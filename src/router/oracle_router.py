@@ -1,8 +1,9 @@
 """Çok Kademeli Dinamik Model Yönlendirme (Cascading), Oracle ve Yarı Ömürlü Sönümleme Motoru."""
+from contextlib import closing
+from dataclasses import dataclass
 import math
 import sqlite3
 import time
-from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 
@@ -39,7 +40,7 @@ class DynamicOracleRouter:
         self._init_db()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS model_outcomes (
@@ -61,7 +62,7 @@ class DynamicOracleRouter:
         timestamp: Optional[float] = None,
     ) -> None:
         ts = time.time() if timestamp is None else float(timestamp)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn:
             conn.execute(
                 "INSERT INTO model_outcomes (model_id, passed, channel, timestamp) VALUES (?, ?, ?, ?)",
                 (model_id, 1 if passed else 0, channel, ts),
@@ -71,7 +72,7 @@ class DynamicOracleRouter:
     def get_model_score(self, model_id: str, now: Optional[float] = None) -> float:
         """Yarı ömürlü sönümleme ($2^{-\\Delta t / T_{1/2}}$) ile güncel başarı puanını hesaplar."""
         current_time = time.time() if now is None else float(now)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn:
             rows = conn.execute(
                 "SELECT passed, channel, timestamp FROM model_outcomes WHERE model_id = ?",
                 (model_id,),
@@ -90,7 +91,9 @@ class DynamicOracleRouter:
 
         return weighted_sum
 
-    def select_best_in_tier(self, tier_models: List[str], now: Optional[float] = None) -> str:
+    def select_best_in_tier(
+        self, tier_models: List[str], now: Optional[float] = None
+    ) -> str:
         return max(tier_models, key=lambda m: self.get_model_score(m, now=now))
 
     def route_and_execute(
@@ -103,6 +106,7 @@ class DynamicOracleRouter:
         """En düşük maliyetli kademeden başlayarak Oracle doğrulaması geçene kadar kademeli yükseltir."""
         attempts: List[Dict[str, Any]] = []
         now = time.time()
+        output = ""
 
         for tier_index, tier_models in enumerate(self.tiers, start=1):
             candidate = self.select_best_in_tier(tier_models, now=now)
@@ -130,6 +134,6 @@ class DynamicOracleRouter:
         return {
             "final_model": attempts[-1]["model"] if attempts else "",
             "tier_reached": len(self.tiers),
-            "output": output if attempts else "",
+            "output": output,
             "attempts": attempts,
         }

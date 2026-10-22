@@ -1,0 +1,657 @@
+{
+  "summary": {
+    "total_files": 23,
+    "total_classes": 9,
+    "total_functions": 50,
+    "total_loc": 1303
+  },
+  "modules": [
+    {
+      "module": "src",
+      "path": "src/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.cli",
+      "path": "src/cli.py",
+      "loc": 45,
+      "classes": [],
+      "functions": [
+        "main"
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "src.devtools.codebase_graph",
+        "src.devtools.security_audit",
+        "src.devtools.token_and_debt_hygiene",
+        "src.infra.hermes_config_builder",
+        "sys"
+      ],
+      "calls": [
+        "ArgumentParser",
+        "add_parser",
+        "add_subparsers",
+        "build_codebase_knowledge_graph",
+        "build_optimal_hermes_spec",
+        "dumps",
+        "exit",
+        "len",
+        "main",
+        "parse_args",
+        "print",
+        "print_help",
+        "run_defensive_security_audit",
+        "scan_shortcut_debt"
+      ],
+      "change_risk": 3.16
+    },
+    {
+      "module": "src.api",
+      "path": "src/api/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.api.job_store",
+      "path": "src/api/job_store.py",
+      "loc": 134,
+      "classes": [
+        "JobStore"
+      ],
+      "functions": [
+        "__init__",
+        "_init_db",
+        "create_job",
+        "mark_running",
+        "mark_completed",
+        "get_job",
+        "list_jobs"
+      ],
+      "imports": [
+        "contextlib",
+        "sqlite3",
+        "time",
+        "typing",
+        "uuid"
+      ],
+      "calls": [
+        "KeyError",
+        "_init_db",
+        "append",
+        "bool",
+        "closing",
+        "commit",
+        "connect",
+        "dict",
+        "execute",
+        "fetchall",
+        "fetchone",
+        "get_job",
+        "time",
+        "uuid4"
+      ],
+      "change_risk": 5.88
+    },
+    {
+      "module": "src.api.server",
+      "path": "src/api/server.py",
+      "loc": 164,
+      "classes": [
+        "BrowserFarmSaaSServer",
+        "RequestHandler"
+      ],
+      "functions": [
+        "__init__",
+        "start_background",
+        "shutdown",
+        "log_message",
+        "_send_json",
+        "_read_json",
+        "do_GET",
+        "do_POST"
+      ],
+      "imports": [
+        "asyncio",
+        "http.server",
+        "json",
+        "os",
+        "src.api.job_store",
+        "src.browser_engine.worker",
+        "src.infra.self_healing_watchdog",
+        "src.infra.webhook_dispatcher",
+        "src.router.oracle_router",
+        "src.search.query_fanout",
+        "threading",
+        "typing"
+      ],
+      "calls": [
+        "BrowserWorker",
+        "DynamicOracleRouter",
+        "JobStore",
+        "OracleSignal",
+        "SelfHealingWatchdog",
+        "Thread",
+        "ThreadingHTTPServer",
+        "WebhookDispatcher",
+        "_read_json",
+        "_send_json",
+        "bool",
+        "create_job",
+        "decode",
+        "dispatch",
+        "dumps",
+        "encode",
+        "end_headers",
+        "execute_fanout_and_ground",
+        "execute_task",
+        "get",
+        "get_job",
+        "int",
+        "join",
+        "len",
+        "loads",
+        "makedirs",
+        "mark_completed",
+        "mark_running",
+        "read",
+        "route_and_execute",
+        "run",
+        "run_cycle",
+        "send_header",
+        "send_response",
+        "server_close",
+        "shutdown",
+        "sleep",
+        "split",
+        "start",
+        "startswith",
+        "str",
+        "strip",
+        "write"
+      ],
+      "change_risk": 8.05
+    },
+    {
+      "module": "src.browser_engine",
+      "path": "src/browser_engine/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.browser_engine.browser_orchestrator",
+      "path": "src/browser_engine/browser_orchestrator.py",
+      "loc": 33,
+      "classes": [
+        "BrowserFarmOrchestrator"
+      ],
+      "functions": [
+        "select_engine",
+        "build_session_task"
+      ],
+      "imports": [
+        "typing"
+      ],
+      "calls": [
+        "replace",
+        "select_engine",
+        "strip"
+      ],
+      "change_risk": 1.41
+    },
+    {
+      "module": "src.browser_engine.worker",
+      "path": "src/browser_engine/worker.py",
+      "loc": 121,
+      "classes": [
+        "BrowserWorker"
+      ],
+      "functions": [
+        "discover_har_api_endpoints",
+        "html_to_clean_markdown",
+        "_default_url_driver",
+        "__init__",
+        "execute_task"
+      ],
+      "imports": [
+        "html",
+        "re",
+        "src.browser_engine.browser_orchestrator",
+        "typing",
+        "urllib.parse",
+        "urllib.request"
+      ],
+      "calls": [
+        "BrowserFarmOrchestrator",
+        "Request",
+        "append",
+        "build_session_task",
+        "compile",
+        "decode",
+        "discover_har_api_endpoints",
+        "driver_fn",
+        "finditer",
+        "group",
+        "html_to_clean_markdown",
+        "index",
+        "join",
+        "len",
+        "read",
+        "splitlines",
+        "startswith",
+        "strip",
+        "sub",
+        "unescape",
+        "urljoin",
+        "urlopen"
+      ],
+      "change_risk": 5.91
+    },
+    {
+      "module": "src.devtools",
+      "path": "src/devtools/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.devtools.codebase_graph",
+      "path": "src/devtools/codebase_graph.py",
+      "loc": 108,
+      "classes": [],
+      "functions": [
+        "build_codebase_knowledge_graph"
+      ],
+      "imports": [
+        "ast",
+        "json",
+        "os",
+        "typing"
+      ],
+      "calls": [
+        "abspath",
+        "add",
+        "append",
+        "dirname",
+        "dump",
+        "endswith",
+        "isinstance",
+        "items",
+        "join",
+        "len",
+        "min",
+        "open",
+        "parse",
+        "read",
+        "relpath",
+        "replace",
+        "round",
+        "set",
+        "sorted",
+        "splitlines",
+        "startswith",
+        "sum",
+        "walk"
+      ],
+      "change_risk": 10.0
+    },
+    {
+      "module": "src.devtools.security_audit",
+      "path": "src/devtools/security_audit.py",
+      "loc": 75,
+      "classes": [],
+      "functions": [
+        "run_defensive_security_audit",
+        "audit_skill_markdown"
+      ],
+      "imports": [
+        "os",
+        "re",
+        "typing"
+      ],
+      "calls": [
+        "append",
+        "compile",
+        "endswith",
+        "finditer",
+        "group",
+        "join",
+        "open",
+        "read",
+        "search",
+        "sorted",
+        "walk"
+      ],
+      "change_risk": 5.54
+    },
+    {
+      "module": "src.devtools.self_evolution_engine",
+      "path": "src/devtools/self_evolution_engine.py",
+      "loc": 51,
+      "classes": [],
+      "functions": [
+        "evaluate_silent_watchdog",
+        "compute_ecosystem_fingerprint",
+        "distill_evolution_record"
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "calls": [
+        "ValueError",
+        "append",
+        "dumps",
+        "encode",
+        "hexdigest",
+        "join",
+        "sha256",
+        "strip",
+        "upper"
+      ],
+      "change_risk": 3.24
+    },
+    {
+      "module": "src.devtools.token_and_debt_hygiene",
+      "path": "src/devtools/token_and_debt_hygiene.py",
+      "loc": 69,
+      "classes": [],
+      "functions": [
+        "compress_cli_output",
+        "scan_shortcut_debt"
+      ],
+      "imports": [
+        "os",
+        "re",
+        "typing"
+      ],
+      "calls": [
+        "append",
+        "compile",
+        "endswith",
+        "enumerate",
+        "extend",
+        "group",
+        "join",
+        "len",
+        "list",
+        "lower",
+        "max",
+        "open",
+        "rstrip",
+        "search",
+        "sorted",
+        "splitlines",
+        "strip",
+        "walk"
+      ],
+      "change_risk": 5.86
+    },
+    {
+      "module": "src.infra",
+      "path": "src/infra/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.infra.hermes_config_builder",
+      "path": "src/infra/hermes_config_builder.py",
+      "loc": 138,
+      "classes": [],
+      "functions": [
+        "build_optimal_hermes_spec",
+        "generate_hermes_cli_commands"
+      ],
+      "imports": [
+        "typing"
+      ],
+      "calls": [
+        "append",
+        "items",
+        "lower",
+        "str"
+      ],
+      "change_risk": 2.33
+    },
+    {
+      "module": "src.infra.self_healing_watchdog",
+      "path": "src/infra/self_healing_watchdog.py",
+      "loc": 51,
+      "classes": [
+        "SelfHealingWatchdog"
+      ],
+      "functions": [
+        "__init__",
+        "run_cycle"
+      ],
+      "imports": [
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "append",
+        "bool",
+        "items",
+        "probe",
+        "restart_fn",
+        "time",
+        "token_refresh_fn",
+        "token_ttl_check"
+      ],
+      "change_risk": 3.04
+    },
+    {
+      "module": "src.infra.webhook_dispatcher",
+      "path": "src/infra/webhook_dispatcher.py",
+      "loc": 60,
+      "classes": [
+        "WebhookDispatcher"
+      ],
+      "functions": [
+        "compute_hmac_signature",
+        "_default_http_sender",
+        "__init__",
+        "dispatch"
+      ],
+      "imports": [
+        "hashlib",
+        "hmac",
+        "json",
+        "typing",
+        "urllib.request"
+      ],
+      "calls": [
+        "Request",
+        "compute_hmac_signature",
+        "dumps",
+        "encode",
+        "hexdigest",
+        "int",
+        "max",
+        "new",
+        "range",
+        "sender_fn",
+        "str",
+        "urlopen"
+      ],
+      "change_risk": 3.35
+    },
+    {
+      "module": "src.net_lab",
+      "path": "src/net_lab/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.net_lab.sober_net_diagnostics",
+      "path": "src/net_lab/sober_net_diagnostics.py",
+      "loc": 27,
+      "classes": [],
+      "functions": [
+        "analyze_socket_trace_and_recommend_routing"
+      ],
+      "imports": [
+        "re",
+        "typing"
+      ],
+      "calls": [
+        "findall",
+        "len",
+        "set",
+        "sorted"
+      ],
+      "change_risk": 1.14
+    },
+    {
+      "module": "src.router",
+      "path": "src/router/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.router.oracle_router",
+      "path": "src/router/oracle_router.py",
+      "loc": 139,
+      "classes": [
+        "OracleSignal",
+        "DynamicOracleRouter"
+      ],
+      "functions": [
+        "__init__",
+        "_init_db",
+        "record_outcome",
+        "get_model_score",
+        "select_best_in_tier",
+        "route_and_execute"
+      ],
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "math",
+        "sqlite3",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "_init_db",
+        "append",
+        "closing",
+        "commit",
+        "connect",
+        "enumerate",
+        "execute",
+        "executor",
+        "fetchall",
+        "float",
+        "get",
+        "get_model_score",
+        "len",
+        "list",
+        "max",
+        "oracle_validator",
+        "pow",
+        "record_outcome",
+        "select_best_in_tier",
+        "time"
+      ],
+      "change_risk": 5.74
+    },
+    {
+      "module": "src.search",
+      "path": "src/search/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.search.query_fanout",
+      "path": "src/search/query_fanout.py",
+      "loc": 88,
+      "classes": [],
+      "functions": [
+        "decompose_query",
+        "default_searxng_search",
+        "execute_fanout_and_ground",
+        "_fetch"
+      ],
+      "imports": [
+        "asyncio",
+        "json",
+        "re",
+        "typing",
+        "urllib.parse",
+        "urllib.request"
+      ],
+      "calls": [
+        "Request",
+        "active_search",
+        "add",
+        "append",
+        "decode",
+        "decompose_query",
+        "gather",
+        "get",
+        "join",
+        "len",
+        "loads",
+        "read",
+        "rstrip",
+        "set",
+        "split",
+        "strip",
+        "to_thread",
+        "urlencode",
+        "urlopen",
+        "zip"
+      ],
+      "change_risk": 5.9
+    }
+  ],
+  "dead_code_candidates": [
+    "src.api.job_store.list_jobs",
+    "src.api.server.do_GET",
+    "src.api.server.do_POST",
+    "src.api.server.log_message",
+    "src.api.server.start_background",
+    "src.devtools.security_audit.audit_skill_markdown",
+    "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",
+    "src.devtools.self_evolution_engine.distill_evolution_record",
+    "src.devtools.self_evolution_engine.evaluate_silent_watchdog",
+    "src.devtools.token_and_debt_hygiene.compress_cli_output",
+    "src.infra.hermes_config_builder.generate_hermes_cli_commands",
+    "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
+    "src.search.query_fanout.default_searxng_search"
+  ]
+}
