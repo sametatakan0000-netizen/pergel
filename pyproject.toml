@@ -1,0 +1,9 @@
+[project]
+name = "ai-browser-farm"
+version = "0.1.0"
+description = "AI-Native Browser Engine, Dynamic Oracle Router, Self-Healing Infra & Linux Net Diagnostics Lab"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

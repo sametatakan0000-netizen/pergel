@@ -1,0 +1,19 @@
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: hermes-searxng
+    ports:
+      - "8888:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888/
+    restart: unless-stopped
+
+  firecrawl-api:
+    image: ghcr.io/mendableai/firecrawl:latest
+    container_name: hermes-firecrawl
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - USE_DB_AUTHENTICATION=false
+    restart: unless-stopped
