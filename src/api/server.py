@@ -19,7 +19,7 @@ from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
-from src.router.live_router import VIRTUAL_PROFILES, LiveRouter, price_tier
+from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
@@ -165,16 +165,17 @@ class BrowserFarmSaaSServer:
                     return
 
                 if self.path == "/v1/models":
-                    # Only the 5 virtual routing profiles are advertised. Raw registry models
-                    # stay routable by explicit id (plan passes them through) and inspectable
-                    # at /v1/models/profiles — but a 430-entry picker list is noise, and a
-                    # misclick on a raw id would silently bypass routing policy.
-                    # Largest window per profile: plan() skips candidates a request outgrows,
-                    # so Hermes does not have to compress down to the smallest model's window.
+                    # One entry only: tier profiles are meaningless now that plan() picks the
+                    # band itself (Pareto + tolerance + sticky). Raw registry models and the old
+                    # virtual aliases (oracle/eco|agentic|premium|free) stay routable by explicit
+                    # id and inspectable at /v1/models/profiles — advertising them was noise and a
+                    # misclick bypassed routing policy.
+                    # Largest window: plan() skips candidates a request outgrows, so Hermes does
+                    # not have to compress down to the smallest model's window.
                     rows: List[Dict[str, Any]] = [
                         {"id": vp, "object": "model", "owned_by": "oracle-router",
                          "context_length": parent.live.virtual_context_length(vp)}
-                        for vp in VIRTUAL_PROFILES
+                        for vp in ADVERTISED_MODELS
                     ]
                     self._send_json(200, {"object": "list", "data": rows})
                     return

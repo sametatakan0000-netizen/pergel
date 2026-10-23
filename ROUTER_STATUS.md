@@ -11,9 +11,13 @@ This repository does **not** modify the running Hermes gateway or its default mo
   - Auto-pool = curated IDs + their `:free` variants. `:batch` (half price; user reports interactive chat works via Nous Portal, but not verified through the router and not auto-pooled) and region-pinned `:US` variants are explicit-only.
   - Fallbacks: catalog × OpenRouter, then catalog × models.dev. Snapshot written atomically; `serve` refreshes every 20 min and keeps the last snapshot on failure.
 - **LiveRouter (`src/router/live_router.py`)** — deterministic, documented policy:
-  - price tier from **billed** input price (≤0.3 / ≤1 / ≤3 / >3 USD per 1M); within a tier: published AA index × learned reliability, then price;
-  - context-fit: conservative token estimate (images counted as 1.5K, not base64 bytes); models a request outgrows are skipped, so virtual profiles advertise their **largest** window (1.05M) to Hermes;
-  - session affinity persisted (escalate-only); cleared on regenerate; 429/5xx → 5 min cooldown, 404 → 1 h; effort clamped to supported levels.
+  - price tier from **billed** input price (≤0.3 / ≤1 / ≤3 / >3 USD per 1M); inside a tier: Pareto dominance, then quality/price;
+  - **Pareto dominance:** only models with a proven 200-on-record response may dominate or lead a band; dominated models are demoted to last resort (dominated ≠ dead — "dead" means all-404 and never dominates);
+  - **tolerance bands:** `QUALITY_TOLERANCE = 5` AA points per price tier, so a cheaper model within 5 points of the band leader wins; equal quality → cheaper input+output billed price; already-served models outrank untried ones;
+  - **sticky:** a pinned model is released only when the turn gets ≥2 tiers easier or a within-tolerance model is materially cheaper (a hard "never downgrade" rule was deleted — it pinned an expensive model on 107K-token turns);
+  - context-fit: conservative token estimate (images counted as 1.5K, not base64 bytes); models a request outgrows are skipped, so the advertised id reports the **largest** window (1.05M) to Hermes;
+  - session affinity persisted; cleared on regenerate; 429/5xx → 5 min cooldown, 404 → 1 h doubling to 24 h; effort clamped to supported levels.
+  - **No tier profiles as a feature.** `/v1/models` advertises exactly one id (`ADVERTISED_MODELS = oracle/auto`). `oracle/eco|agentic|premium|free` and all raw registry ids remain routable by explicit name for forcing/debugging, inspectable at `/v1/models/profiles`, and never shown in the picker.
 - **Self-evolution (`src/router/outcome_learning.py`)** — learns from real traffic, zero extra inference:
   - structural checks: malformed tool-call JSON, unknown tool names, empty answers (stream and non-stream);
   - implicit feedback on the next user turn: regenerate −1, correction phrasing −0.5, continuing after a final answer +0.5; tool-loop turns neutral; aux calls (explicit models sharing the session id) ignored;
@@ -31,7 +35,7 @@ Dry run with the real registry and an echo upstream: `python3 scripts/routing_dr
 
 - **Real Nous inference through the router works.** A live Hermes Telegram session runs on `/model custom:oracle-router:oracle/auto`; Hermes leaks the provider prefix into the model name, which the router now normalizes (`normalize_model`). Fix landed because the raw form previously returned `Unknown model`.
 - Router health (host): 391 routable models, registry fresh; `hermes proxy` Nous adapter ready.
-- `/v1/models` advertises only the 5 virtual profiles (picker stays clean); raw ids remain routable by explicit name, full catalog at `/v1/models/profiles`. Verified live on host.
+- `/v1/models` advertises a single id, `oracle/auto` (2026-10-24: the 5 tier profiles were demoted to hidden aliases — the picker had shown `oracle-router (6)` entries nobody should have to choose between). Aliases and raw ids stay routable by explicit name; full catalog at `/v1/models/profiles`. The stale hand-written `MODEL_PROFILES.json` export (65 guessed personas/tiers) was deleted — the live endpoint is the only source now.
 - Learning starts empty: quality ordering is benchmark-driven until real traffic accumulates evidence. The keyword tier guess is crude by design; floors correct it per bucket over time.
 - Correction detection is a regex (TR/EN) — a weak signal by design (−0.5).
 

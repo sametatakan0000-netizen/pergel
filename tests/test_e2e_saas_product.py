@@ -110,11 +110,11 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 with urllib.request.urlopen(f"{base_url}/v1/models", timeout=5) as resp:
                     models_payload = json.loads(resp.read().decode("utf-8"))
                 model_ids = {m["id"] for m in models_payload["data"]}
-                self.assertIn("oracle/auto", model_ids)
-                self.assertIn("oracle/free", model_ids)
-                # Only virtual profiles are advertised; raw ids stay routable but unlisted.
+                # One advertised id: the router decides the band, tier profiles are legacy aliases.
+                self.assertEqual(model_ids, {"oracle/auto"})
+                # Raw ids and aliases stay routable by explicit name but are never advertised.
                 self.assertNotIn("google/gemini-4-argon", model_ids)
-                self.assertEqual(len(model_ids), 5)
+                self.assertNotIn("oracle/free", model_ids)
 
                 chat_req_body = json.dumps(
                     {

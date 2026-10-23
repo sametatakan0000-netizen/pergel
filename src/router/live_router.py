@@ -39,6 +39,10 @@ from src.router.model_registry import VerifiedProfile, clamp_effort
 from src.router.outcome_learning import OutcomeLearner, bucket_for
 from src.router.request_features import estimate_tokens, has_image, keyword_tier
 
+# Advertised to the client picker: one id. Everything else is an alias kept for
+# compatibility/forcing, not a feature — plan() decides the band on its own.
+ADVERTISED_MODELS = ("oracle/auto",)
+
 VIRTUAL_PROFILES = {
     "oracle/auto": None,  # classified per request
     "oracle/eco": 1,

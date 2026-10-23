@@ -3,7 +3,7 @@
     "total_files": 26,
     "total_classes": 12,
     "total_functions": 138,
-    "total_loc": 2797
+    "total_loc": 2802
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 409,
+      "loc": 410,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -690,7 +690,7 @@
     {
       "module": "src.router.live_router",
       "path": "src/router/live_router.py",
-      "loc": 380,
+      "loc": 384,
       "classes": [
         "LiveRouter"
       ],
