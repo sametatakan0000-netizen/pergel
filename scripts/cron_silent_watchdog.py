@@ -24,6 +24,7 @@ def main() -> int:
             "-t",
             "/root/ai_browser_farm",
         ],
+        cwd="/root/ai_browser_farm",
         capture_output=True,
         text=True,
     )

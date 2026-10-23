@@ -1,6 +1,9 @@
+from pathlib import Path
 import subprocess
 import sys
 import unittest
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 from src.infra.hermes_config_builder import (
     build_optimal_hermes_spec,
     generate_hermes_cli_commands,
@@ -63,7 +66,7 @@ class TestHermesConfigSpec(unittest.TestCase):
     def test_cli_exposes_serving_and_catalog_refresh_commands(self):
         result = subprocess.run(
             [sys.executable, "-m", "src.cli", "--help"],
-            capture_output=True, text=True, check=True,
+            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
         )
         self.assertIn("serve", result.stdout)
         self.assertIn("refresh-catalog", result.stdout)
@@ -71,7 +74,7 @@ class TestHermesConfigSpec(unittest.TestCase):
     def test_doctor_does_not_report_ready_without_upstream(self):
         result = subprocess.run(
             [sys.executable, "-m", "src.cli", "doctor"],
-            capture_output=True, text=True, check=True,
+            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
         )
         report = __import__("json").loads(result.stdout)
         self.assertNotEqual(report["status"], "READY")
