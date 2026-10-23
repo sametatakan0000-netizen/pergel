@@ -31,6 +31,7 @@ Dry run with the real registry and an echo upstream: `python3 scripts/routing_dr
 
 - **Real Nous inference through the router works.** A live Hermes Telegram session runs on `/model custom:oracle-router:oracle/auto`; Hermes leaks the provider prefix into the model name, which the router now normalizes (`normalize_model`). Fix landed because the raw form previously returned `Unknown model`.
 - Router health (host): 391 routable models, registry fresh; `hermes proxy` Nous adapter ready.
+- `/v1/models` advertises only the 5 virtual profiles (picker stays clean); raw ids remain routable by explicit name, full catalog at `/v1/models/profiles`. Verified live on host.
 - Learning starts empty: quality ordering is benchmark-driven until real traffic accumulates evidence. The keyword tier guess is crude by design; floors correct it per bucket over time.
 - Correction detection is a regex (TR/EN) — a weak signal by design (−0.5).
 
