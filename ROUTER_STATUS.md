@@ -8,7 +8,7 @@ This repository does **not** modify the running Hermes gateway or its default mo
   - Membership, capabilities and **Portal billed prices**: `https://inference-api.nousresearch.com/v1/models` (425 models; `pricing` = billed, `pricing.original` = list → discount).
   - Benchmarks: OpenRouter `/api/v1/models` → Artificial Analysis intelligence/coding/agentic indices (matched by ID, `:free` falls back to base ID).
   - Curation: Hermes `model-catalog.json` (56/57 curated IDs present on Nous).
-  - Auto-pool = curated IDs + their `:free` variants. `:batch` (half price, interactive behaviour unverified) and region-pinned `:US` variants are explicit-only.
+  - Auto-pool = curated IDs + their `:free` variants. `:batch` (half price; user reports interactive chat works via Nous Portal, but not verified through the router and not auto-pooled) and region-pinned `:US` variants are explicit-only.
   - Fallbacks: catalog × OpenRouter, then catalog × models.dev. Snapshot written atomically; `serve` refreshes every 20 min and keeps the last snapshot on failure.
 - **LiveRouter (`src/router/live_router.py`)** — deterministic, documented policy:
   - price tier from **billed** input price (≤0.3 / ≤1 / ≤3 / >3 USD per 1M); within a tier: published AA index × learned reliability, then price;
