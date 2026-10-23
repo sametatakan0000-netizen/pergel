@@ -202,8 +202,11 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     self.assertEqual(result["id"], "upstream-real-id")
                     self.assertEqual(result["choices"][0]["message"]["content"], "upstream-answer")
                     self.assertEqual(result["usage"]["total_tokens"], 17)
-                self.assertEqual(received[0]["model"], received[1]["model"])
-                self.assertEqual(received[0]["model"], "google/gemini-4-argon")  # escalated, then no downgrade
+                self.assertEqual(received[0]["model"], "google/gemini-4-argon")  # hard turn escalates
+                # Documented downgrade: "Merhaba" is two price tiers easier than the pin and
+                # the cheaper tier is within tolerance, so the session releases the pin
+                # instead of riding the expensive model to the end of the conversation.
+                self.assertEqual(received[1]["model"], "test/cheap")
                 self.assertEqual(received[1]["messages"][0]["content"], "Merhaba")
                 self.assertEqual(received[1]["temperature"], 0.4)
                 self.assertEqual(received[0]["tools"][0]["function"]["name"], "terminal")
@@ -535,8 +538,13 @@ class TestE2ESaaSProduct(unittest.TestCase):
                         with urllib.request.urlopen(r, timeout=5) as resp:
                             return resp.headers["X-Oracle-Selected-Model"]
                     first = send("oracle/auto", "mimari tasarım")
+                    self.assertEqual(first, "google/gemini-4-argon")
                     send("test/cheap", "bu konuşmaya başlık üret")
-                    self.assertEqual(send("oracle/auto", "devam"), first)
+                    # An explicit-model auxiliary call must not overwrite the session's pin...
+                    self.assertEqual(router.live.sticky_model("conv-1"), first)
+                    # ...but an easy turn two tiers below the pin releases it (documented
+                    # downgrade) instead of riding the expensive model for the whole session.
+                    self.assertEqual(send("oracle/auto", "devam"), "test/cheap")
                 finally:
                     router.shutdown()
         finally:

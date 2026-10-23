@@ -76,13 +76,38 @@ class TestLiveRouter(unittest.TestCase):
     def test_session_affinity_persists_across_restarts(self):
         self.router.commit_choice("s1", "v/mid")
         restarted = LiveRouter(self.db, self.profiles, explore_epsilon=0)
-        self.assertEqual(restarted.plan(chat("merhaba"), session_id="s1")[0], "v/mid")
+        self.assertEqual(restarted.sticky_model("s1"), "v/mid")
+        # A same-tier turn keeps the pin (cache survives the restart).
+        self.assertEqual(restarted.plan(chat("python kodu düzelt"), session_id="s1")[0], "v/mid")
 
-    def test_session_only_escalates_never_downgrades(self):
+    def test_session_escalates_when_turn_demand_exceeds_sticky(self):
         self.router.commit_choice("s1", "v/free-text")
         self.assertEqual(self.router.plan(chat("mimari tasarım"), session_id="s1")[0], "v/flagship")
+
+    def test_sticky_survives_easier_turns_only_when_quality_gap_exceeds_tolerance(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        profiles["v/mid"] = replace(profiles["v/mid"], intelligence_index=20.0)
+        profiles["v/flagship"] = replace(profiles["v/flagship"], intelligence_index=50.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.commit_choice("s1", "v/flagship")
+        # One tier easier than the pin and 30 points of real quality gap: keep the pin.
+        self.assertEqual(router.plan(chat("python kodu düzelt"), session_id="s1")[0], "v/flagship")
+
+    def test_sticky_releases_to_cheaper_model_inside_tolerance_band(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        profiles["v/flagship"] = replace(profiles["v/flagship"], intelligence_index=56.0)
+        profiles["v/apex"] = replace(profiles["v/apex"], intelligence_index=57.6,
+                                     list_cost_in=3.0, list_cost_out=15.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.commit_choice("s1", "v/apex")
+        # Both tier 3, 1.6 points apart: the pinned model is 1.5x the price for nothing visible.
+        self.assertEqual(router.plan(chat("mimari tasarım"), session_id="s1")[0], "v/flagship")
+
+    def test_sticky_two_tiers_above_easy_turn_is_released(self):
         self.router.commit_choice("s1", "v/flagship")
-        self.assertEqual(self.router.plan(chat("teşekkürler"), session_id="s1")[0], "v/flagship")
+        self.assertEqual(self.router.plan(chat("merhaba"), session_id="s1")[0], "v/free-text")
 
     def test_sticky_model_without_vision_is_replaced_for_image_turns(self):
         self.router.commit_choice("s1", "v/mid")
@@ -120,6 +145,55 @@ class TestLiveRouter(unittest.TestCase):
         profiles["v/free-text"] = replace(profiles["v/free-text"], intelligence_index=20.0)
         router = LiveRouter(self.db, profiles, explore_epsilon=0)
         self.assertEqual(router.plan(chat("merhaba"))[0], "v/cheap-vision")
+
+    def test_within_tolerance_band_cheaper_model_wins(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        # The user's tolerance rule: 57.6 vs 56.0 must NOT justify a 1.5x price...
+        profiles["v/flagship"] = replace(profiles["v/flagship"], intelligence_index=56.0)
+        profiles["v/apex"] = replace(profiles["v/apex"], intelligence_index=57.6,
+                                     list_cost_in=3.0, list_cost_out=15.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        self.assertEqual(router.plan(chat("mimari tasarım"))[0], "v/flagship")
+        # ...but a gap beyond the band still buys the better model.
+        profiles["v/apex"] = replace(profiles["v/apex"], intelligence_index=65.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        self.assertEqual(router.plan(chat("mimari tasarım"))[0], "v/apex")
+
+    def test_dominated_models_are_demoted_to_last_resort(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        # free-text is strictly better AND strictly cheaper: cheap-vision is never worth picking.
+        profiles["v/free-text"] = replace(profiles["v/free-text"], intelligence_index=40.0)
+        profiles["v/cheap-vision"] = replace(profiles["v/cheap-vision"], intelligence_index=20.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        plan = router.plan(chat("merhaba"))
+        self.assertEqual(plan[0], "v/free-text")
+        self.assertEqual(plan[-1], "v/cheap-vision")  # kept only as very last resort
+
+    def test_repeated_not_found_backs_off_exponentially(self):
+        self.router.record_upstream("v/free-text", status=404, latency_ms=5, now=1000.0)
+        self.assertIn("v/free-text", self.router.cooling_down(1001.0))
+        self.assertNotIn("v/free-text", self.router.cooling_down(1000.0 + 3601))
+        self.router.record_upstream("v/free-text", status=404, latency_ms=5, now=4601.0)
+        self.assertIn("v/free-text", self.router.cooling_down(4601.0 + 3601))  # 2nd strike: 7200s
+        self.assertNotIn("v/free-text", self.router.cooling_down(4601.0 + 7201))
+
+    def test_unserved_variant_cannot_dominate_a_working_model(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        # v/cheap-vision looks like a half-price twin of v/mid (same quality, cheaper) — but
+        # the upstream 404s it every time. Phantom metadata must not demote v/mid to last resort.
+        profiles["v/cheap-vision"] = replace(profiles["v/cheap-vision"], intelligence_index=40.0,
+                                             list_cost_in=0.05, list_cost_out=0.2)
+        profiles["v/mid"] = replace(profiles["v/mid"], intelligence_index=40.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.record_upstream("v/cheap-vision", status=404, latency_ms=5, now=1000.0)
+        plan = router.plan(chat("merhaba"), now=2000.0)
+        # v/mid keeps its tier-2 slot ahead of tier-3 fallbacks (demotion would push it
+        # behind every primary model), and the phantom stays last (cooling after its 404).
+        self.assertLess(plan.index("v/mid"), plan.index("v/flagship"))
+        self.assertEqual(plan[-1], "v/cheap-vision")
 
     def test_learned_failures_reorder_candidates_within_a_tier(self):
         self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/free-text")
