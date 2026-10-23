@@ -43,6 +43,19 @@ class TestBrowserWorker(unittest.TestCase):
         self.assertEqual(called_engines, ["lightpanda", "chromium-browser-use"])
         self.assertIn("# Rendered Product Data", result["markdown"])
 
+        # Second call to the same domain must adaptively skip lightpanda via self-evolution
+        called_engines.clear()
+        result2 = worker.execute_task(
+            job_id="job_100",
+            url="https://spa.example.com/checkout",
+            needs_vision=False,
+            js_complexity="low",
+        )
+        self.assertTrue(result2["oracle_passed"])
+        self.assertEqual(called_engines, ["chromium-browser-use"])
+        self.assertGreaterEqual(len(worker.orchestrator.evolution_ledger), 1)
+        self.assertEqual(worker.orchestrator.evolution_ledger[0]["mode"], "FIX")
+
 
 if __name__ == "__main__":
     unittest.main()

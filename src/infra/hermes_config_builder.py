@@ -1,14 +1,58 @@
-"""Hermes Agent resmi şemasına uygun tam potansiyel konfigürasyon ve CLI komut üreticisi."""
+"""Hermes Agent resmi şemasına uygun tam potansiyel konfigürasyon, Custom Oracle Router Proxy ve Nous Portal entegrasyonu."""
 from typing import Any, Dict, List
 
 
 def build_optimal_hermes_spec() -> Dict[str, Any]:
-    """Resmî Hermes Agent dokümantasyonuyla doğrulanmış tam potansiyel ayar şeması."""
+    """Resmî Hermes Agent dokümantasyonu ve canlı Nous Portal (57+ model kataloğu) ile doğrulanmış şema."""
     return {
         "model": {
             "provider": "nous",
             "default": "google/gemini-4-argon",
             "switch_context_confirm_tokens": 100000,
+        },
+        "nous": {
+            "anthropic_wire": "chat",
+            "keepalive_interval_seconds": 900,
+        },
+        "subscription_proxy": {
+            "enabled": True,
+            "upstream_url": "http://127.0.0.1:8645/v1",
+            "provider": "nous",
+        },
+        "providers": {
+            "oracle-router": {
+                "api": "http://127.0.0.1:8090/v1",
+                "transport": "chat_completions",
+                "session_affinity_header": "x-hermes-session-id",
+                "catalog_provider": "nous",
+                "default_model": "oracle/auto",
+                "models": {
+                    "oracle/auto": {
+                        "context_length": 1000000,
+                        "supports_vision": True,
+                        "prompt_caching": True,
+                    },
+                    "oracle/eco": {
+                        "context_length": 256000,
+                        "supports_vision": True,
+                        "prompt_caching": True,
+                    },
+                    "oracle/free": {
+                        "context_length": 128000,
+                        "supports_vision": False,
+                        "prompt_caching": False,
+                    },
+                },
+            }
+        },
+        "smart_model_routing": {
+            "enabled": True,
+            "max_simple_chars": 160,
+            "max_simple_words": 28,
+            "cheap_model": {
+                "provider": "nous",
+                "model": "qwen/qwen3.8-27b",
+            },
         },
         "agent": {
             "max_turns": 90,
@@ -63,16 +107,16 @@ def build_optimal_hermes_spec() -> Dict[str, Any]:
         },
         "auxiliary": {
             "vision": {"provider": "nous", "model": "google/gemini-4-argon"},
-            "compression": {"provider": "nous", "model": "google/gemini-3.7-flash:free"},
-            "web_extract": {"provider": "nous", "model": "google/gemini-3.7-flash:free"},
-            "title_generation": {"provider": "nous", "model": "google/gemini-3.7-flash:free"},
-            "approval": {"provider": "nous", "model": "google/gemini-3.7-flash:free"},
-            "skills_hub": {"provider": "nous", "model": "deepseek/deepseek-v4-pro"},
+            "compression": {"provider": "nous", "model": "upstage/solar-mini4"},
+            "web_extract": {"provider": "nous", "model": "upstage/solar-mini4"},
+            "title_generation": {"provider": "nous", "model": "upstage/solar-mini4"},
+            "approval": {"provider": "nous", "model": "qwen/qwen3.8-27b"},
+            "skills_hub": {"provider": "nous", "model": "deepseek/deepseek-v4.1-flash-1017"},
             "kanban_decomposer": {"provider": "nous", "model": "deepseek/deepseek-v4-pro"},
-            "mcp": {"provider": "nous", "model": "openai/gpt-6-sol"},
-            "curator": {"provider": "nous", "model": "openai/gpt-6-sol"},
-            "triage_specifier": {"provider": "nous", "model": "qwen/qwen3.6-27b"},
-            "profile_describer": {"provider": "nous", "model": "qwen/qwen3.6-27b"},
+            "mcp": {"provider": "nous", "model": "z-ai/glm-5.2"},
+            "curator": {"provider": "nous", "model": "openai/gpt-6.1-sol"},
+            "triage_specifier": {"provider": "nous", "model": "qwen/qwen3.8-27b"},
+            "profile_describer": {"provider": "nous", "model": "qwen/qwen3.8-27b"},
         },
         "moa": {
             "default_preset": "default",
@@ -89,12 +133,12 @@ def build_optimal_hermes_spec() -> Dict[str, Any]:
                         },
                         {
                             "provider": "nous",
-                            "model": "openai/gpt-6-sol",
+                            "model": "openai/gpt-6.1-sol",
                             "reasoning_effort": "medium",
                         },
                         {
                             "provider": "nous",
-                            "model": "qwen/qwen3.6-27b",
+                            "model": "qwen/qwen3.8-27b",
                             "reasoning_effort": "low",
                         },
                     ],
@@ -110,11 +154,24 @@ def build_optimal_hermes_spec() -> Dict[str, Any]:
 
 
 def generate_hermes_cli_commands(spec: Dict[str, Any]) -> List[str]:
-    """Hard Invariant uyumlu (`hermes config set`) komut listesi üretir."""
+    """Hard Invariant uyumlu (`hermes config set` + `hermes proxy start`) komut listesi üretir."""
     cmds = [
+        "# 1. Nous Portal Subscription Proxy'yi başlat (:8645 -> OAuth otomatik JWT yenileme)",
+        "hermes proxy start --host 127.0.0.1 --port 8645 &",
+        "# 2. Named Custom Provider olarak yerel Self-Evolving Oracle Router Proxy (:8090) tanımla",
+        f"hermes config set providers.oracle-router.api {spec['providers']['oracle-router']['api']}",
+        f"hermes config set providers.oracle-router.transport {spec['providers']['oracle-router']['transport']}",
+        f"hermes config set providers.oracle-router.session_affinity_header {spec['providers']['oracle-router']['session_affinity_header']}",
+        f"hermes config set providers.oracle-router.catalog_provider {spec['providers']['oracle-router']['catalog_provider']}",
+        f"hermes config set providers.oracle-router.default_model {spec['providers']['oracle-router']['default_model']}",
+        "# 3. Ana model ve Nous Portal wire optimizasyonu (Prompt Cache korunumu için anthropic_wire=chat)",
         f"hermes config set model.provider {spec['model']['provider']}",
         f"hermes config set model.default {spec['model']['default']}",
         f"hermes config set model.switch_context_confirm_tokens {spec['model']['switch_context_confirm_tokens']}",
+        f"hermes config set nous.anthropic_wire {spec['nous']['anthropic_wire']}",
+        f"hermes config set smart_model_routing.enabled {str(spec['smart_model_routing']['enabled']).lower()}",
+        f"hermes config set smart_model_routing.cheap_model.provider {spec['smart_model_routing']['cheap_model']['provider']}",
+        f"hermes config set smart_model_routing.cheap_model.model {spec['smart_model_routing']['cheap_model']['model']}",
         f"hermes config set terminal.backend {spec['terminal']['backend']}",
         f"hermes config set checkpoints.enabled {str(spec['checkpoints']['enabled']).lower()}",
         f"hermes config set checkpoints.max_snapshots {spec['checkpoints']['max_snapshots']}",

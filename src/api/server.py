@@ -1,10 +1,11 @@
-"""AI-Native Browser Engine (SaaS) Birleşik REST API Sunucusu."""
+"""AI-Native Browser Engine (SaaS) & OpenAI-Compatible Custom Provider Proxy Sunucusu."""
 import asyncio
 import json
 import os
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from src.api.job_store import JobStore
 from src.browser_engine.worker import BrowserWorker
@@ -15,23 +16,35 @@ from src.search.query_fanout import execute_fanout_and_ground
 
 
 class BrowserFarmSaaSServer:
-    """/v1/health, /v1/jobs/browse, /v1/jobs/<id>, /v1/search/fanout ve /v1/router/complete sunucusu."""
+    """SaaS uçları + Hermes `provider: custom` için OpenAI-uyumlu `/v1/models` ve `/v1/chat/completions` Proxy."""
+
+    VIRTUAL_ROUTING_PROFILES = [
+        "oracle/auto",
+        "oracle/eco",
+        "oracle/free",
+        "oracle/agentic",
+        "oracle/premium",
+    ]
 
     def __init__(
         self,
         host: str = "127.0.0.1",
         port: int = 8090,
         db_dir: str = "/root/ai_browser_farm",
+        nous_proxy_url: str = "http://127.0.0.1:8645/v1",
         driver_fn: Optional[Callable[[str, str, str], str]] = None,
         webhook_sender_fn: Optional[Callable[[str, bytes, Dict[str, str]], int]] = None,
+        upstream_chat_fn: Optional[Callable[[str, Dict[str, Any]], str]] = None,
     ) -> None:
         self.host = host
         self.db_dir = db_dir
+        self.nous_proxy_url = nous_proxy_url
         os.makedirs(self.db_dir, exist_ok=True)
         self.job_store = JobStore(os.path.join(self.db_dir, "jobs.db"))
         self.router = DynamicOracleRouter(os.path.join(self.db_dir, "router.db"))
         self.worker = BrowserWorker(driver_fn=driver_fn)
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)
+        self.upstream_chat_fn = upstream_chat_fn
         self.watchdog = SelfHealingWatchdog(
             health_probes={"job_store": lambda: True, "router_db": lambda: True},
             restart_fn=lambda svc: True,
@@ -65,6 +78,35 @@ class BrowserFarmSaaSServer:
                     report = parent.watchdog.run_cycle()
                     self._send_json(200, {"status": "ok", "watchdog": report})
                     return
+
+                if self.path == "/v1/models/profiles":
+                    self._send_json(200, parent.router.export_model_profiles_json())
+                    return
+
+                if self.path == "/v1/models":
+                    data_rows: List[Dict[str, Any]] = [
+                        {
+                            "id": vp,
+                            "object": "model",
+                            "owned_by": "oracle-router",
+                            "context_length": 1000000,
+                        }
+                        for vp in parent.VIRTUAL_ROUTING_PROFILES
+                    ]
+                    for mid, prof in parent.router.inventory.items():
+                        data_rows.append(
+                            {
+                                "id": mid,
+                                "object": "model",
+                                "owned_by": prof.provider,
+                                "tier": prof.tier,
+                                "supports_vision": prof.supports_vision,
+                                "sale_badge": prof.sale_badge,
+                            }
+                        )
+                    self._send_json(200, {"object": "list", "data": data_rows})
+                    return
+
                 if self.path.startswith("/v1/jobs/"):
                     job_id = self.path.split("/v1/jobs/", 1)[1].strip("/")
                     try:
@@ -145,6 +187,63 @@ class BrowserFarmSaaSServer:
                         ),
                     )
                     self._send_json(200, res)
+                    return
+
+                if self.path == "/v1/chat/completions":
+                    session_id = self.headers.get("x-hermes-session-id", "")
+                    task_type, needs_vision, target_tier = (
+                        parent.router.classify_chat_request(
+                            payload, session_id=session_id
+                        )
+                    )
+                    tier_models = parent.router.tiers[target_tier - 1]
+                    chosen_model = parent.router.select_best_in_tier(
+                        tier_models,
+                        task_type=task_type,
+                        needs_vision=needs_vision,
+                    )
+                    tuning = parent.router.get_adaptive_tuning(
+                        chosen_model, task_type=task_type
+                    )
+                    if session_id:
+                        parent.router.session_sticky_models[session_id] = chosen_model
+
+                    if parent.upstream_chat_fn:
+                        reply_text = parent.upstream_chat_fn(chosen_model, tuning)
+                    else:
+                        reply_text = f"[OracleRouter -> {chosen_model} | effort={tuning['reasoning_effort']}] OK"
+
+                    parent.router.record_outcome(
+                        chosen_model,
+                        passed=True,
+                        channel="weak",
+                        task_type=task_type,
+                    )
+                    completion_resp = {
+                        "id": f"chatcmpl-oracle-{int(time.time() * 1000)}",
+                        "object": "chat.completion",
+                        "created": int(time.time()),
+                        "model": chosen_model,
+                        "choices": [
+                            {
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": reply_text,
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "oracle_routing": {
+                            "selected_model": chosen_model,
+                            "task_type": task_type,
+                            "tier": target_tier,
+                            "session_id": session_id,
+                            "upstream_proxy": parent.nous_proxy_url,
+                            "tuning": tuning,
+                        },
+                    }
+                    self._send_json(200, completion_resp)
                     return
 
                 self._send_json(404, {"error": "Unknown endpoint"})

@@ -1,9 +1,9 @@
 {
   "summary": {
     "total_files": 23,
-    "total_classes": 9,
-    "total_functions": 50,
-    "total_loc": 1303
+    "total_classes": 10,
+    "total_functions": 65,
+    "total_loc": 2281
   },
   "modules": [
     {
@@ -105,7 +105,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 164,
+      "loc": 263,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -132,6 +132,7 @@
         "src.router.oracle_router",
         "src.search.query_fanout",
         "threading",
+        "time",
         "typing"
       ],
       "calls": [
@@ -145,7 +146,9 @@
         "WebhookDispatcher",
         "_read_json",
         "_send_json",
+        "append",
         "bool",
+        "classify_chat_request",
         "create_job",
         "decode",
         "dispatch",
@@ -154,9 +157,12 @@
         "end_headers",
         "execute_fanout_and_ground",
         "execute_task",
+        "export_model_profiles_json",
         "get",
+        "get_adaptive_tuning",
         "get_job",
         "int",
+        "items",
         "join",
         "len",
         "loads",
@@ -164,9 +170,11 @@
         "mark_completed",
         "mark_running",
         "read",
+        "record_outcome",
         "route_and_execute",
         "run",
         "run_cycle",
+        "select_best_in_tier",
         "send_header",
         "send_response",
         "server_close",
@@ -177,9 +185,11 @@
         "startswith",
         "str",
         "strip",
+        "time",
+        "upstream_chat_fn",
         "write"
       ],
-      "change_risk": 8.05
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine",
@@ -194,28 +204,43 @@
     {
       "module": "src.browser_engine.browser_orchestrator",
       "path": "src/browser_engine/browser_orchestrator.py",
-      "loc": 33,
+      "loc": 109,
       "classes": [
         "BrowserFarmOrchestrator"
       ],
       "functions": [
+        "__init__",
+        "_extract_domain",
         "select_engine",
+        "record_domain_escalation",
         "build_session_task"
       ],
       "imports": [
-        "typing"
+        "src.devtools.self_evolution_engine",
+        "typing",
+        "urllib.parse"
       ],
       "calls": [
+        "_extract_domain",
+        "append",
+        "distill_evolution_record",
+        "extend",
+        "get",
+        "join",
+        "len",
+        "lower",
         "replace",
         "select_engine",
-        "strip"
+        "setdefault",
+        "strip",
+        "urlparse"
       ],
-      "change_risk": 1.41
+      "change_risk": 5.16
     },
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 121,
+      "loc": 127,
       "classes": [
         "BrowserWorker"
       ],
@@ -250,6 +275,7 @@
         "join",
         "len",
         "read",
+        "record_domain_escalation",
         "splitlines",
         "startswith",
         "strip",
@@ -258,7 +284,7 @@
         "urljoin",
         "urlopen"
       ],
-      "change_risk": 5.91
+      "change_risk": 5.99
     },
     {
       "module": "src.devtools",
@@ -417,7 +443,7 @@
     {
       "module": "src.infra.hermes_config_builder",
       "path": "src/infra/hermes_config_builder.py",
-      "loc": 138,
+      "loc": 195,
       "classes": [],
       "functions": [
         "build_optimal_hermes_spec",
@@ -432,7 +458,7 @@
         "lower",
         "str"
       ],
-      "change_risk": 2.33
+      "change_risk": 3.04
     },
     {
       "module": "src.infra.self_healing_watchdog",
@@ -540,50 +566,101 @@
     {
       "module": "src.router.oracle_router",
       "path": "src/router/oracle_router.py",
-      "loc": 139,
+      "loc": 879,
       "classes": [
         "OracleSignal",
+        "ModelProfile",
         "DynamicOracleRouter"
       ],
       "functions": [
+        "_build_full_nous_inventory",
+        "__post_init__",
         "__init__",
+        "_connect",
         "_init_db",
+        "sync_live_model_catalog",
         "record_outcome",
         "get_model_score",
+        "get_adaptive_tuning",
+        "export_model_profiles_json",
+        "get_task_tier_floor",
+        "_record_evolution",
+        "get_evolution_ledger",
+        "_maybe_evolve_task_floor",
         "select_best_in_tier",
-        "route_and_execute"
+        "classify_chat_request",
+        "route_and_execute",
+        "combined_score"
       ],
       "imports": [
-        "contextlib",
         "dataclasses",
+        "json",
         "math",
+        "os",
+        "re",
         "sqlite3",
+        "src.devtools.self_evolution_engine",
         "time",
         "typing"
       ],
       "calls": [
+        "ModelProfile",
+        "__setattr__",
+        "_build_full_nous_inventory",
+        "_connect",
         "_init_db",
+        "_maybe_evolve_task_floor",
+        "_record_evolution",
+        "abspath",
+        "any",
         "append",
-        "closing",
+        "asdict",
+        "bool",
+        "close",
         "commit",
         "connect",
-        "enumerate",
+        "dataclass",
+        "dict",
+        "dirname",
+        "distill_evolution_record",
+        "dump",
         "execute",
         "executor",
         "fetchall",
+        "fetchone",
         "float",
         "get",
+        "get_adaptive_tuning",
         "get_model_score",
+        "get_task_tier_floor",
+        "group",
+        "index",
+        "int",
+        "isinstance",
+        "items",
+        "join",
         "len",
         "list",
+        "lower",
+        "makedirs",
         "max",
+        "min",
+        "open",
         "oracle_validator",
         "pow",
+        "range",
         "record_outcome",
+        "round",
+        "search",
         "select_best_in_tier",
-        "time"
+        "sorted",
+        "startswith",
+        "str",
+        "sum",
+        "time",
+        "tuple"
       ],
-      "change_risk": 5.74
+      "change_risk": 10.0
     },
     {
       "module": "src.search",
@@ -647,11 +724,13 @@
     "src.api.server.start_background",
     "src.devtools.security_audit.audit_skill_markdown",
     "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",
-    "src.devtools.self_evolution_engine.distill_evolution_record",
     "src.devtools.self_evolution_engine.evaluate_silent_watchdog",
     "src.devtools.token_and_debt_hygiene.compress_cli_output",
     "src.infra.hermes_config_builder.generate_hermes_cli_commands",
     "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
+    "src.router.oracle_router.combined_score",
+    "src.router.oracle_router.get_evolution_ledger",
+    "src.router.oracle_router.sync_live_model_catalog",
     "src.search.query_fanout.default_searxng_search"
   ]
 }

@@ -56,7 +56,7 @@ def _default_url_driver(engine: str, url: str, session_name: str) -> str:
 
 
 class BrowserWorker:
-    """Lightpanda -> Chromium Browser-Use -> Camofox kademeli yükseltme ve Oracle doğrulama işçisi."""
+    """Lightpanda -> Chromium Browser-Use -> Camofox kademeli yükseltme ve Self-Evolving Oracle işçisi."""
 
     ENGINE_LADDER = ["lightpanda", "chromium-browser-use", "camofox"]
 
@@ -100,6 +100,12 @@ class BrowserWorker:
             md = html_to_clean_markdown(raw_html)
             discovered_apis = discover_har_api_endpoints(raw_html, base_url=url)
             if len(md.strip()) >= 10:
+                self.orchestrator.record_domain_escalation(
+                    url=url,
+                    attempted_engines=attempts,
+                    final_engine=engine,
+                    discovered_apis=discovered_apis,
+                )
                 return {
                     "job_id": job_id,
                     "session_name": spec["session_name"],

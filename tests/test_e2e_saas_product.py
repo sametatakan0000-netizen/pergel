@@ -71,6 +71,48 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     fetched = json.loads(resp.read().decode("utf-8"))
                 self.assertEqual(fetched["job_id"], job_id)
                 self.assertEqual(fetched["status"], "completed")
+
+                # 4. OpenAI-Compatible Custom Provider Proxy (/v1/models & /v1/chat/completions)
+                with urllib.request.urlopen(f"{base_url}/v1/models", timeout=5) as resp:
+                    models_payload = json.loads(resp.read().decode("utf-8"))
+                model_ids = {m["id"] for m in models_payload["data"]}
+                self.assertIn("oracle/auto", model_ids)
+                self.assertIn("oracle/free", model_ids)
+                self.assertIn("google/gemini-4-argon", model_ids)
+
+                chat_req_body = json.dumps(
+                    {
+                        "model": "oracle/auto",
+                        "messages": [
+                            {"role": "user", "content": "Karmaşık tersine mühendislik mimarisi ve Ghidra decompile planı çıkar"}
+                        ],
+                        "tools": [{"type": "function", "function": {"name": "terminal"}}],
+                    }
+                ).encode("utf-8")
+                chat_req = urllib.request.Request(
+                    f"{base_url}/v1/chat/completions",
+                    data=chat_req_body,
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-hermes-session-id": "sess_test_affinity_01",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(chat_req, timeout=5) as resp:
+                    chat_res = json.loads(resp.read().decode("utf-8"))
+                self.assertEqual(chat_res["object"], "chat.completion")
+                self.assertIn("oracle_routing", chat_res)
+                self.assertIn("selected_model", chat_res["oracle_routing"])
+                self.assertIn("reasoning_effort", chat_res["oracle_routing"]["tuning"])
+                self.assertIn("role_persona", chat_res["oracle_routing"]["tuning"])
+
+                # 5. Model Profiles Registry Endpoint (/v1/models/profiles)
+                with urllib.request.urlopen(
+                    f"{base_url}/v1/models/profiles", timeout=5
+                ) as resp:
+                    prof_res = json.loads(resp.read().decode("utf-8"))
+                self.assertGreaterEqual(prof_res["total_models"], 64)
+                self.assertIn("google/gemini-4-argon", prof_res["profiles"])
             finally:
                 server.shutdown()
 
