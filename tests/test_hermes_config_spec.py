@@ -33,7 +33,7 @@ class TestHermesConfigSpec(unittest.TestCase):
         self.assertEqual(
             spec["auxiliary"]["vision"]["model"], "google/gemini-4-argon"
         )
-        # Named Custom Provider proxy bridging Hermes -> DynamicOracleRouter (:8090) -> hermes proxy (:8645 -> Nous Portal)
+        # Named Custom Provider proxy bridging Hermes -> oracle router (:8090, LiveRouter) -> hermes proxy (:8645 -> Nous Portal)
         self.assertIn("oracle-router", spec["providers"])
         oracle_prov = spec["providers"]["oracle-router"]
         self.assertEqual(oracle_prov["api"], "http://127.0.0.1:8090/v1")

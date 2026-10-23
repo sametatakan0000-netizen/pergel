@@ -11,11 +11,11 @@ class TestSeniorDevToolbox(unittest.TestCase):
         graph = build_codebase_knowledge_graph("/root/ai_browser_farm/src")
         self.assertGreaterEqual(graph["summary"]["total_files"], 5)
         module_paths = [m["module"] for m in graph["modules"]]
-        self.assertIn("src.router.oracle_router", module_paths)
+        self.assertIn("src.router.live_router", module_paths)
         router_mod = next(
-            m for m in graph["modules"] if m["module"] == "src.router.oracle_router"
+            m for m in graph["modules"] if m["module"] == "src.router.live_router"
         )
-        self.assertIn("DynamicOracleRouter", router_mod["classes"])
+        self.assertIn("LiveRouter", router_mod["classes"])
         self.assertIn("change_risk", router_mod)
         self.assertIn("dead_code_candidates", graph)
 
