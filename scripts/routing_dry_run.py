@@ -23,7 +23,7 @@ class Echo(BaseHTTPRequestHandler):
     def do_POST(self):
         req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         seen.append(req)
-        body = json.dumps({"id": "echo", "model": req["model"], "choices": [],
+        body = json.dumps({"id": "echo", "model": req["model"], "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}}],
                            "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode()
         self.send_response(200); self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
