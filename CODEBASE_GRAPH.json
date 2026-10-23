@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 26,
     "total_classes": 12,
-    "total_functions": 137,
-    "total_loc": 2781
+    "total_functions": 138,
+    "total_loc": 2797
   },
   "modules": [
     {
@@ -690,7 +690,7 @@
     {
       "module": "src.router.live_router",
       "path": "src/router/live_router.py",
-      "loc": 364,
+      "loc": 380,
       "classes": [
         "LiveRouter"
       ],
@@ -709,6 +709,7 @@
         "record_upstream",
         "cooling_down",
         "dead_models",
+        "served_models",
         "model_stats",
         "_overpaying",
         "_pool",
@@ -778,6 +779,7 @@
         "prune_dominated",
         "reliability_map",
         "segment",
+        "served_models",
         "set",
         "sorted",
         "split",

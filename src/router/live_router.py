@@ -14,13 +14,14 @@ Selection policy (documented, deterministic):
   3. Inventory filter: a candidate that another candidate Pareto-dominates (no better on any
      verified axis: price in/out, intelligence index, context window — strictly worse on at
      least one) is demoted to a last-resort fallback and can only run when the primary pool
-     is exhausted. Unknown values never dominate: no fabricated quality claims. A model the
-     upstream never served (all-404, zero successes) cannot dominate anyone — half-price
-     variant metadata must not demote a working model.
+     is exhausted. Unknown values never dominate: no fabricated quality claims. Only a model
+     with a real 200 on record may dominate — untried metadata promising a half-price twin
+     must never demote a working model (observed: unserved ``:batch`` variants 404 upstream).
   4. Order: tiers >= start (ascending), then intelligence bands — adjusted Artificial
-     Analysis indexes within QUALITY_TOLERANCE points count as EQUAL, so the cheaper model
-     wins the band — then lower price. Lower tiers follow as last-resort fallbacks. Models
-     cooling down after 429/5xx/404 move to the end; repeated 404s back off exponentially.
+     Analysis indexes within QUALITY_TOLERANCE points count as EQUAL — inside a band a model
+     with a proven 200 leads never-served candidates, then lower price (in, out). Lower tiers
+     follow as last-resort fallbacks. Models cooling down after 429/5xx/404 move to the end;
+     repeated 404s back off exponentially.
   5. Session affinity is persisted in SQLite. The pin survives while the turn demands a
      comparable price tier (STICKY_TIER_GRACE) and no cheaper candidate sits within
      QUALITY_TOLERANCE of it (prompt-cache survival); easier turns release the pin instead
@@ -94,13 +95,16 @@ def dominates(q: VerifiedProfile, p: VerifiedProfile) -> bool:
     return no_worse and strictly_better
 
 
-def prune_dominated(pool: List[VerifiedProfile], dead: Optional[set] = None):
+def prune_dominated(pool: List[VerifiedProfile], dead: Optional[set] = None,
+                    served: Optional[set] = None):
     """Split the pool into (primary, dominated). Dominated models are never worth picking
-    while their dominator runs, so they stay reachable only as very last resort. Models in
-    ``dead`` (never served by the upstream) may not dominate: their metadata can promise a
-    half-price variant that simply does not exist upstream."""
+    while their dominator runs, so they stay reachable only as very last resort. Only served
+    models (a real 200 on record, unless ``served`` is None) may dominate; ``dead`` models
+    (all-404, never served) may not. Metadata alone cannot demote a working model — phantom
+    half-price variants must not push proven models out of the primary pool."""
     dead = dead or set()
-    dominators = [p for p in pool if p.model_id not in dead]
+    dominators = [p for p in pool
+                  if p.model_id not in dead and (served is None or p.model_id in served)]
     primary: List[VerifiedProfile] = []
     dominated: List[VerifiedProfile] = []
     for p in pool:
@@ -214,6 +218,14 @@ class LiveRouter:
                 "GROUP BY model_id").fetchall()
         return {mid for mid, wins, misses in rows if not wins and misses}
 
+    def served_models(self) -> set:
+        """Models with at least one real 200: the only ones trusted to dominate peers or to
+        outrank never-tried candidates inside a tolerance band."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT model_id FROM upstream_events WHERE status = 200").fetchall()
+        return {r[0] for r in rows}
+
     def model_stats(self, model_id: str) -> Dict[str, Any]:
         with self._conn() as conn:
             row = conn.execute(
@@ -256,11 +268,15 @@ class LiveRouter:
     def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool, min_context: int = 0,
                  learned: Optional[Dict[str, float]] = None) -> List[str]:
         pool = self._pool(free_only, needs_vision, min_context)
-        primary, dominated = prune_dominated(pool, self.dead_models())
+        served = self.served_models()
+        primary, dominated = prune_dominated(pool, self.dead_models(), served)
         learned = learned or {}
 
         def key(p: VerifiedProfile):
-            return (price_tier(p), p.billed_cost_in or 0.0, p.billed_cost_out or 0.0,
+            # Inside a tolerance band: a model that actually served beats never-tried
+            # candidates first (phantom cheap variants must not lead while proven ones work).
+            return (price_tier(p), 0 if p.model_id in served else 1,
+                    p.billed_cost_in or 0.0, p.billed_cost_out or 0.0,
                     -adjusted_quality(p, learned), p.model_id)
 
         def band_sorted(models: List[VerifiedProfile]) -> List[VerifiedProfile]:

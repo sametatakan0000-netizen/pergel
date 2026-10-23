@@ -167,6 +167,7 @@ class TestLiveRouter(unittest.TestCase):
         profiles["v/free-text"] = replace(profiles["v/free-text"], intelligence_index=40.0)
         profiles["v/cheap-vision"] = replace(profiles["v/cheap-vision"], intelligence_index=20.0)
         router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.record_upstream("v/free-text", status=200, latency_ms=5, now=1000.0)  # proven dominator
         plan = router.plan(chat("merhaba"))
         self.assertEqual(plan[0], "v/free-text")
         self.assertEqual(plan[-1], "v/cheap-vision")  # kept only as very last resort
@@ -188,12 +189,26 @@ class TestLiveRouter(unittest.TestCase):
                                              list_cost_in=0.05, list_cost_out=0.2)
         profiles["v/mid"] = replace(profiles["v/mid"], intelligence_index=40.0)
         router = LiveRouter(self.db, profiles, explore_epsilon=0)
-        router.record_upstream("v/cheap-vision", status=404, latency_ms=5, now=1000.0)
+        router.record_upstream("v/mid", status=200, latency_ms=5, now=1000.0)        # working model
+        router.record_upstream("v/cheap-vision", status=404, latency_ms=5, now=1000.0)  # phantom
         plan = router.plan(chat("merhaba"), now=2000.0)
         # v/mid keeps its tier-2 slot ahead of tier-3 fallbacks (demotion would push it
         # behind every primary model), and the phantom stays last (cooling after its 404).
         self.assertLess(plan.index("v/mid"), plan.index("v/flagship"))
         self.assertEqual(plan[-1], "v/cheap-vision")
+
+    def test_served_model_outranks_untried_phantom_in_band(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        # Same tier, same tolerance band, the never-tried twin is cheaper — but only v/mid
+        # has ever served. The proven model leads; the phantom waits for real evidence.
+        profiles["v/cheap-vision"] = replace(profiles["v/cheap-vision"], intelligence_index=40.0,
+                                             list_cost_in=0.15, list_cost_out=0.6)
+        profiles["v/mid"] = replace(profiles["v/mid"], intelligence_index=40.0,
+                                    list_cost_in=0.2, list_cost_out=0.8)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.record_upstream("v/mid", status=200, latency_ms=10, now=1000.0)
+        self.assertEqual(router.plan(chat("merhaba"))[0], "v/mid")
 
     def test_learned_failures_reorder_candidates_within_a_tier(self):
         self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/free-text")
