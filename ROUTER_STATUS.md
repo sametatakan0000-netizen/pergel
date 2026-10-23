@@ -57,3 +57,14 @@ ORACLE_ROUTER_APPLY=1 bash scripts/hermes_full_optimize_commands.sh   # register
 Then in a **new** Hermes session: `/model custom:oracle-router:oracle/auto`. The main model default is untouched until you choose `--global`.
 
 Tests: `python3 -m unittest discover -s tests -t .` · Status: `python3 -m src.cli doctor` → `PROTOTYPE`.
+
+## Offline measurement vs xRouteBench (2026-10-23, zero model calls)
+
+`scripts/bench/xroutebench_keyword_tier.py` replays the **precomputed** xRouteBench `llmrouter_generic` test split
+(3,729 queries × 18 models, HF `ulab-ai/xRouteBench`) against our `keyword_tier`. Findings (classifier only; the
+18-model pool is not our Nous pool, queries are benchmark-style, not chat traffic):
+- Reference: best fixed model 0.805, per-query oracle 0.929.
+- Keyword tiers separate difficulty only weakly: mean perf over all models is tier1 0.647, tier2 0.518, **tier3 0.691** (n=59).
+  Tier 2 is harder than tier 1, but tier 3 ("architecture/design/analysis") is *not* harder, so the tier-3 keywords are not a reliable hardness signal.
+- 78% of queries land in tier 1, so the keyword guess alone would send most traffic to the cheapest band; the learned per-bucket floors and escalation are what protect quality, not the classifier.
+- Not shown: end-to-end router score (our router starts at a tier floor and escalates, it does not hard-route). Next step if wanted: replay the full `plan()` logic on this data.
