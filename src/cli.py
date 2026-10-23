@@ -1,10 +1,13 @@
 """AI-Native Browser Engine & Self-Evolution Lab Birleşik CLI Komuta Aracı."""
 import argparse
+import os
+import pathlib
 import json
 import sys
 import threading
 import urllib.error
 
+REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 from src.devtools.codebase_graph import build_codebase_knowledge_graph
 from src.devtools.security_audit import run_defensive_security_audit
 from src.devtools.token_and_debt_hygiene import scan_shortcut_debt
@@ -21,10 +24,10 @@ def main() -> int:
     sub.add_parser("doctor", help="Run full architecture, security, and debt audit")
     serve = sub.add_parser("serve", help="Serve the local router (Nous proxy must run separately)")
     serve.add_argument("--port", type=int, default=8090)
-    serve.add_argument("--db-dir", default="/root/ai_browser_farm")
+    serve.add_argument("--db-dir", default=REPO_ROOT)
     serve.add_argument("--nous-proxy-url", default="http://127.0.0.1:8645/v1")
     refresh = sub.add_parser("refresh-catalog", help="Rebuild verified model registry from public catalog + metadata (no inference)")
-    refresh.add_argument("--registry-path", default="/root/ai_browser_farm/model_registry.json")
+    refresh.add_argument("--registry-path", default=os.path.join(REPO_ROOT, "model_registry.json"))
 
     args = parser.parse_args()
     if args.command == "refresh-catalog":
@@ -64,14 +67,14 @@ def main() -> int:
         return 0
 
     if args.command == "graph":
-        graph = build_codebase_knowledge_graph("/root/ai_browser_farm/src")
+        graph = build_codebase_knowledge_graph(os.path.join(REPO_ROOT, "src"))
         print(json.dumps(graph["summary"], indent=2))
         return 0
 
     if args.command == "doctor":
-        graph = build_codebase_knowledge_graph("/root/ai_browser_farm/src")
-        sec = run_defensive_security_audit("/root/ai_browser_farm/src")
-        debt = scan_shortcut_debt("/root/ai_browser_farm/src")
+        graph = build_codebase_knowledge_graph(os.path.join(REPO_ROOT, "src"))
+        sec = run_defensive_security_audit(os.path.join(REPO_ROOT, "src"))
+        debt = scan_shortcut_debt(os.path.join(REPO_ROOT, "src"))
         spec = build_optimal_hermes_spec()
         report = {
             "status": "PROTOTYPE" if sec["status"] == "PASS" else "WARNING",

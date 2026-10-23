@@ -3,7 +3,7 @@
     "total_files": 26,
     "total_classes": 11,
     "total_functions": 126,
-    "total_loc": 2580
+    "total_loc": 2583
   },
   "modules": [
     {
@@ -19,7 +19,7 @@
     {
       "module": "src.cli",
       "path": "src/cli.py",
-      "loc": 91,
+      "loc": 94,
       "classes": [],
       "functions": [
         "main",
@@ -29,6 +29,8 @@
         "argparse",
         "datetime",
         "json",
+        "os",
+        "pathlib",
         "src.api.server",
         "src.devtools.codebase_graph",
         "src.devtools.security_audit",
@@ -43,6 +45,7 @@
         "ArgumentParser",
         "BrowserFarmSaaSServer",
         "Event",
+        "Path",
         "Thread",
         "add_argument",
         "add_parser",
@@ -55,6 +58,7 @@
         "is_set",
         "isoformat",
         "items",
+        "join",
         "len",
         "main",
         "now",
@@ -62,6 +66,7 @@
         "print",
         "print_help",
         "refresh_registry",
+        "resolve",
         "run_defensive_security_audit",
         "save_snapshot",
         "scan_shortcut_debt",
@@ -70,11 +75,12 @@
         "sorted",
         "start",
         "start_background",
+        "str",
         "sum",
         "values",
         "wait"
       ],
-      "change_risk": 7.14
+      "change_risk": 7.58
     },
     {
       "module": "src.api",
@@ -192,6 +198,7 @@
         "_relay_stream",
         "_send_json",
         "_usage_from",
+        "abspath",
         "analyze_response",
         "as_response",
         "asdict",
@@ -200,6 +207,7 @@
         "commit_choice",
         "create_job",
         "decode",
+        "dirname",
         "dispatch",
         "dumps",
         "encode",

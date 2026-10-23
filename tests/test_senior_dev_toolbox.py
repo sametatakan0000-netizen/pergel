@@ -1,4 +1,8 @@
+import os
+import pathlib
 import unittest
+
+REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 from src.devtools.codebase_graph import build_codebase_knowledge_graph
 from src.devtools.security_audit import (
     audit_skill_markdown,
@@ -8,7 +12,7 @@ from src.devtools.security_audit import (
 
 class TestSeniorDevToolbox(unittest.TestCase):
     def test_build_codebase_knowledge_graph_indexes_modules_dead_code_and_change_risk(self):
-        graph = build_codebase_knowledge_graph("/root/ai_browser_farm/src")
+        graph = build_codebase_knowledge_graph(os.path.join(REPO_ROOT, "src"))
         self.assertGreaterEqual(graph["summary"]["total_files"], 5)
         module_paths = [m["module"] for m in graph["modules"]]
         self.assertIn("src.router.live_router", module_paths)
@@ -20,7 +24,7 @@ class TestSeniorDevToolbox(unittest.TestCase):
         self.assertIn("dead_code_candidates", graph)
 
     def test_defensive_security_audit_passes_clean_code_and_blocks_toxic_skill(self):
-        clean_report = run_defensive_security_audit("/root/ai_browser_farm/src")
+        clean_report = run_defensive_security_audit(os.path.join(REPO_ROOT, "src"))
         self.assertEqual(clean_report["status"], "PASS")
         self.assertEqual(len(clean_report["critical_findings"]), 0)
 

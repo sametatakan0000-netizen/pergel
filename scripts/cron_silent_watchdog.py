@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Sıfır-Token Sessiz Altyapı Watchdog Betiği (`no_agent=True` Cronjob için)."""
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
 
-sys.path.insert(0, "/root/ai_browser_farm")
+REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.insert(0, REPO_ROOT)
 from src.devtools.self_evolution_engine import evaluate_silent_watchdog
 
 
 def main() -> int:
-    usage = shutil.disk_usage("/root")
+    usage = shutil.disk_usage(REPO_ROOT)
     free_gb = usage.free / (1024 ** 3)
 
     proc = subprocess.run(
@@ -20,11 +22,11 @@ def main() -> int:
             "unittest",
             "discover",
             "-s",
-            "/root/ai_browser_farm/tests",
+            os.path.join(REPO_ROOT, "tests"),
             "-t",
-            "/root/ai_browser_farm",
+            REPO_ROOT,
         ],
-        cwd="/root/ai_browser_farm",
+        cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )

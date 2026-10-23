@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Set
 
 
 def build_codebase_knowledge_graph(
-    src_root: str, output_json_path: str = "/root/ai_browser_farm/CODEBASE_GRAPH.json"
+    src_root: str, output_json_path: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "CODEBASE_GRAPH.json")
 ) -> Dict[str, Any]:
     """Modülleri, sınıfları, fonksiyonları, çağrı ağını, ölü kod adaylarını ve risk puanını çıkarır."""
     modules: List[Dict[str, Any]] = []

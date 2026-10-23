@@ -48,7 +48,7 @@ class BrowserFarmSaaSServer:
         self,
         host: str = "127.0.0.1",
         port: int = 8090,
-        db_dir: str = "/root/ai_browser_farm",
+        db_dir: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         nous_proxy_url: str = "http://127.0.0.1:8645/v1",
         driver_fn: Optional[Callable[[str, str, str], str]] = None,
         webhook_sender_fn: Optional[Callable[[str, bytes, Dict[str, str]], int]] = None,

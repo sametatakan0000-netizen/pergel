@@ -10,21 +10,22 @@
 - `src/net_lab/sober_net_diagnostics.py` — Linux Sober (Roblox) & Minecraft socket/MTU/TLS diagnostics.
 
 ## 2. Verification & Commands (S-Tier Rule #1: "Done is a Claim — Show the Receipt")
+- (`$REPO` = repo root: `~/.hermes/sandboxes/docker/default/home/ai_browser_farm` on host)
 - Run full test suite (must pass 100% before and after every change):
   ```bash
-  python3 -m unittest discover -s /root/ai_browser_farm/tests -t /root/ai_browser_farm -v
+  python3 -m unittest discover -s $REPO/tests -t $REPO -v
   ```
 - Refresh Codebase Knowledge Graph (`CODEBASE_GRAPH.json`):
   ```bash
-  PYTHONPATH=/root/ai_browser_farm python3 -m src.cli graph
+  PYTHONPATH=$REPO python3 -m src.cli graph
   ```
 - Run full Doctor & Security/Debt Audit:
   ```bash
-  PYTHONPATH=/root/ai_browser_farm python3 -m src.cli doctor
+  PYTHONPATH=$REPO python3 -m src.cli doctor
   ```
 
 ## 3. Senior Engineering Rules (Karpathy + Ponytail + RTK + Graphify)
-1. **Graph-First Navigation:** Read `/root/ai_browser_farm/CODEBASE_GRAPH.json` before opening individual source files to avoid burning context tokens.
+1. **Graph-First Navigation:** Read `$REPO/CODEBASE_GRAPH.json` before opening individual source files to avoid burning context tokens.
 2. **YAGNI & Shortcut Debt Ledger (`ponytail`):** Write minimal, zero-bloat code. Any deliberate simplification MUST carry a comment `# shortcut: <current limit>, <when to upgrade>`.
 3. **Token & Context Hygiene (`rtk` / `caveman`):** Keep active context well below 200k tokens. Compress noisy CLI outputs via `compress_cli_output`.
 4. **ToxicSkills Quarantine (`Snyk` / `Strix`):** Never install an external `SKILL.md` without passing `audit_skill_markdown` first.

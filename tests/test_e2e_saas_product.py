@@ -56,6 +56,9 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 profiles=fixture_profiles(),
                 driver_fn=mock_driver,
                 webhook_sender_fn=mock_webhook_sender,
+                # Unreachable upstream: test must not depend on a live local
+                # `hermes proxy` on :8645.
+                nous_proxy_url="http://127.0.0.1:9/v1",
             )
             server.start_background()
             try:
