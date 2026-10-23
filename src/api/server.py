@@ -21,6 +21,7 @@ from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
+from src.router.moa_plan import plan_moa
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
 
@@ -246,6 +247,23 @@ class BrowserFarmSaaSServer:
                         self._send_json(502, {"error": f"search backend unavailable: {type(exc).__name__}"})
                         return
                     self._send_json(200, res)
+                    return
+
+                if self.path == "/v1/router/moa":
+                    # Decision preview only: nothing is sent upstream, no tokens are spent.
+                    if not isinstance(payload.get("messages"), list) or not payload["messages"]:
+                        self._send_json(400, {"error": "messages must be a nonempty array"})
+                        return
+                    payload["model"] = parent.live.normalize_model(payload.get("model"))
+                    session_id = self.headers.get("x-hermes-session-id", "") or None
+                    try:
+                        decision = plan_moa(parent.live, payload, session_id=session_id,
+                                            spent_today_usd=payload.get("spent_today_usd", 0.0),
+                                            force=bool(payload.get("force", False)))
+                    except KeyError as exc:
+                        self._send_json(404, {"error": f"Unknown model: {exc.args[0]}"})
+                        return
+                    self._send_json(200, decision)
                     return
 
                 if self.path == "/v1/router/complete":

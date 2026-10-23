@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 26,
+    "total_files": 27,
     "total_classes": 12,
-    "total_functions": 139,
-    "total_loc": 2809
+    "total_functions": 143,
+    "total_loc": 2965
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 410,
+      "loc": 428,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -173,6 +173,7 @@
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
         "src.router.live_router",
+        "src.router.moa_plan",
         "src.router.model_registry",
         "src.router.outcome_learning",
         "src.search.query_fanout",
@@ -249,6 +250,7 @@
         "now",
         "on_request",
         "on_response",
+        "plan_moa",
         "plan_with_context",
         "pop",
         "prepare_payload",
@@ -791,6 +793,45 @@
         "values"
       ],
       "change_risk": 10.0
+    },
+    {
+      "module": "src.router.moa_plan",
+      "path": "src/router/moa_plan.py",
+      "loc": 138,
+      "classes": [],
+      "functions": [
+        "turn_cost",
+        "budget_ratio",
+        "_member_key",
+        "plan_moa"
+      ],
+      "imports": [
+        "src.router.live_router",
+        "src.router.model_registry",
+        "src.router.request_features",
+        "typing"
+      ],
+      "calls": [
+        "_member_key",
+        "adjusted_quality",
+        "append",
+        "bool",
+        "budget_ratio",
+        "estimate_tokens",
+        "float",
+        "get",
+        "len",
+        "max",
+        "min",
+        "plan_with_context",
+        "price_tier",
+        "reliability_map",
+        "round",
+        "sort",
+        "start_tier",
+        "turn_cost"
+      ],
+      "change_risk": 7.33
     },
     {
       "module": "src.router.model_registry",

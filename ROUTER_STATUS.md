@@ -18,6 +18,25 @@ This repository does **not** modify the running Hermes gateway or its default mo
   - context-fit: conservative token estimate (images counted as 1.5K, not base64 bytes); models a request outgrows are skipped, so the advertised id reports the **largest** window (1.05M) to Hermes;
   - session affinity persisted; cleared on regenerate; 429/5xx → 5 min cooldown, 404 → 1 h doubling to 24 h; effort clamped to supported levels.
   - **No tier profiles as a feature.** `/v1/models` advertises exactly one id (`ADVERTISED_MODELS = oracle/auto`). `oracle/eco|agentic|premium|free` and all raw registry ids remain routable by explicit name for forcing/debugging, inspectable at `/v1/models/profiles`, and never shown in the picker.
+- **Amiral + subagents (`src/router/moa_plan.py`)** — decision layer only, no extra inference:
+  - **Amiral** = the first entry of `plan()`; no separate selector, so the existing tier /
+    tolerance / proven-before-untried policy decides it.
+  - **Subagents (MoA members)** = models in the *same or a cheaper* price tier whose adjusted
+    quality sits inside the Amiral's `QUALITY_TOLERANCE` band, greedy by quality-per-dollar
+    (learned reliability included), max 3, never a model outside the band.
+  - **Budget is dynamic, not a constant** — the cap is `amiral_single_turn_cost * ratio` where
+    `ratio = base_tier_ratio(3.0 / 2.0 / 1.5) * (1+hardness) * (1+uncertainty) * (1-spend_pressure)`:
+    harder-than-guessed turns (learned floor above the keyword guess), unproven buckets
+    (low learned reliability) and low spend buy more opinions; today's spend above a soft
+    allowance shrinks it to 1.0 (single model). The only fixed number is the runaway guard
+    `ABSOLUTE_TURN_CAP_USD = 0.60`.
+  - Easy turns (tier 1) never fan out; `force=true` overrides for inspection.
+  - `POST /v1/router/moa` returns the full decision (`amiral`, `members`, `cap_usd`,
+    `ratio`, `reason`) without sending anything upstream.
+  - Measured on the real snapshot (107K-token prompt): hard turn single `$0.095` → 2 members
+    `$0.190`; with `spent_today_usd=20` the same turn falls back to single. **Execution is not
+    wired yet** — `/v1/chat/completions` still sends one model, so members are a plan, not
+    parallel calls.
 - **Self-evolution (`src/router/outcome_learning.py`)** — learns from real traffic, zero extra inference:
   - structural checks: malformed tool-call JSON, unknown tool names, empty answers (stream and non-stream);
   - implicit feedback on the next user turn: regenerate −1, correction phrasing −0.5, continuing after a final answer +0.5; tool-loop turns neutral; aux calls (explicit models sharing the session id) ignored;

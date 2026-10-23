@@ -89,3 +89,41 @@ class TestFanout(_Base):
 
     def test_empty_query_400(self):
         self.assertEqual(call(self.start(), "/v1/search/fanout", {"query": " "})[0], 400)
+
+
+class TestMoaPreview(_Base):
+    def test_preview_returns_amiral_and_never_calls_upstream(self):
+        from dataclasses import replace
+        from src.router.model_registry import build_profiles
+        catalog = {"version": 1, "providers": {"nous": {"models": [
+            {"id": "m/cheap-a"}, {"id": "m/cheap-b"}, {"id": "m/top"}]}}}
+        dev = {"openrouter": {"models": {
+            "m/cheap-a": {"tool_call": True, "reasoning": False, "reasoning_options": [],
+                          "modalities": {"input": ["text"]}, "limit": {"context": 200000},
+                          "cost": {"input": 0.1, "output": 0.5}},
+            "m/cheap-b": {"tool_call": True, "reasoning": False, "reasoning_options": [],
+                          "modalities": {"input": ["text"]}, "limit": {"context": 200000},
+                          "cost": {"input": 0.08, "output": 0.4}},
+            "m/top": {"tool_call": True, "reasoning": False, "reasoning_options": [],
+                      "modalities": {"input": ["text"]}, "limit": {"context": 200000},
+                      "cost": {"input": 2.0, "output": 10.0}},
+        }}}
+        profiles = build_profiles(catalog, dev, fetched_at="t")
+        for mid, q in (("m/cheap-a", 44.0), ("m/cheap-b", 43.5), ("m/top", 57.0)):
+            profiles[mid] = replace(profiles[mid], intelligence_index=q)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        srv = BrowserFarmSaaSServer(port=0, db_dir=tmp.name, profiles=profiles,
+                                    driver_fn=lambda e, u, s: PAGE,
+                                    nous_proxy_url="http://127.0.0.1:9/v1")  # dead upstream
+        srv.start_background()
+        self.addCleanup(srv.shutdown)
+        base = f"http://127.0.0.1:{srv.port}"
+        body = {"model": "oracle/auto", "force": True,
+                "messages": [{"role": "user", "content": "merhaba"}]}
+        st, decision = call(base, "/v1/router/moa", body)
+        self.assertEqual(st, 200)              # dead upstream proves nothing was forwarded
+        self.assertEqual(decision["amiral"], "m/cheap-b")
+        self.assertIn("cap_usd", decision["moa"])
+        st, _ = call(base, "/v1/router/moa", {"messages": []})
+        self.assertEqual(st, 400)
