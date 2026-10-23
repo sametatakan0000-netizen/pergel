@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 27,
+    "total_files": 28,
     "total_classes": 12,
-    "total_functions": 145,
-    "total_loc": 2996
+    "total_functions": 153,
+    "total_loc": 3141
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 433,
+      "loc": 488,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -147,6 +147,8 @@
         "_validate_target",
         "__init__",
         "refresh_registry",
+        "_call_upstream",
+        "_apply_moa",
         "_forward_chat",
         "_relay_stream",
         "start_background",
@@ -173,6 +175,7 @@
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
         "src.router.live_router",
+        "src.router.moa_exec",
         "src.router.moa_plan",
         "src.router.model_registry",
         "src.router.outcome_learning",
@@ -197,6 +200,7 @@
         "ThreadingHTTPServer",
         "ValueError",
         "WebhookDispatcher",
+        "_apply_moa",
         "_elapsed_ms",
         "_forward_chat",
         "_read_json",
@@ -209,6 +213,7 @@
         "as_response",
         "asdict",
         "bool",
+        "build_aggregator_payload",
         "clear_sticky",
         "commit_choice",
         "create_job",
@@ -246,6 +251,7 @@
         "mark_completed",
         "mark_running",
         "max",
+        "member_usage_summary",
         "monotonic",
         "normalize_model",
         "now",
@@ -263,6 +269,7 @@
         "rstrip",
         "run",
         "run_cycle",
+        "run_members",
         "save_snapshot",
         "send_header",
         "send_response",
@@ -278,6 +285,7 @@
         "sum",
         "summary",
         "type",
+        "update",
         "update_profiles",
         "urlopen",
         "urlsplit",
@@ -801,6 +809,46 @@
       "change_risk": 10.0
     },
     {
+      "module": "src.router.moa_exec",
+      "path": "src/router/moa_exec.py",
+      "loc": 90,
+      "classes": [],
+      "functions": [
+        "draft_text",
+        "run_members",
+        "build_aggregator_payload",
+        "member_usage_summary",
+        "json_size",
+        "one"
+      ],
+      "imports": [
+        "concurrent.futures",
+        "json",
+        "typing"
+      ],
+      "calls": [
+        "ThreadPoolExecutor",
+        "append",
+        "call_fn",
+        "dict",
+        "draft_text",
+        "dumps",
+        "enumerate",
+        "get",
+        "isinstance",
+        "join",
+        "len",
+        "list",
+        "map",
+        "min",
+        "pop",
+        "range",
+        "strip",
+        "zip"
+      ],
+      "change_risk": 6.12
+    },
+    {
       "module": "src.router.moa_plan",
       "path": "src/router/moa_plan.py",
       "loc": 138,
@@ -1125,6 +1173,8 @@
     "src.router.live_router.key",
     "src.router.live_router.model_stats",
     "src.router.live_router.plan",
+    "src.router.moa_exec.json_size",
+    "src.router.moa_exec.one",
     "src.router.model_registry.auto_eligible",
     "src.router.model_registry.billed_cost_in",
     "src.router.model_registry.billed_cost_out",

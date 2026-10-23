@@ -12,7 +12,7 @@ import urllib.request
 from dataclasses import asdict
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.api.job_store import JobStore
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
@@ -21,12 +21,15 @@ from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
+from src.router.moa_exec import build_aggregator_payload, member_usage_summary, run_members
 from src.router.moa_plan import plan_moa
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
 
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
+# Amiral + subagent turns. Off by default until real traffic is observed; set to 1 to enable.
+MOA_ENABLED = os.environ.get("ORACLE_MOA", "0") == "1"
 
 
 def _elapsed_ms(started: float) -> int:
@@ -292,6 +295,8 @@ class BrowserFarmSaaSServer:
                     if not plan:
                         self._send_json(422, {"error": "No verified eligible model for requested profile"})
                         return
+                    if routed and MOA_ENABLED:
+                        payload, plan, _moa = parent._apply_moa(payload, plan, session_id)
                     parent._forward_chat(self, payload, plan[: parent.MAX_ATTEMPTS], session_id, bucket, routed)
                     return
 
@@ -309,6 +314,56 @@ class BrowserFarmSaaSServer:
         self.live.update_profiles(profiles)
         self.registry_fetched_at = fetched_at
         return sum(p.routable for p in profiles.values())
+
+    def _call_upstream(self, model_id: str, payload: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
+        """Non-streaming call for a subagent. Usage is recorded (spend accounting) but the
+        outcome is not fed to the learner: members are internal drafts, not user feedback."""
+        upstream_payload = self.live.prepare_payload(payload, model_id)
+        upstream_payload.pop("oracle_routing", None)
+        request = urllib.request.Request(
+            self.nous_proxy_url.rstrip("/") + "/chat/completions",
+            data=json.dumps(upstream_payload).encode("utf-8"), method="POST",
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {self.upstream_api_key}"},
+        )
+        started = time.monotonic()
+        try:
+            with urllib.request.urlopen(request, timeout=self.UPSTREAM_TIMEOUT) as upstream:
+                status, raw = upstream.status, upstream.read()
+        except urllib.error.HTTPError as exc:
+            self.live.record_upstream(model_id, exc.code, _elapsed_ms(started))
+            return exc.code, {}
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return 502, {}
+        try:
+            body = json.loads(raw)
+        except ValueError:
+            body = {}
+        usage = body.get("usage") if isinstance(body, dict) and isinstance(body.get("usage"), dict) else {}
+        self.live.record_upstream(model_id, status, _elapsed_ms(started),
+                                  usage.get("prompt_tokens"), usage.get("completion_tokens"))
+        return status, body if isinstance(body, dict) else {}
+
+    def _apply_moa(self, payload: Dict[str, Any], plan: List[str],
+                   session_id: Optional[str]) -> Tuple[Dict[str, Any], List[str], Dict[str, Any]]:
+        """Amiral + subagents for hard turns. Returns the (possibly enriched) payload, the
+        unchanged candidate plan (plan[0] stays the Amiral) and a decision summary.
+        Any failure degrades to the plain single-model path."""
+        try:
+            decision = plan_moa(self.live, payload, session_id=session_id,
+                                spent_today_usd=self.live.spent_today())
+        except Exception:
+            return payload, plan, {"enabled": False, "reason": "decision error"}
+        members = decision["moa"]["members"] if decision["moa"]["enabled"] else []
+        if not members or decision["amiral"] != plan[0]:
+            return payload, plan, {"enabled": False, "reason": decision["moa"]["reason"]}
+        drafts = run_members(self._call_upstream, members, payload)
+        info = member_usage_summary(drafts, members)
+        info.update({"enabled": bool(drafts), "amiral": plan[0],
+                     "cap_usd": decision["moa"]["cap_usd"]})
+        if not drafts:
+            return payload, plan, info
+        return build_aggregator_payload(payload, drafts), plan, info
 
     def _forward_chat(self, handler: BaseHTTPRequestHandler, payload: Dict[str, Any], plan: List[str],
                       session_id: Optional[str], bucket: str, routed: bool) -> None:
