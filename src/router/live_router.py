@@ -230,6 +230,32 @@ class LiveRouter:
                 "SELECT DISTINCT model_id FROM upstream_events WHERE status = 200").fetchall()
         return {r[0] for r in rows}
 
+    def spent_since(self, since: float, now: Optional[float] = None) -> float:
+        """USD actually billed since ``since``, from recorded usage and known prices.
+
+        Only 200 events with token counts count; a model without published prices is
+        skipped rather than guessed, so the figure is a lower bound on real spend.
+        """
+        now = time.time() if now is None else now
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT model_id, COALESCE(SUM(prompt_tokens),0), COALESCE(SUM(completion_tokens),0) "
+                "FROM upstream_events WHERE status = 200 AND ts >= ? AND ts <= ? GROUP BY model_id",
+                (since, now)).fetchall()
+        total = 0.0
+        for model_id, prompt_tokens, completion_tokens in rows:
+            profile = self.profiles.get(model_id)
+            if profile is None or profile.billed_cost_in is None or profile.billed_cost_out is None:
+                continue
+            total += (prompt_tokens * profile.billed_cost_in
+                      + completion_tokens * profile.billed_cost_out) / 1_000_000
+        return total
+
+    def spent_today(self, now: Optional[float] = None) -> float:
+        now = time.time() if now is None else now
+        midnight = now - (now % 86400)  # UTC day boundary
+        return self.spent_since(midnight, now=now)
+
     def model_stats(self, model_id: str) -> Dict[str, Any]:
         with self._conn() as conn:
             row = conn.execute(

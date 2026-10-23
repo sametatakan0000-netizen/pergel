@@ -121,6 +121,15 @@ class TestMoaPlan(unittest.TestCase):
         self.assertLessEqual(len(lean["moa"]["members"]), len(rich["moa"]["members"]))
         self.assertLessEqual(lean["moa"]["cap_usd"], rich["moa"]["cap_usd"])
 
+    def test_spent_today_is_computed_from_recorded_usage(self):
+        self.router.record_upstream("v/tiny-a", 200, 100, prompt_tokens=1_000_000,
+                                    completion_tokens=0, now=1000.0)
+        self.router.record_upstream("v/flagship", 200, 100, prompt_tokens=0,
+                                    completion_tokens=100_000, now=1000.0)
+        spent = self.router.spent_since(1000.0 - 60, now=1000.0)
+        # 1M input at $0.10 + 100K output at $10.00 per 1M
+        self.assertAlmostEqual(spent, 0.10 + 1.0, places=6)
+
     def test_member_cost_uses_prompt_size(self):
         small = turn_cost(self.profiles["v/tiny-a"], 1000)
         big = turn_cost(self.profiles["v/tiny-a"], 100000)

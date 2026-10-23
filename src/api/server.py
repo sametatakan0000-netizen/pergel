@@ -257,9 +257,14 @@ class BrowserFarmSaaSServer:
                     payload["model"] = parent.live.normalize_model(payload.get("model"))
                     session_id = self.headers.get("x-hermes-session-id", "") or None
                     try:
+                        # Spend comes from our own recorded usage, not from the caller: a
+                        # client-supplied number would sit at 0 forever and the shrinkage
+                        # would never fire. An explicit value may only raise it.
+                        spent = max(parent.live.spent_today(), float(payload.get("spent_today_usd") or 0.0))
                         decision = plan_moa(parent.live, payload, session_id=session_id,
-                                            spent_today_usd=payload.get("spent_today_usd", 0.0),
+                                            spent_today_usd=spent,
                                             force=bool(payload.get("force", False)))
+                        decision["moa"]["spent_today_usd"] = round(spent, 4)
                     except KeyError as exc:
                         self._send_json(404, {"error": f"Unknown model: {exc.args[0]}"})
                         return
