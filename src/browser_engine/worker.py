@@ -23,10 +23,34 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
     return found
 
 
+try:
+    import trafilatura
+except ImportError:  # shortcut: regex fallback is boilerplate-blind, require trafilatura in production deploys
+    trafilatura = None
+
+_MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; regex path keeps them
+
+
 def html_to_clean_markdown(raw_html: str) -> str:
-    """Ham HTML'den script/style gürültüsünü temizler, başlık ve linkleri koruyarak Markdown üretir."""
+    """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta regex yedeğine düşer."""
     if not raw_html or not raw_html.strip():
         return ""
+    if trafilatura is not None:
+        extracted = trafilatura.extract(
+            raw_html,
+            output_format="markdown",
+            include_links=True,
+            include_tables=True,
+            include_formatting=True,
+            favor_recall=True,
+        )
+        if extracted and len(extracted.strip()) >= _MIN_EXTRACTED_CHARS:
+            return extracted.strip()
+    return _regex_markdown(raw_html)
+
+
+def _regex_markdown(raw_html: str) -> str:
+    """Ham HTML'den script/style gürültüsünü temizler, başlık ve linkleri koruyarak Markdown üretir."""
 
     text = re.sub(r"<(script|style|noscript)[^>]*>.*?</\1>", "", raw_html, flags=re.S | re.I)
     text = re.sub(r"<h1[^>]*>(.*?)</h1>", r"\n# \1\n", text, flags=re.S | re.I)

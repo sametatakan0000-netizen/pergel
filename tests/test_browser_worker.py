@@ -1,4 +1,5 @@
 import unittest
+from src.browser_engine import worker as worker_mod
 from src.browser_engine.worker import (
     BrowserWorker,
     discover_har_api_endpoints,
@@ -59,3 +60,30 @@ class TestBrowserWorker(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+ARTICLE_HTML = """<html><head><title>Pricing</title></head><body>
+<nav><ul><li><a href="/">Home</a></li><li><a href="/login">LOGIN-NAV-JUNK</a></li></ul></nav>
+<article><h1>Pricing Guide</h1>
+<p>The starter plan costs 49 dollars per month and includes ten thousand page fetches,
+cited search results and automatic engine escalation for hard websites.</p>
+<p>The team plan costs 199 dollars per month and adds priority queues, webhook delivery
+with signed payloads, and discovered API endpoint exports for every crawled domain.</p>
+<pre><code>curl -X POST /v1/jobs -d '{"url": "https://example.com"}'</code></pre>
+<table><tr><th>Plan</th><th>Price</th></tr><tr><td>Starter</td><td>49</td></tr></table>
+</article>
+<footer>COOKIE-FOOTER-JUNK All rights reserved</footer></body></html>"""
+
+
+class TestMainContentExtraction(unittest.TestCase):
+    @unittest.skipIf(worker_mod.trafilatura is None, "trafilatura not installed (use .venv)")
+    def test_boilerplate_removed_and_content_kept(self):
+        md = html_to_clean_markdown(ARTICLE_HTML)
+        self.assertIn("Pricing Guide", md)
+        self.assertIn("199 dollars", md)
+        self.assertIn("curl -X POST /v1/jobs", md)
+        self.assertNotIn("LOGIN-NAV-JUNK", md)
+        self.assertNotIn("COOKIE-FOOTER-JUNK", md)
+
+    def test_short_fragment_falls_back_to_regex(self):
+        self.assertIn("# Hi", html_to_clean_markdown("<h1>Hi</h1><p>x</p>"))

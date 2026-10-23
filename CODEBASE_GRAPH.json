@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 26,
     "total_classes": 11,
-    "total_functions": 126,
-    "total_loc": 2583
+    "total_functions": 127,
+    "total_loc": 2607
   },
   "modules": [
     {
@@ -346,13 +346,14 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 127,
+      "loc": 151,
       "classes": [
         "BrowserWorker"
       ],
       "functions": [
         "discover_har_api_endpoints",
         "html_to_clean_markdown",
+        "_regex_markdown",
         "_default_url_driver",
         "__init__",
         "execute_task"
@@ -361,6 +362,7 @@
         "html",
         "re",
         "src.browser_engine.browser_orchestrator",
+        "trafilatura",
         "typing",
         "urllib.parse",
         "urllib.request"
@@ -368,12 +370,14 @@
       "calls": [
         "BrowserFarmOrchestrator",
         "Request",
+        "_regex_markdown",
         "append",
         "build_session_task",
         "compile",
         "decode",
         "discover_har_api_endpoints",
         "driver_fn",
+        "extract",
         "finditer",
         "group",
         "html_to_clean_markdown",
@@ -390,7 +394,7 @@
         "urljoin",
         "urlopen"
       ],
-      "change_risk": 5.99
+      "change_risk": 7.69
     },
     {
       "module": "src.devtools",
