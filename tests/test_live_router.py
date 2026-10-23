@@ -44,7 +44,7 @@ class TestLiveRouter(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "router.db")
         self.profiles = build_profiles(CATALOG, MODELS_DEV, fetched_at="t")
-        self.router = LiveRouter(self.db, self.profiles)
+        self.router = LiveRouter(self.db, self.profiles, explore_epsilon=0)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -75,7 +75,7 @@ class TestLiveRouter(unittest.TestCase):
 
     def test_session_affinity_persists_across_restarts(self):
         self.router.commit_choice("s1", "v/mid")
-        restarted = LiveRouter(self.db, self.profiles)
+        restarted = LiveRouter(self.db, self.profiles, explore_epsilon=0)
         self.assertEqual(restarted.plan(chat("merhaba"), session_id="s1")[0], "v/mid")
 
     def test_session_only_escalates_never_downgrades(self):
@@ -118,12 +118,24 @@ class TestLiveRouter(unittest.TestCase):
         profiles = dict(self.profiles)
         profiles["v/cheap-vision"] = replace(profiles["v/cheap-vision"], intelligence_index=40.0)
         profiles["v/free-text"] = replace(profiles["v/free-text"], intelligence_index=20.0)
-        router = LiveRouter(self.db, profiles)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
         self.assertEqual(router.plan(chat("merhaba"))[0], "v/cheap-vision")
+
+    def test_learned_failures_reorder_candidates_within_a_tier(self):
+        self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/free-text")
+        for _ in range(3):
+            self.router.learner.record("v/free-text", "t1:txt:s", 1, neg=1.0, reason="user_retry")
+        self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/cheap-vision")
+
+    def test_learned_bucket_floor_raises_start_tier(self):
+        for model in ("v/free-text", "v/cheap-vision") * 3:
+            self.router.learner.record(model, "t1:txt:s", 1, neg=1.0, reason="user_retry")
+        self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/mid")
+        self.assertEqual(self.router.learner.evolution_events()[0]["kind"], "floor_raised")
 
     def test_upstream_events_are_persisted_with_usage(self):
         self.router.record_upstream("v/mid", status=200, latency_ms=812, prompt_tokens=100, completion_tokens=20)
-        stats = LiveRouter(self.db, self.profiles).model_stats("v/mid")
+        stats = LiveRouter(self.db, self.profiles, explore_epsilon=0).model_stats("v/mid")
         self.assertEqual(stats["requests"], 1)
         self.assertEqual(stats["errors"], 0)
         self.assertEqual(stats["prompt_tokens"], 100)
@@ -154,7 +166,7 @@ class TestLiveRouterNousRegistry(unittest.TestCase):
         ]}
         self.tmp = tempfile.TemporaryDirectory()
         self.profiles = build_registry(catalog, nous, None, fetched_at="t")
-        self.router = LiveRouter(os.path.join(self.tmp.name, "r.db"), self.profiles)
+        self.router = LiveRouter(os.path.join(self.tmp.name, "r.db"), self.profiles, explore_epsilon=0)
 
     def tearDown(self):
         self.tmp.cleanup()

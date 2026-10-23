@@ -15,7 +15,8 @@ from src.api.job_store import JobStore
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
-from src.router.live_router import VIRTUAL_PROFILES, LiveRouter
+from src.router.live_router import VIRTUAL_PROFILES, LiveRouter, price_tier
+from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
 
@@ -52,6 +53,7 @@ class BrowserFarmSaaSServer:
         webhook_sender_fn: Optional[Callable[[str, bytes, Dict[str, str]], int]] = None,
         profiles: Optional[Dict[str, Any]] = None,
         registry_path: Optional[str] = None,
+        explore_epsilon: Optional[float] = None,
     ) -> None:
         if host not in {"127.0.0.1", "::1", "localhost"}:
             raise ValueError("Unauthenticated router must bind to loopback only")
@@ -64,7 +66,9 @@ class BrowserFarmSaaSServer:
         self.registry_fetched_at: Optional[str] = None
         if profiles is None and os.path.exists(self.registry_path):
             profiles, self.registry_fetched_at = load_snapshot(self.registry_path)
-        self.live = LiveRouter(os.path.join(self.db_dir, "live_router.db"), profiles or {})
+        epsilon = float(os.environ.get("ORACLE_EXPLORE_EPSILON", "0.05")) if explore_epsilon is None else explore_epsilon
+        self.live = LiveRouter(os.path.join(self.db_dir, "live_router.db"), profiles or {},
+                               explore_epsilon=epsilon)
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(driver_fn=driver_fn)
@@ -113,6 +117,10 @@ class BrowserFarmSaaSServer:
                         "registry": {"fetched_at": parent.registry_fetched_at, "routable": routable},
                         "watchdog": report,
                     })
+                    return
+
+                if self.path == "/v1/router/learning":
+                    self._send_json(200, parent.live.learner.summary())
                     return
 
                 if self.path == "/v1/models/profiles":
@@ -222,15 +230,18 @@ class BrowserFarmSaaSServer:
                         self._send_json(400, {"error": "messages must be a nonempty array"})
                         return
                     session_id = self.headers.get("x-hermes-session-id", "") or None
+                    routed = (payload.get("model") or "oracle/auto") in VIRTUAL_PROFILES
+                    if routed and parent.live.learner.on_request(session_id, payload) == "user_retry":
+                        parent.live.clear_sticky(session_id)  # regenerate = dissatisfied: re-pick
                     try:
-                        plan = parent.live.plan(payload, session_id=session_id)
+                        plan, bucket, _ = parent.live.plan_with_context(payload, session_id=session_id)
                     except KeyError:
                         self._send_json(400, {"error": "Unknown model"})
                         return
                     if not plan:
                         self._send_json(422, {"error": "No verified eligible model for requested profile"})
                         return
-                    parent._forward_chat(self, payload, plan[: parent.MAX_ATTEMPTS], session_id)
+                    parent._forward_chat(self, payload, plan[: parent.MAX_ATTEMPTS], session_id, bucket, routed)
                     return
 
                 self._send_json(404, {"error": "Unknown endpoint"})
@@ -248,10 +259,23 @@ class BrowserFarmSaaSServer:
         self.registry_fetched_at = fetched_at
         return sum(p.routable for p in profiles.values())
 
-    def _forward_chat(self, handler: BaseHTTPRequestHandler, payload: Dict[str, Any],
-                      plan: List[str], session_id: Optional[str]) -> None:
+    def _forward_chat(self, handler: BaseHTTPRequestHandler, payload: Dict[str, Any], plan: List[str],
+                      session_id: Optional[str], bucket: str, routed: bool) -> None:
         last_error = None
-        for model_id in plan:
+        messages = payload.get("messages") or []
+        user_hash = OutcomeLearner.last_user_hash(messages)
+        tools = payload.get("tools")
+
+        def learn(model_id: str, ok: bool, final: bool, reason: str) -> None:
+            profile = self.live.profiles.get(model_id)
+            tier = price_tier(profile) if profile else 0
+            # Explicit-model calls (e.g. Hermes aux titles sharing the session id) only feed
+            # structural evidence; implicit user feedback is tracked for router decisions only.
+            self.live.learner.on_response(session_id if routed else None, model_id, bucket, tier,
+                                          structural_ok=ok, final_answer=final, last_user_hash=user_hash,
+                                          msg_count=len(messages), reason=reason)
+
+        for index, model_id in enumerate(plan):
             upstream_payload = self.live.prepare_payload(payload, model_id)
             upstream_payload.pop("oracle_routing", None)
             request = urllib.request.Request(
@@ -277,9 +301,39 @@ class BrowserFarmSaaSServer:
                     "error": "Nous subscription proxy timed out" if timed_out else "Nous subscription proxy unavailable"
                 })
                 return
+
             with upstream:
-                self._relay_success(handler, upstream, model_id, session_id, started,
-                                    routed=(payload.get("model") or "oracle/auto") in VIRTUAL_PROFILES)
+                content_type = upstream.headers.get("Content-Type", "application/json")
+                if content_type.startswith("text/event-stream"):
+                    self._relay_stream(handler, upstream, model_id, session_id, started, routed, tools, learn)
+                    return
+                body = upstream.read()
+                status = upstream.status
+            try:
+                parsed = json.loads(body)
+            except ValueError:
+                parsed = None
+            ok, final, reason = analyze_response(parsed, tools) if isinstance(parsed, dict) else (False, False, "unparseable")
+            usage = parsed.get("usage") if isinstance(parsed, dict) and isinstance(parsed.get("usage"), dict) else {}
+            self.live.record_upstream(model_id, status, _elapsed_ms(started),
+                                      usage.get("prompt_tokens"), usage.get("completion_tokens"))
+            learn(model_id, ok, final, reason)
+            if not ok and index < len(plan) - 1:
+                # Self-healing: a broken non-stream answer never reaches the client if another
+                # candidate exists. Costs an extra call only when the first one was unusable.
+                last_error = (status, content_type, body, model_id)
+                continue
+            if routed:
+                self.live.commit_choice(session_id, model_id)
+            handler.send_response(status)
+            handler.send_header("Content-Type", content_type)
+            handler.send_header("X-Oracle-Selected-Model", model_id)
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            try:
+                handler.wfile.write(body)
+            except OSError:
+                pass
             return
 
         status, content_type, body, model_id = last_error
@@ -290,38 +344,32 @@ class BrowserFarmSaaSServer:
         handler.end_headers()
         handler.wfile.write(body)
 
-    def _relay_success(self, handler: BaseHTTPRequestHandler, upstream: Any, model_id: str,
-                       session_id: Optional[str], started: float, routed: bool = True) -> None:
+    def _relay_stream(self, handler: BaseHTTPRequestHandler, upstream: Any, model_id: str,
+                      session_id: Optional[str], started: float, routed: bool,
+                      tools: Optional[List[Dict[str, Any]]], learn: Callable[[str, bool, bool, str], None]) -> None:
         if routed:
             # Only router decisions define session affinity. Explicit-model calls that share the
             # session id (Hermes titles/compression) must not overwrite the conversation's model.
             self.live.commit_choice(session_id, model_id)
-        content_type = upstream.headers.get("Content-Type", "application/json")
         handler.send_response(upstream.status)
-        handler.send_header("Content-Type", content_type)
+        handler.send_header("Content-Type", upstream.headers.get("Content-Type", "text/event-stream"))
         handler.send_header("X-Oracle-Selected-Model", model_id)
+        handler.end_headers()
+        accumulator = StreamAccumulator()
         usage: Dict[str, Any] = {}
-        if content_type.startswith("text/event-stream"):
-            handler.end_headers()
-            try:
-                while line := upstream.readline():
-                    handler.wfile.write(line)
-                    handler.wfile.flush()
-                    if line.startswith(b"data: {") and b'"usage"' in line:
-                        usage = _usage_from(line[6:]) or usage
-            except OSError:
-                pass  # client or upstream closed mid-stream; headers are already sent
-        else:
-            body = upstream.read()
-            handler.send_header("Content-Length", str(len(body)))
-            handler.end_headers()
-            try:
-                handler.wfile.write(body)
-            except OSError:
-                pass
-            usage = _usage_from(body)
+        try:
+            while line := upstream.readline():
+                handler.wfile.write(line)
+                handler.wfile.flush()
+                accumulator.feed(line)
+                if line.startswith(b"data: {") and b'"usage"' in line:
+                    usage = _usage_from(line[6:]) or usage
+        except OSError:
+            pass  # client or upstream closed mid-stream; headers are already sent
         self.live.record_upstream(model_id, upstream.status, _elapsed_ms(started),
                                   usage.get("prompt_tokens"), usage.get("completion_tokens"))
+        ok, final, reason = analyze_response(accumulator.as_response(), tools)
+        learn(model_id, ok, final, reason)
 
     def start_background(self) -> None:
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)

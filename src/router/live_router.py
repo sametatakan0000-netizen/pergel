@@ -26,6 +26,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 from src.router.model_registry import VerifiedProfile, clamp_effort
+from src.router.outcome_learning import OutcomeLearner, bucket_for
+from src.router.request_features import estimate_tokens, has_image, keyword_tier
 
 VIRTUAL_PROFILES = {
     "oracle/auto": None,  # classified per request
@@ -37,12 +39,6 @@ VIRTUAL_PROFILES = {
 
 COOLDOWN_SECONDS = {429: 300, 404: 3600}
 SERVER_ERROR_COOLDOWN = 300
-
-TIER3_KEYWORDS = ("mimari", "architecture", "tasarım", "design", "refactor", "analiz", "analysis",
-                  "güvenlik", "security", "planla", "migration", "optimiz")
-TIER2_KEYWORDS = ("kod", "code", "python", "test", "hata", "bug", "fix", "script", "fonksiyon",
-                  "function", "deploy", "docker", "sql", "regex", "api")
-
 
 def price_tier(profile: VerifiedProfile) -> int:
     """Explicit billed-price bands (Portal price when known, else list; USD per 1M input tokens).
@@ -59,66 +55,19 @@ def price_tier(profile: VerifiedProfile) -> int:
     return 4
 
 
-IMAGE_TOKEN_ESTIMATE = 1500   # per image part; base64 bytes are not text tokens
-OUTPUT_RESERVE_TOKENS = 4096  # when the caller does not set max_tokens
-
-
-def estimate_tokens(payload: Dict[str, Any]) -> int:
-    """Conservative (over-)estimate of prompt + reserved output tokens. ~3 chars/token."""
-    chars, images = 0, 0
-    for message in payload.get("messages") or []:
-        content = message.get("content")
-        if isinstance(content, str):
-            chars += len(content)
-        elif isinstance(content, list):
-            for part in content:
-                if not isinstance(part, dict):
-                    continue
-                if part.get("type") in ("image_url", "input_image"):
-                    images += 1
-                else:
-                    chars += len(part.get("text") or "")
-        for call in message.get("tool_calls") or []:
-            chars += len(json.dumps(call, ensure_ascii=False))
-    if payload.get("tools"):
-        chars += len(json.dumps(payload["tools"], ensure_ascii=False))
-    reserve = payload.get("max_tokens") or payload.get("max_completion_tokens") or OUTPUT_RESERVE_TOKENS
-    return chars // 3 + images * IMAGE_TOKEN_ESTIMATE + int(reserve)
-
-
-def _message_text(message: Dict[str, Any]) -> str:
-    content = message.get("content")
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return " ".join(p.get("text", "") for p in content if isinstance(p, dict))
-    return ""
-
-
-def _has_image(messages: List[Dict[str, Any]]) -> bool:
-    for message in messages:
-        content = message.get("content")
-        if isinstance(content, list) and any(
-            isinstance(p, dict) and p.get("type") in ("image_url", "input_image") for p in content
-        ):
-            return True
-    return False
-
-
 def classify_tier(messages: List[Dict[str, Any]]) -> int:
-    last_user = next((m for m in reversed(messages) if m.get("role") == "user"), None)
-    text = _message_text(last_user).lower() if last_user else ""
-    if any(k in text for k in TIER3_KEYWORDS):
-        return 3
-    if any(k in text for k in TIER2_KEYWORDS):
-        return 2
-    return 1
+    return keyword_tier(messages)
+
+
+UNKNOWN_QUALITY = 25.0  # stand-in AA index for models without published benchmarks (sorts low)
 
 
 class LiveRouter:
-    def __init__(self, db_path: str, profiles: Dict[str, VerifiedProfile]):
+    def __init__(self, db_path: str, profiles: Dict[str, VerifiedProfile],
+                 learner: Optional[OutcomeLearner] = None, explore_epsilon: float = 0.05):
         self.db_path = db_path
         self.profiles = dict(profiles)
+        self.learner = learner or OutcomeLearner(db_path, epsilon=explore_epsilon)
         directory = os.path.dirname(os.path.abspath(db_path))
         os.makedirs(directory, exist_ok=True)
         with self._conn() as conn:
@@ -157,6 +106,12 @@ class LiveRouter:
                 "DO UPDATE SET model_id=excluded.model_id, updated_at=excluded.updated_at",
                 (session_id, model_id, time.time()),
             )
+
+    def clear_sticky(self, session_id: Optional[str]) -> None:
+        if not session_id:
+            return
+        with self._conn() as conn:
+            conn.execute("DELETE FROM session_affinity WHERE session_id=?", (session_id,))
 
     def sticky_model(self, session_id: Optional[str]) -> Optional[str]:
         if not session_id:
@@ -217,12 +172,17 @@ class LiveRouter:
         contexts = [p.context_window for p in pool if p.context_window]
         return max(contexts) if contexts else None
 
-    def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool, min_context: int = 0) -> List[str]:
+    def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool, min_context: int = 0,
+                 bucket: Optional[str] = None) -> List[str]:
         pool = self._pool(free_only, needs_vision, min_context)
+        learned = self.learner.reliability_map(bucket) if bucket else {}
 
         def key(p: VerifiedProfile):
-            quality = p.intelligence_index
-            return (price_tier(p), quality is None, -(quality or 0.0), p.billed_cost_in or 0.0, p.model_id)
+            # Published benchmark scaled by learned reliability for this kind of request:
+            # 0.5 (no evidence) keeps the benchmark; real failures/successes move it.
+            quality = p.intelligence_index if p.intelligence_index is not None else UNKNOWN_QUALITY
+            adjusted = quality * (0.5 + learned.get(p.model_id, 0.5))
+            return (price_tier(p), -adjusted, p.billed_cost_in or 0.0, p.model_id)
 
         upper = sorted((p for p in pool if price_tier(p) >= start_tier), key=key)
         lower = sorted((p for p in pool if price_tier(p) < start_tier),
@@ -231,18 +191,26 @@ class LiveRouter:
 
     def plan(self, payload: Dict[str, Any], session_id: Optional[str] = None,
              now: Optional[float] = None) -> List[str]:
+        return self.plan_with_context(payload, session_id, now)[0]
+
+    def plan_with_context(self, payload: Dict[str, Any], session_id: Optional[str] = None,
+                          now: Optional[float] = None):
+        """Return (ordered candidates, bucket, start tier). Raises KeyError for unknown models."""
         requested = payload.get("model") or "oracle/auto"
+        messages = payload.get("messages") or []
+        kw_tier = keyword_tier(messages)
+        bucket = bucket_for(payload, kw_tier)
         if requested not in VIRTUAL_PROFILES:
             if requested not in self.profiles:
                 raise KeyError(requested)
-            return [requested]
+            return [requested], bucket, kw_tier
 
-        messages = payload.get("messages") or []
-        needs_vision = _has_image(messages)
+        needs_vision = has_image(messages)
         fixed = VIRTUAL_PROFILES[requested]
-        start = classify_tier(messages) if fixed is None else max(fixed, 1)
+        # oracle/auto: crude keyword guess, corrected by learned per-bucket floors + exploration.
+        start = self.learner.start_tier(bucket, kw_tier, now=now) if fixed is None else max(fixed, 1)
         order = self._ordered(start, needs_vision, free_only=(fixed == 0),
-                              min_context=estimate_tokens(payload))
+                              min_context=estimate_tokens(payload), bucket=bucket)
 
         cooling = self.cooling_down(now)
         sticky = self.sticky_model(session_id)
@@ -251,7 +219,8 @@ class LiveRouter:
                 and (not needs_vision or profile.supports_vision) and price_tier(profile) >= start):
             order = [sticky] + [m for m in order if m != sticky]
 
-        return [m for m in order if m not in cooling] + [m for m in order if m in cooling]
+        ordered = [m for m in order if m not in cooling] + [m for m in order if m in cooling]
+        return ordered, bucket, start
 
     def prepare_payload(self, payload: Dict[str, Any], model_id: str) -> Dict[str, Any]:
         out = copy.deepcopy(payload)

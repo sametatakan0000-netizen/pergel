@@ -5,6 +5,7 @@ import unittest
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
+os.environ.setdefault("ORACLE_EXPLORE_EPSILON", "0")  # deterministic routing in tests
 from src.api.server import BrowserFarmSaaSServer
 from src.router.model_registry import build_profiles_from_openrouter
 
@@ -364,6 +365,89 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 self.assertEqual(router.live.model_stats("test/cheap")["requests"], 0)
             finally:
                 router.shutdown()
+
+    def test_self_evolution_signals_from_real_traffic(self):
+        received = []
+
+        class Upstream(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                received.append(body)
+                last = body["messages"][-1]["content"]
+                if body.get("stream"):
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.end_headers()
+                    self.wfile.write(b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":'
+                                     b'{"name":"terminal","arguments":"{broken"}}]}}]}\n\ndata: [DONE]\n\n')
+                    return
+                if last == "araç çağır" and body["model"] == "test/cheap":
+                    msg = {"role": "assistant", "content": None, "tool_calls": [
+                        {"id": "c1", "type": "function", "function": {"name": "terminal", "arguments": "{not json"}}]}
+                else:
+                    msg = {"role": "assistant", "content": f"answer from {body['model']}"}
+                data = json.dumps({"id": "x", "model": body["model"], "choices": [{"index": 0, "message": msg}]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        thread = Thread(target=upstream.serve_forever, daemon=True)
+        thread.start()
+        tools = [{"type": "function", "function": {"name": "terminal"}}]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                router = BrowserFarmSaaSServer(
+                    port=0, db_dir=tmp, profiles=fixture_profiles(),
+                    nous_proxy_url=f"http://127.0.0.1:{upstream.server_port}/v1",
+                )
+                router.start_background()
+                base = f"http://127.0.0.1:{router.port}/v1"
+                try:
+                    def send(messages, session=None, model="oracle/auto", stream=False):
+                        headers = {"Content-Type": "application/json"}
+                        if session:
+                            headers["x-hermes-session-id"] = session
+                        req = urllib.request.Request(base + "/chat/completions", method="POST", headers=headers,
+                            data=json.dumps({"model": model, "messages": messages, "tools": tools,
+                                             "stream": stream}).encode())
+                        with urllib.request.urlopen(req, timeout=5) as resp:
+                            raw = resp.read()
+                            return resp.headers["X-Oracle-Selected-Model"], raw
+
+                    # 1) Non-stream malformed tool call is repaired by the next candidate before the client sees it.
+                    selected, raw = send([{"role": "user", "content": "araç çağır"}])
+                    self.assertEqual([b["model"] for b in received[-2:]], ["test/cheap", "test/mid"])
+                    self.assertEqual(selected, "test/mid")
+                    self.assertIn(b"answer from test/mid", raw)
+
+                    # 2) Streams cannot be repaired, but the malformed call is still learned from.
+                    send([{"role": "user", "content": "akış"}], stream=True)
+
+                    # 3) Regenerating the same user turn penalises the model that answered it.
+                    turn = [{"role": "user", "content": "merhaba"}]
+                    first, _ = send(turn, session="conv")
+                    send([{"role": "user", "content": "başlık üret"}], session="conv", model="test/mid")  # aux call: ignored
+                    send(turn, session="conv")
+
+                    with urllib.request.urlopen(base + "/router/learning", timeout=5) as resp:
+                        learning = json.load(resp)
+                    self.assertEqual(learning["signal_counts"].get("malformed_tool_arguments"), 2)
+                    self.assertEqual(learning["signal_counts"].get("user_retry"), 1)
+                    self.assertNotIn("continued", learning["signal_counts"])  # aux call did not count
+                    retry_rows = [r for r in learning["model_bucket"] if r["model"] == first]
+                    self.assertTrue(retry_rows and retry_rows[0]["reliability"] < 0.5)
+                finally:
+                    router.shutdown()
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            thread.join(timeout=3)
 
     def test_without_registry_virtual_profiles_refuse_instead_of_guessing(self):
         with tempfile.TemporaryDirectory() as tmp:
