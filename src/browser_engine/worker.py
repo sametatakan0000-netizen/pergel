@@ -8,15 +8,22 @@ from typing import Any, Callable, Dict, List, Optional
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 
 
+def _strip_non_script_tags(raw_html: str) -> str:
+    """Drop <link>/<meta> tags (icons, manifests, canonical) that are not API calls."""
+    return re.sub(r"<(?:link|meta)\b[^>]*>", "", raw_html, flags=re.IGNORECASE)
+
+
 def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
     """`har-derived-api-client` desenine uygun olarak sayfa kaynağındaki XHR/JSON API uçlarını keşfeder."""
+    # shortcut: regex, not a DOM/JS parser; only quoted strings inside JS network calls
+    # or script blocks count, so <link> icons/manifests are not reported as APIs.
     pattern = re.compile(
-        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'])((?:https?://|/)[^"'\s)]+?(?:api|graphql|\.json)[^"'\s)]*)["']""",
+        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'])((?:https?://|/)[^"'\s)<>]+?(?:api|graphql|\.json)[^"'\s)<>]*)["']""",
         re.IGNORECASE,
     )
     found: List[str] = []
-    for match in pattern.finditer(raw_html):
-        candidate = match.group(1).strip()
+    for match in pattern.finditer(_strip_non_script_tags(raw_html)):
+        candidate = re.sub(r"(\\[nrt])+$", "", match.group(1).strip())
         if base_url and candidate.startswith("/"):
             candidate = urllib.parse.urljoin(base_url, candidate)
         if candidate not in found:

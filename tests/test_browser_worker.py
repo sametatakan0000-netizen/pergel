@@ -23,6 +23,19 @@ class TestBrowserWorker(unittest.TestCase):
         endpoints = discover_har_api_endpoints(raw_html, base_url="https://example.com")
         self.assertIn("https://example.com/api/v2/pricing.json", endpoints)
 
+    def test_har_discovery_ignores_link_tags_manifests_and_escape_residue(self):
+        raw_html = (
+            '<link rel="manifest" href="/site.webmanifest">'
+            '<link rel="icon" href="/static/manifest.json">'
+            '<script>fetch("/api/v2/pricing.json");'
+            'var s = "https://example.com/graphql\\n";</script>'
+        )
+        endpoints = discover_har_api_endpoints(raw_html, base_url="https://example.com")
+        self.assertEqual(
+            endpoints,
+            ["https://example.com/api/v2/pricing.json", "https://example.com/graphql"],
+        )
+
     def test_worker_escalates_engine_when_lightpanda_returns_empty(self):
         called_engines = []
 
