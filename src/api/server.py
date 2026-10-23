@@ -23,13 +23,15 @@ from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRout
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
 from src.router.moa_exec import build_aggregator_payload, member_usage_summary, run_members
 from src.router.moa_plan import plan_moa
+from src.router.moa_policy import MoaPolicy
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
 
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
-# Amiral + subagent turns. Off by default until real traffic is observed; set to 1 to enable.
-MOA_ENABLED = os.environ.get("ORACLE_MOA", "0") == "1"
+# Amiral + subagent turns are governed per bucket by MoaPolicy (evidence from implicit
+# feedback). ORACLE_MOA=0 is an emergency kill-switch, not the policy.
+MOA_ENABLED = os.environ.get("ORACLE_MOA", "1") != "0"
 
 
 def _elapsed_ms(started: float) -> int:
@@ -101,6 +103,7 @@ class BrowserFarmSaaSServer:
         epsilon = float(os.environ.get("ORACLE_EXPLORE_EPSILON", "0.05")) if explore_epsilon is None else explore_epsilon
         self.live = LiveRouter(os.path.join(self.db_dir, "live_router.db"), profiles or {},
                                explore_epsilon=epsilon)
+        self.moa_policy = MoaPolicy(os.path.join(self.db_dir, "moa_policy.db"))
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(
@@ -285,8 +288,11 @@ class BrowserFarmSaaSServer:
                     session_id = self.headers.get("x-hermes-session-id", "") or None
                     payload["model"] = parent.live.normalize_model(payload.get("model"))
                     routed = payload["model"] in VIRTUAL_PROFILES
-                    if routed and parent.live.learner.on_request(session_id, payload) == "user_retry":
-                        parent.live.clear_sticky(session_id)  # regenerate = dissatisfied: re-pick
+                    if routed:
+                        signal = parent.live.learner.on_request(session_id, payload)
+                        parent.moa_policy.settle(session_id, signal)  # attribute to the arm used
+                        if signal == "user_retry":
+                            parent.live.clear_sticky(session_id)  # regenerate = dissatisfied: re-pick
                     try:
                         plan, bucket, _ = parent.live.plan_with_context(payload, session_id=session_id)
                     except KeyError:
@@ -296,7 +302,7 @@ class BrowserFarmSaaSServer:
                         self._send_json(422, {"error": "No verified eligible model for requested profile"})
                         return
                     if routed and MOA_ENABLED:
-                        payload, plan, _moa = parent._apply_moa(payload, plan, session_id)
+                        payload, plan, _moa = parent._apply_moa(payload, plan, session_id, bucket)
                     parent._forward_chat(self, payload, plan[: parent.MAX_ATTEMPTS], session_id, bucket, routed)
                     return
 
@@ -344,11 +350,12 @@ class BrowserFarmSaaSServer:
                                   usage.get("prompt_tokens"), usage.get("completion_tokens"))
         return status, body if isinstance(body, dict) else {}
 
-    def _apply_moa(self, payload: Dict[str, Any], plan: List[str],
-                   session_id: Optional[str]) -> Tuple[Dict[str, Any], List[str], Dict[str, Any]]:
-        """Amiral + subagents for hard turns. Returns the (possibly enriched) payload, the
-        unchanged candidate plan (plan[0] stays the Amiral) and a decision summary.
-        Any failure degrades to the plain single-model path."""
+    def _apply_moa(self, payload: Dict[str, Any], plan: List[str], session_id: Optional[str],
+                   bucket: str) -> Tuple[Dict[str, Any], List[str], Dict[str, Any]]:
+        """Amiral + subagents, chosen per bucket by MoaPolicy. Returns the (possibly enriched)
+        payload, the unchanged plan (plan[0] stays the Amiral) and a decision summary.
+        Only turns where MoA is physically possible (members fit the cap) enter the arm
+        comparison; any failure degrades to the plain single-model path."""
         try:
             decision = plan_moa(self.live, payload, session_id=session_id,
                                 spent_today_usd=self.live.spent_today())
@@ -357,9 +364,15 @@ class BrowserFarmSaaSServer:
         members = decision["moa"]["members"] if decision["moa"]["enabled"] else []
         if not members or decision["amiral"] != plan[0]:
             return payload, plan, {"enabled": False, "reason": decision["moa"]["reason"]}
+        mode = self.moa_policy.choose(bucket)
+        if session_id:
+            self.moa_policy.remember(session_id, bucket, mode)  # feedback arrives next turn
+        if mode == "single":
+            return payload, plan, {"enabled": False, "reason": "policy: single arm",
+                                   "bucket": bucket, "amiral": plan[0]}
         drafts = run_members(self._call_upstream, members, payload)
         info = member_usage_summary(drafts, members)
-        info.update({"enabled": bool(drafts), "amiral": plan[0],
+        info.update({"enabled": bool(drafts), "amiral": plan[0], "bucket": bucket,
                      "cap_usd": decision["moa"]["cap_usd"]})
         if not drafts:
             return payload, plan, info

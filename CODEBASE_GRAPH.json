@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 28,
-    "total_classes": 12,
-    "total_functions": 153,
-    "total_loc": 3141
+    "total_files": 29,
+    "total_classes": 13,
+    "total_functions": 162,
+    "total_loc": 3283
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 488,
+      "loc": 501,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -177,6 +177,7 @@
         "src.router.live_router",
         "src.router.moa_exec",
         "src.router.moa_plan",
+        "src.router.moa_policy",
         "src.router.model_registry",
         "src.router.outcome_learning",
         "src.search.query_fanout",
@@ -193,6 +194,7 @@
         "JobStore",
         "LiveRouter",
         "Lock",
+        "MoaPolicy",
         "Request",
         "SelfHealingWatchdog",
         "StreamAccumulator",
@@ -214,6 +216,7 @@
         "asdict",
         "bool",
         "build_aggregator_payload",
+        "choose",
         "clear_sticky",
         "commit_choice",
         "create_job",
@@ -265,6 +268,7 @@
         "read",
         "readline",
         "record_upstream",
+        "remember",
         "round",
         "rstrip",
         "run",
@@ -274,6 +278,7 @@
         "send_header",
         "send_response",
         "server_close",
+        "settle",
         "shutdown",
         "sorted",
         "spent_today",
@@ -886,6 +891,48 @@
         "turn_cost"
       ],
       "change_risk": 7.33
+    },
+    {
+      "module": "src.router.moa_policy",
+      "path": "src/router/moa_policy.py",
+      "loc": 129,
+      "classes": [
+        "MoaPolicy"
+      ],
+      "functions": [
+        "__init__",
+        "_conn",
+        "counts",
+        "bad_rates",
+        "explore_rate",
+        "choose",
+        "remember",
+        "settle",
+        "summary"
+      ],
+      "imports": [
+        "contextlib",
+        "random",
+        "sqlite3",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "Random",
+        "_conn",
+        "bad_rates",
+        "close",
+        "connect",
+        "counts",
+        "execute",
+        "executescript",
+        "explore_rate",
+        "fetchall",
+        "fetchone",
+        "random",
+        "time"
+      ],
+      "change_risk": 8.61
     },
     {
       "module": "src.router.model_registry",

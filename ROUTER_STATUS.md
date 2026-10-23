@@ -43,6 +43,14 @@ This repository does **not** modify the running Hermes gateway or its default mo
     usage counts toward spend accounting, member outcomes do NOT feed the learner. E2E test
     with a fake upstream (`tests/test_moa_e2e.py`). Turning it on is a real token-spend
     decision and is left to the user's observation of traffic.
+  - **Adaptive arm policy (`src/router/moa_policy.py`)** — supersedes the env switch as the
+    policy. Each eligible turn (members fit the cap) is tagged `moa`/`single` per bucket; the
+    next user turn's implicit signal (retry/correction = bad, continued = good) is attributed
+    to that arm. Per bucket: cold or undecided → MoA with `COLD_EXPLORE=0.10`; MoA better by
+    ≥`MARGIN=0.05` bad-rate → MoA with 5% single probes; MoA worse → 10% MoA probes. Spend
+    pressure still closes MoA through the dynamic cap. `ORACLE_MOA=0` is an emergency kill-switch.
+    Learning is unverified on live traffic; a simulation shows the mechanism converges
+    (MoA bad 5.6% vs single 21% → 95% MoA). Inspect: `MoaPolicy.summary()`.
 - **Self-evolution (`src/router/outcome_learning.py`)** — learns from real traffic, zero extra inference:
   - structural checks: malformed tool-call JSON, unknown tool names, empty answers (stream and non-stream);
   - implicit feedback on the next user turn: regenerate −1, correction phrasing −0.5, continuing after a final answer +0.5; tool-loop turns neutral; aux calls (explicit models sharing the session id) ignored;
