@@ -87,3 +87,18 @@ class TestMainContentExtraction(unittest.TestCase):
 
     def test_short_fragment_falls_back_to_regex(self):
         self.assertIn("# Hi", html_to_clean_markdown("<h1>Hi</h1><p>x</p>"))
+
+
+class TestPolicyBlockDoesNotEscalate(unittest.TestCase):
+    def test_fetch_blocked_stops_ladder(self):
+        from src.browser_engine.worker import FetchBlocked
+        calls = []
+
+        def drv(engine, url, session):
+            calls.append(engine)
+            raise FetchBlocked("robots")
+
+        r = BrowserWorker(driver_fn=drv).execute_task("j1", "https://blocked.example.com")
+        self.assertFalse(r["oracle_passed"])
+        self.assertTrue(r["blocked"])
+        self.assertEqual(calls, ["lightpanda"])

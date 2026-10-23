@@ -1,9 +1,9 @@
 {
   "summary": {
     "total_files": 26,
-    "total_classes": 11,
-    "total_functions": 127,
-    "total_loc": 2607
+    "total_classes": 12,
+    "total_functions": 128,
+    "total_loc": 2647
   },
   "modules": [
     {
@@ -346,14 +346,16 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 151,
+      "loc": 191,
       "classes": [
+        "FetchBlocked",
         "BrowserWorker"
       ],
       "functions": [
         "discover_har_api_endpoints",
         "html_to_clean_markdown",
         "_regex_markdown",
+        "_allowed_by_robots",
         "_default_url_driver",
         "__init__",
         "execute_task"
@@ -365,25 +367,33 @@
         "trafilatura",
         "typing",
         "urllib.parse",
-        "urllib.request"
+        "urllib.request",
+        "urllib.robotparser"
       ],
       "calls": [
         "BrowserFarmOrchestrator",
+        "FetchBlocked",
         "Request",
+        "RobotFileParser",
+        "_allowed_by_robots",
         "_regex_markdown",
         "append",
         "build_session_task",
+        "can_fetch",
         "compile",
         "decode",
         "discover_har_api_endpoints",
         "driver_fn",
         "extract",
         "finditer",
+        "get",
         "group",
         "html_to_clean_markdown",
         "index",
         "join",
         "len",
+        "lower",
+        "parse",
         "read",
         "record_domain_escalation",
         "splitlines",
@@ -392,9 +402,10 @@
         "sub",
         "unescape",
         "urljoin",
-        "urlopen"
+        "urlopen",
+        "urlsplit"
       ],
-      "change_risk": 7.69
+      "change_risk": 10.0
     },
     {
       "module": "src.devtools",

@@ -2,6 +2,7 @@
 import html
 import re
 import urllib.parse
+import urllib.robotparser
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
@@ -70,13 +71,41 @@ def _regex_markdown(raw_html: str) -> str:
     return "\n\n".join(lines)
 
 
+MAX_BODY_BYTES = 2 * 1024 * 1024
+_ROBOTS_CACHE: Dict[str, Any] = {}
+
+
+class FetchBlocked(Exception):
+    """Policy block (robots.txt / non-HTML). Escalating to a heavier engine must NOT bypass it."""
+
+
+def _allowed_by_robots(url: str, user_agent: str) -> bool:
+    parts = urllib.parse.urlsplit(url)
+    origin = f"{parts.scheme}://{parts.netloc}"
+    rp = _ROBOTS_CACHE.get(origin)
+    if rp is None:
+        rp = urllib.robotparser.RobotFileParser()
+        try:
+            req = urllib.request.Request(origin + "/robots.txt", headers={"User-Agent": user_agent})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                rp.parse(resp.read(512 * 1024).decode("utf-8", errors="replace").splitlines())
+        except Exception:  # shortcut: unreachable/missing robots.txt = allow all, cache never expires; add TTL when long-running
+            rp.parse([])
+        _ROBOTS_CACHE[origin] = rp
+    return rp.can_fetch(user_agent, url)
+
+
 def _default_url_driver(engine: str, url: str, session_name: str) -> str:
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": f"HermesBrowserFarm/1.0 ({engine}; {session_name})"},
-    )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return resp.read().decode("utf-8", errors="replace")
+    """Plain-HTTP fetch (same for every tier until real browser binaries are wired). Honors robots.txt."""
+    ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
+    if not _allowed_by_robots(url, "HermesBrowserFarm"):
+        raise FetchBlocked(f"robots.txt disallows {url}")
+    req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "text/html,*/*;q=0.5"})
+    with urllib.request.urlopen(req, timeout=15) as resp:  # HTTPError (403/5xx) propagates -> worker escalates
+        ctype = resp.headers.get("Content-Type", "")
+        if "html" not in ctype.lower() and "xml" not in ctype.lower():
+            raise FetchBlocked(f"non-HTML content type: {ctype}")
+        return resp.read(MAX_BODY_BYTES).decode("utf-8", errors="replace")
 
 
 class BrowserWorker:
@@ -118,6 +147,17 @@ class BrowserWorker:
             attempts.append(engine)
             try:
                 raw_html = self.driver_fn(engine, url, spec["session_name"])
+            except FetchBlocked:
+                return {
+                    "job_id": job_id,
+                    "session_name": spec["session_name"],
+                    "final_engine": engine,
+                    "attempted_engines": attempts,
+                    "oracle_passed": False,
+                    "blocked": True,
+                    "markdown": "",
+                    "discovered_apis": [],
+                }
             except Exception:
                 raw_html = ""
 
