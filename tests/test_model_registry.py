@@ -6,10 +6,43 @@ import unittest
 from src.router.model_registry import (
     build_profiles,
     build_profiles_from_openrouter,
+    build_registry,
     clamp_effort,
     load_snapshot,
     save_snapshot,
 )
+
+NOUS = {"data": [
+    {   # curated, on promo: Portal price differs from list price
+        "id": "vendor/strong", "name": "Strong", "context_length": 1000000,
+        "architecture": {"input_modalities": ["text", "image"]},
+        "top_provider": {"context_length": 1000000, "max_completion_tokens": 64000},
+        "supported_parameters": ["tools", "reasoning_effort"],
+        "reasoning": {"supported_efforts": ["high", "low"], "default_effort": "high"},
+        "pricing": {"prompt": "0.000002", "completion": "0.00001",
+                    "original": {"prompt": "0.000004", "completion": "0.00002"}},
+    },
+    {   # free variant of a curated model
+        "id": "vendor/cheap:free", "name": "Cheap (free)", "context_length": 128000,
+        "architecture": {"input_modalities": ["text"]},
+        "supported_parameters": ["tools"], "pricing": {"prompt": "0", "completion": "0"},
+    },
+    {   # curated base model
+        "id": "vendor/cheap", "name": "Cheap", "context_length": 128000,
+        "architecture": {"input_modalities": ["text"]},
+        "supported_parameters": ["tools"], "pricing": {"prompt": "0.0000001", "completion": "0.0000004"},
+    },
+    {   # on Nous but not curated
+        "id": "other/extra", "name": "Extra", "context_length": 64000,
+        "architecture": {"input_modalities": ["text"]},
+        "supported_parameters": ["tools"], "pricing": {"prompt": "0.0000001", "completion": "0.0000001"},
+    },
+    {   # batch variant of a curated model: cheaper, but interactive suitability unverified
+        "id": "vendor/strong:batch", "name": "Strong (batch)", "context_length": 1000000,
+        "architecture": {"input_modalities": ["text"]},
+        "supported_parameters": ["tools"], "pricing": {"prompt": "0.000001", "completion": "0.000005"},
+    },
+]}
 
 OPENROUTER = {"data": [
     {
@@ -145,7 +178,42 @@ class TestModelRegistry(unittest.TestCase):
         self.assertEqual(cheap.list_cost_in, 0.0)
         self.assertEqual(profiles["vendor/textonly"].status, "catalog_only")
 
+    def test_nous_registry_uses_portal_prices_and_merges_benchmarks(self):
+        reg = build_registry(CATALOG, NOUS, OPENROUTER, fetched_at="t")
+        strong = reg["vendor/strong"]
+        self.assertEqual(strong.metadata_source, "nous:/v1/models")
+        self.assertAlmostEqual(strong.portal_cost_in, 2.0)   # what the subscription is billed
+        self.assertAlmostEqual(strong.list_cost_in, 4.0)     # pricing.original
+        self.assertAlmostEqual(strong.billed_cost_in, 2.0)
+        self.assertEqual(strong.discount_pct, 50)
+        self.assertEqual(strong.intelligence_index, 57.6)    # merged from OpenRouter benchmarks
+        self.assertEqual(strong.effort_levels, ("low", "high"))
+        self.assertTrue(strong.curated and strong.auto_eligible)
+
+    def test_nous_registry_membership_and_auto_pool(self):
+        reg = build_registry(CATALOG, NOUS, OPENROUTER, fetched_at="t")
+        self.assertIn("other/extra", reg)                     # explicitly requestable
+        self.assertFalse(reg["other/extra"].curated)
+        self.assertFalse(reg["other/extra"].auto_eligible)    # not Hermes-curated
+        free = reg["vendor/cheap:free"]
+        self.assertTrue(free.curated and free.auto_eligible)  # free variant of curated base
+        self.assertEqual(free.billed_cost_in, 0.0)
+        self.assertEqual(free.discount_pct, None)             # no original price published
+        self.assertEqual(reg["vendor/catalog-only"].status, "catalog_only")  # curated, absent on Nous
+        self.assertFalse(reg["vendor/catalog-only"].auto_eligible)
+        self.assertTrue(reg["vendor/cheap"].is_silent_default)
+        batch = reg["vendor/strong:batch"]
+        self.assertTrue(batch.routable)          # explicitly requestable
+        self.assertFalse(batch.auto_eligible)    # only base IDs and :free variants are auto-picked
+
+    def test_nous_registry_works_without_benchmark_source(self):
+        reg = build_registry(CATALOG, NOUS, None, fetched_at="t")
+        self.assertIsNone(reg["vendor/strong"].intelligence_index)
+        self.assertTrue(reg["vendor/strong"].routable)
+
     def test_malformed_sources_raise(self):
+        with self.assertRaises(ValueError):
+            build_registry(CATALOG, {"data": "bad"}, OPENROUTER, fetched_at="x")
         with self.assertRaises(ValueError):
             build_profiles_from_openrouter(CATALOG, {"data": "bad"}, fetched_at="x")
         with self.assertRaises(ValueError):

@@ -129,5 +129,65 @@ class TestLiveRouter(unittest.TestCase):
         self.assertEqual(stats["prompt_tokens"], 100)
 
 
+class TestLiveRouterNousRegistry(unittest.TestCase):
+    """Portal prices, curated pool and context-fit using the Nous-format registry builder."""
+
+    def setUp(self):
+        from src.router.model_registry import build_registry
+
+        def model(mid, cost_in, ctx, vision=False):
+            return {"id": mid, "context_length": ctx,
+                    "architecture": {"input_modalities": ["text", "image"] if vision else ["text"]},
+                    "supported_parameters": ["tools"],
+                    "pricing": {"prompt": str(cost_in / 1e6), "completion": str(cost_in * 4 / 1e6)}}
+
+        catalog = {"version": 1, "providers": {"nous": {"models": [
+            {"id": "c/small"}, {"id": "c/big"}, {"id": "c/promo"}]}}}
+        nous = {"data": [
+            model("c/small", 0.1, 32000),
+            model("c/small:free", 0, 32000),
+            model("c/big", 0.2, 1000000),
+            # list $5 but Portal bills $0.25 -> must be treated as tier 1, not tier 4
+            dict(model("c/promo", 0.25, 200000), pricing={"prompt": "0.00000025", "completion": "0.000001",
+                                                          "original": {"prompt": "0.000005", "completion": "0.00002"}}),
+            model("x/uncurated", 0.01, 500000),
+        ]}
+        self.tmp = tempfile.TemporaryDirectory()
+        self.profiles = build_registry(catalog, nous, None, fetched_at="t")
+        self.router = LiveRouter(os.path.join(self.tmp.name, "r.db"), self.profiles)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_tier_uses_billed_portal_price(self):
+        self.assertEqual(price_tier(self.profiles["c/promo"]), 1)
+
+    def test_uncurated_models_are_never_auto_selected_but_explicitly_allowed(self):
+        self.assertNotIn("x/uncurated", self.router.plan(chat("merhaba")))
+        self.assertEqual(self.router.plan(chat("x", model="x/uncurated")), ["x/uncurated"])
+
+    def test_free_profile_uses_portal_zero_price_variants(self):
+        self.assertEqual(self.router.plan(chat("x", model="oracle/free")), ["c/small:free"])
+
+    def test_requests_that_do_not_fit_skip_small_context_models(self):
+        small_request = self.router.plan(chat("merhaba"))
+        self.assertIn("c/small", small_request)
+        huge = chat("a" * 200000)  # ~67K tokens by the conservative estimate: too big for 32K windows
+        plan = self.router.plan(huge)
+        self.assertNotIn("c/small", plan)
+        self.assertNotIn("c/small:free", plan)
+        self.assertIn("c/big", plan)
+
+    def test_image_payload_bytes_do_not_inflate_token_estimate(self):
+        payload = chat("bak", image=True)
+        payload["messages"][0]["content"][1]["image_url"]["url"] = "data:image/png;base64," + "A" * 400000
+        from src.router.live_router import estimate_tokens
+        self.assertLess(estimate_tokens(payload), 10000)  # would be ~133K if base64 were counted
+
+    def test_virtual_context_length_is_largest_window_in_profile_pool(self):
+        self.assertEqual(self.router.virtual_context_length("oracle/auto"), 1000000)
+        self.assertEqual(self.router.virtual_context_length("oracle/free"), 32000)
+
+
 if __name__ == "__main__":
     unittest.main()

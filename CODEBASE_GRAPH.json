@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 25,
     "total_classes": 12,
-    "total_functions": 104,
-    "total_loc": 2875
+    "total_functions": 114,
+    "total_loc": 3003
   },
   "modules": [
     {
@@ -130,7 +130,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 335,
+      "loc": 334,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -217,7 +217,6 @@
         "makedirs",
         "mark_completed",
         "mark_running",
-        "min",
         "monotonic",
         "now",
         "plan",
@@ -245,6 +244,7 @@
         "update_profiles",
         "urlopen",
         "values",
+        "virtual_context_length",
         "write"
       ],
       "change_risk": 10.0
@@ -619,12 +619,13 @@
     {
       "module": "src.router.live_router",
       "path": "src/router/live_router.py",
-      "loc": 231,
+      "loc": 275,
       "classes": [
         "LiveRouter"
       ],
       "functions": [
         "price_tier",
+        "estimate_tokens",
         "_message_text",
         "_has_image",
         "classify_tier",
@@ -636,6 +637,8 @@
         "record_upstream",
         "cooling_down",
         "model_stats",
+        "_pool",
+        "virtual_context_length",
         "_ordered",
         "plan",
         "prepare_payload",
@@ -644,6 +647,7 @@
       "imports": [
         "contextlib",
         "copy",
+        "json",
         "os",
         "sqlite3",
         "src.router.model_registry",
@@ -656,6 +660,7 @@
         "_has_image",
         "_message_text",
         "_ordered",
+        "_pool",
         "abspath",
         "any",
         "clamp_effort",
@@ -666,14 +671,18 @@
         "deepcopy",
         "dict",
         "dirname",
+        "dumps",
+        "estimate_tokens",
         "execute",
         "executescript",
         "fetchall",
         "fetchone",
         "get",
+        "int",
         "isinstance",
         "join",
         "key",
+        "len",
         "lower",
         "makedirs",
         "max",
@@ -691,7 +700,7 @@
     {
       "module": "src.router.model_registry",
       "path": "src/router/model_registry.py",
-      "loc": 266,
+      "loc": 351,
       "classes": [
         "VerifiedProfile"
       ],
@@ -704,12 +713,19 @@
         "build_profiles",
         "_per_million",
         "_canonical_efforts",
+        "_profile_from_meta",
+        "_openrouter_index",
         "build_profiles_from_openrouter",
+        "build_registry",
         "clamp_effort",
         "save_snapshot",
         "load_snapshot",
         "_get_json",
         "fetch_profiles",
+        "billed_cost_in",
+        "billed_cost_out",
+        "discount_pct",
+        "auto_eligible",
         "routable"
       ],
       "imports": [
@@ -731,13 +747,16 @@
         "_int",
         "_metadata_index",
         "_num",
+        "_openrouter_index",
         "_per_million",
+        "_profile_from_meta",
         "abspath",
         "any",
         "asdict",
         "bool",
         "build_profiles",
         "build_profiles_from_openrouter",
+        "build_registry",
         "dataclass",
         "dirname",
         "dump",
@@ -754,8 +773,10 @@
         "min",
         "mkstemp",
         "open",
+        "partition",
         "replace",
         "round",
+        "set",
         "sorted",
         "str",
         "strip",
@@ -938,6 +959,10 @@
     "src.infra.hermes_config_builder.generate_hermes_cli_commands",
     "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
     "src.router.live_router.model_stats",
+    "src.router.model_registry.auto_eligible",
+    "src.router.model_registry.billed_cost_in",
+    "src.router.model_registry.billed_cost_out",
+    "src.router.model_registry.discount_pct",
     "src.router.model_registry.routable",
     "src.router.oracle_router.classify_chat_request",
     "src.router.oracle_router.combined_score",

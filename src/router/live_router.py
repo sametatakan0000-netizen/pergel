@@ -19,6 +19,7 @@ Selection policy (documented, deterministic):
 """
 import contextlib
 import copy
+import json
 import os
 import sqlite3
 import time
@@ -44,8 +45,9 @@ TIER2_KEYWORDS = ("kod", "code", "python", "test", "hata", "bug", "fix", "script
 
 
 def price_tier(profile: VerifiedProfile) -> int:
-    """Explicit list-price bands (USD per 1M input tokens). A cost policy, not a quality claim."""
-    cost = profile.list_cost_in
+    """Explicit billed-price bands (Portal price when known, else list; USD per 1M input tokens).
+    A cost policy, not a quality claim."""
+    cost = profile.billed_cost_in
     if cost is None:
         return 99
     if cost <= 0.3:
@@ -55,6 +57,33 @@ def price_tier(profile: VerifiedProfile) -> int:
     if cost <= 3.0:
         return 3
     return 4
+
+
+IMAGE_TOKEN_ESTIMATE = 1500   # per image part; base64 bytes are not text tokens
+OUTPUT_RESERVE_TOKENS = 4096  # when the caller does not set max_tokens
+
+
+def estimate_tokens(payload: Dict[str, Any]) -> int:
+    """Conservative (over-)estimate of prompt + reserved output tokens. ~3 chars/token."""
+    chars, images = 0, 0
+    for message in payload.get("messages") or []:
+        content = message.get("content")
+        if isinstance(content, str):
+            chars += len(content)
+        elif isinstance(content, list):
+            for part in content:
+                if not isinstance(part, dict):
+                    continue
+                if part.get("type") in ("image_url", "input_image"):
+                    images += 1
+                else:
+                    chars += len(part.get("text") or "")
+        for call in message.get("tool_calls") or []:
+            chars += len(json.dumps(call, ensure_ascii=False))
+    if payload.get("tools"):
+        chars += len(json.dumps(payload["tools"], ensure_ascii=False))
+    reserve = payload.get("max_tokens") or payload.get("max_completion_tokens") or OUTPUT_RESERVE_TOKENS
+    return chars // 3 + images * IMAGE_TOKEN_ESTIMATE + int(reserve)
 
 
 def _message_text(message: Dict[str, Any]) -> str:
@@ -171,15 +200,29 @@ class LiveRouter:
                 "completion_tokens": row[3], "avg_latency_ms": row[4]}
 
     # ---- selection ---------------------------------------------------------------------
-    def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool) -> List[str]:
+    def _pool(self, free_only: bool, needs_vision: bool = False, min_context: int = 0) -> List[VerifiedProfile]:
         pool = [p for p in self.profiles.values()
-                if p.routable and (not needs_vision or p.supports_vision)]
+                if p.auto_eligible and (not needs_vision or p.supports_vision)]
         if free_only:
-            pool = [p for p in pool if p.list_cost_in == 0 and p.list_cost_out == 0]
+            pool = [p for p in pool if p.billed_cost_in == 0 and p.billed_cost_out == 0]
+        if min_context:
+            fitting = [p for p in pool if (p.context_window or 0) >= min_context]
+            # If nothing fits, keep the largest windows first rather than refusing outright.
+            pool = fitting or sorted(pool, key=lambda p: -(p.context_window or 0))[:3]
+        return pool
+
+    def virtual_context_length(self, profile_name: str) -> Optional[int]:
+        """Largest window a virtual profile can resolve to; plan() skips models a request outgrows."""
+        pool = self._pool(free_only=VIRTUAL_PROFILES.get(profile_name) == 0)
+        contexts = [p.context_window for p in pool if p.context_window]
+        return max(contexts) if contexts else None
+
+    def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool, min_context: int = 0) -> List[str]:
+        pool = self._pool(free_only, needs_vision, min_context)
 
         def key(p: VerifiedProfile):
             quality = p.intelligence_index
-            return (price_tier(p), quality is None, -(quality or 0.0), p.list_cost_in or 0.0, p.model_id)
+            return (price_tier(p), quality is None, -(quality or 0.0), p.billed_cost_in or 0.0, p.model_id)
 
         upper = sorted((p for p in pool if price_tier(p) >= start_tier), key=key)
         lower = sorted((p for p in pool if price_tier(p) < start_tier),
@@ -198,12 +241,13 @@ class LiveRouter:
         needs_vision = _has_image(messages)
         fixed = VIRTUAL_PROFILES[requested]
         start = classify_tier(messages) if fixed is None else max(fixed, 1)
-        order = self._ordered(start, needs_vision, free_only=(fixed == 0))
+        order = self._ordered(start, needs_vision, free_only=(fixed == 0),
+                              min_context=estimate_tokens(payload))
 
         cooling = self.cooling_down(now)
         sticky = self.sticky_model(session_id)
         profile = self.profiles.get(sticky) if sticky else None
-        if (profile and profile.routable and sticky in order and sticky not in cooling
+        if (profile and profile.auto_eligible and sticky in order and sticky not in cooling
                 and (not needs_vision or profile.supports_vision) and price_tier(profile) >= start):
             order = [sticky] + [m for m in order if m != sticky]
 

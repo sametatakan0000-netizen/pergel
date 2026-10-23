@@ -143,7 +143,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 self.assertEqual(prof_res["profiles"]["test/catalog-only"]["status"], "catalog_only")
                 self.assertEqual(prof_res["profiles"]["google/gemini-4-argon"]["intelligence_index"], 52.6)
                 virtual = next(m for m in models_payload["data"] if m["id"] == "oracle/auto")
-                self.assertEqual(virtual["context_length"], 131072)  # smallest routable window
+                self.assertEqual(virtual["context_length"], 1048576)  # largest window; plan() filters by fit
             finally:
                 server.shutdown()
 

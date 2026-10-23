@@ -15,8 +15,11 @@ from typing import Any, Dict, Optional, Tuple
 CATALOG_URL = "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json"
 MODELS_DEV_URL = "https://models.dev/api.json"
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
+NOUS_MODELS_URL = "https://inference-api.nousresearch.com/v1/models"
 METADATA_SOURCE = "models.dev:openrouter"
 OPENROUTER_SOURCE = "openrouter:/api/v1/models"
+NOUS_SOURCE = "nous:/v1/models"
+AUTO_VARIANTS = {"free"}
 
 # Canonical effort order used only to find the nearest level a model supports.
 EFFORT_ORDER: Tuple[str, ...] = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
@@ -50,7 +53,32 @@ class VerifiedProfile:
     intelligence_index: Optional[float] = None
     coding_index: Optional[float] = None
     agentic_index: Optional[float] = None
+    # Nous Portal billed price (USD / 1M). list_cost_* holds the undiscounted list price.
+    portal_cost_in: Optional[float] = None
+    portal_cost_out: Optional[float] = None
+    # Listed in the Hermes curated Nous catalog (directly, or as a ``:free`` variant of a curated ID).
+    curated: bool = True
     fetched_at: str = field(default="", compare=False)
+
+    @property
+    def billed_cost_in(self) -> Optional[float]:
+        return self.portal_cost_in if self.portal_cost_in is not None else self.list_cost_in
+
+    @property
+    def billed_cost_out(self) -> Optional[float]:
+        return self.portal_cost_out if self.portal_cost_out is not None else self.list_cost_out
+
+    @property
+    def discount_pct(self) -> Optional[int]:
+        portal, listed = self.portal_cost_in, self.list_cost_in
+        if portal is None or not listed or portal >= listed:
+            return None
+        return round((listed - portal) / listed * 100)
+
+    @property
+    def auto_eligible(self) -> bool:
+        """Virtual profiles only pick Hermes-curated models; others stay explicitly requestable."""
+        return self.routable and self.curated
 
     @property
     def routable(self) -> bool:
@@ -154,12 +182,62 @@ def _canonical_efforts(values: Any) -> Tuple[str, ...]:
     return tuple(known + extras)
 
 
-def build_profiles_from_openrouter(catalog: Dict[str, Any], openrouter: Dict[str, Any], fetched_at: str) -> Dict[str, VerifiedProfile]:
-    entries = _catalog_entries(catalog)
+def _profile_from_meta(mid: str, meta: Dict[str, Any], source: str, fetched_at: str,
+                       silent_default: bool = False, curated: bool = True,
+                       benchmarks: Optional[Dict[str, Any]] = None) -> VerifiedProfile:
+    """Map one OpenRouter-format model object (also used by Nous /v1/models) to a profile."""
+    arch = meta.get("architecture") or {}
+    inputs = tuple(m for m in arch.get("input_modalities") or [] if isinstance(m, str))
+    top = meta.get("top_provider") or {}
+    contexts = [c for c in (_int(meta.get("context_length")), _int(top.get("context_length"))) if c]
+    params = meta.get("supported_parameters") or []
+    reasoning = meta.get("reasoning") if isinstance(meta.get("reasoning"), dict) else {}
+    pricing = meta.get("pricing") or {}
+    original = pricing.get("original") if isinstance(pricing.get("original"), dict) else None
+    aa = (benchmarks if benchmarks is not None else (meta.get("benchmarks") or {})).get("artificial_analysis") or {}
+    billed_in, billed_out = _per_million(pricing.get("prompt")), _per_million(pricing.get("completion"))
+    portal = source == NOUS_SOURCE
+    return VerifiedProfile(
+        model_id=mid,
+        status="verified_metadata",
+        metadata_source=source,
+        name=str(meta.get("name") or ""),
+        description=str(meta.get("description") or ""),
+        family=str(meta.get("canonical_slug") or ""),
+        supports_tools="tools" in params,
+        supports_vision="image" in inputs,
+        supports_reasoning=bool(reasoning) or "reasoning" in params,
+        effort_levels=_canonical_efforts(reasoning.get("supported_efforts")),
+        input_modalities=inputs,
+        context_window=min(contexts) if contexts else None,
+        max_output=_int(top.get("max_completion_tokens")),
+        list_cost_in=_per_million(original.get("prompt")) if original else billed_in,
+        list_cost_out=_per_million(original.get("completion")) if original else billed_out,
+        list_cost_cache_read=_per_million(pricing.get("input_cache_read")),
+        knowledge_cutoff=str(meta.get("knowledge_cutoff") or ""),
+        is_silent_default=silent_default,
+        default_effort=reasoning.get("default_effort") if isinstance(reasoning.get("default_effort"), str) else None,
+        reasoning_mandatory=reasoning.get("mandatory") is True,
+        intelligence_index=_num(aa.get("intelligence_index")),
+        coding_index=_num(aa.get("coding_index")),
+        agentic_index=_num(aa.get("agentic_index")),
+        portal_cost_in=billed_in if portal else None,
+        portal_cost_out=billed_out if portal else None,
+        curated=curated,
+        fetched_at=fetched_at,
+    )
+
+
+def _openrouter_index(openrouter: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     data = openrouter.get("data") if isinstance(openrouter, dict) else None
     if not isinstance(data, list):
-        raise ValueError("OpenRouter payload lacks data list")
-    index = {m["id"]: m for m in data if isinstance(m, dict) and isinstance(m.get("id"), str)}
+        raise ValueError("OpenRouter-format payload lacks data list")
+    return {m["id"]: m for m in data if isinstance(m, dict) and isinstance(m.get("id"), str)}
+
+
+def build_profiles_from_openrouter(catalog: Dict[str, Any], openrouter: Dict[str, Any], fetched_at: str) -> Dict[str, VerifiedProfile]:
+    entries = _catalog_entries(catalog)
+    index = _openrouter_index(openrouter)
     profiles: Dict[str, VerifiedProfile] = {}
     for entry in entries:
         mid = entry["id"].strip()
@@ -169,40 +247,32 @@ def build_profiles_from_openrouter(catalog: Dict[str, Any], openrouter: Dict[str
             profiles[mid] = VerifiedProfile(model_id=mid, status="catalog_only",
                                             is_silent_default=silent_default, fetched_at=fetched_at)
             continue
-        arch = meta.get("architecture") or {}
-        inputs = tuple(m for m in arch.get("input_modalities") or [] if isinstance(m, str))
-        top = meta.get("top_provider") or {}
-        contexts = [c for c in (_int(meta.get("context_length")), _int(top.get("context_length"))) if c]
-        params = meta.get("supported_parameters") or []
-        reasoning = meta.get("reasoning") if isinstance(meta.get("reasoning"), dict) else {}
-        pricing = meta.get("pricing") or {}
-        aa = (meta.get("benchmarks") or {}).get("artificial_analysis") or {}
-        profiles[mid] = VerifiedProfile(
-            model_id=mid,
-            status="verified_metadata",
-            metadata_source=OPENROUTER_SOURCE,
-            name=str(meta.get("name") or ""),
-            description=str(meta.get("description") or ""),
-            family=str(meta.get("canonical_slug") or ""),
-            supports_tools="tools" in params,
-            supports_vision="image" in inputs,
-            supports_reasoning=bool(reasoning) or "reasoning" in params,
-            effort_levels=_canonical_efforts(reasoning.get("supported_efforts")),
-            input_modalities=inputs,
-            context_window=min(contexts) if contexts else None,
-            max_output=_int(top.get("max_completion_tokens")),
-            list_cost_in=_per_million(pricing.get("prompt")),
-            list_cost_out=_per_million(pricing.get("completion")),
-            list_cost_cache_read=_per_million(pricing.get("input_cache_read")),
-            knowledge_cutoff=str(meta.get("knowledge_cutoff") or ""),
-            is_silent_default=silent_default,
-            default_effort=reasoning.get("default_effort") if isinstance(reasoning.get("default_effort"), str) else None,
-            reasoning_mandatory=reasoning.get("mandatory") is True,
-            intelligence_index=_num(aa.get("intelligence_index")),
-            coding_index=_num(aa.get("coding_index")),
-            agentic_index=_num(aa.get("agentic_index")),
-            fetched_at=fetched_at,
+        profiles[mid] = _profile_from_meta(mid, meta, OPENROUTER_SOURCE, fetched_at, silent_default)
+    return profiles
+
+
+def build_registry(catalog: Dict[str, Any], nous_models: Dict[str, Any],
+                   openrouter: Optional[Dict[str, Any]], fetched_at: str) -> Dict[str, VerifiedProfile]:
+    """Nous /v1/models = membership, capabilities, Portal prices; OpenRouter = benchmarks only."""
+    entries = _catalog_entries(catalog)
+    curated_ids = {e["id"].strip() for e in entries}
+    defaults = {e["id"].strip() for e in entries if e.get("default")}
+    nous = _openrouter_index(nous_models)
+    bench = _openrouter_index(openrouter) if openrouter is not None else {}
+    profiles: Dict[str, VerifiedProfile] = {}
+    for mid, meta in nous.items():
+        base, _, variant = mid.partition(":")
+        profiles[mid] = _profile_from_meta(
+            mid, meta, NOUS_SOURCE, fetched_at,
+            silent_default=mid in defaults,
+            # Auto-pool: curated IDs and their ':free' variants only. ':batch' (half price,
+            # interactive behaviour unverified) and region-pinned variants stay explicit-only.
+            curated=mid in curated_ids or (variant in AUTO_VARIANTS and base in curated_ids),
+            benchmarks=(bench.get(mid) or bench.get(base) or {}).get("benchmarks") or {},
         )
+    for mid in curated_ids - set(profiles):
+        profiles[mid] = VerifiedProfile(model_id=mid, status="catalog_only",
+                                        is_silent_default=mid in defaults, fetched_at=fetched_at)
     return profiles
 
 
@@ -257,10 +327,25 @@ def _get_json(url: str, timeout: int) -> Any:
 
 def fetch_profiles(fetched_at: str, catalog_url: str = CATALOG_URL,
                    openrouter_url: str = OPENROUTER_MODELS_URL,
-                   models_dev_url: str = MODELS_DEV_URL) -> Dict[str, VerifiedProfile]:
-    """Public, key-less sources only. No model inference is performed."""
+                   models_dev_url: str = MODELS_DEV_URL,
+                   nous_url: str = NOUS_MODELS_URL) -> Dict[str, VerifiedProfile]:
+    """Public, key-less sources only. No model inference is performed.
+
+    Preferred: Nous /v1/models (+ OpenRouter benchmarks). Fallbacks keep the router usable
+    when a source is down: catalog x OpenRouter, then catalog x models.dev.
+    """
     catalog = _get_json(catalog_url, 15)
     try:
-        return build_profiles_from_openrouter(catalog, _get_json(openrouter_url, 30), fetched_at)
+        openrouter = _get_json(openrouter_url, 30)
     except (OSError, ValueError):
-        return build_profiles(catalog, _get_json(models_dev_url, 30), fetched_at)
+        openrouter = None
+    try:
+        return build_registry(catalog, _get_json(nous_url, 30), openrouter, fetched_at)
+    except (OSError, ValueError):
+        pass
+    if openrouter is not None:
+        try:
+            return build_profiles_from_openrouter(catalog, openrouter, fetched_at)
+        except ValueError:
+            pass
+    return build_profiles(catalog, _get_json(models_dev_url, 30), fetched_at)
