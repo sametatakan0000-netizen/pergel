@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 26,
     "total_classes": 11,
-    "total_functions": 125,
-    "total_loc": 2569
+    "total_functions": 126,
+    "total_loc": 2584
   },
   "modules": [
     {
@@ -130,7 +130,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 386,
+      "loc": 387,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -231,6 +231,7 @@
         "mark_completed",
         "mark_running",
         "monotonic",
+        "normalize_model",
         "now",
         "on_request",
         "on_response",
@@ -659,7 +660,7 @@
     {
       "module": "src.router.live_router",
       "path": "src/router/live_router.py",
-      "loc": 244,
+      "loc": 258,
       "classes": [
         "LiveRouter"
       ],
@@ -679,6 +680,7 @@
         "virtual_context_length",
         "_ordered",
         "plan",
+        "normalize_model",
         "plan_with_context",
         "prepare_payload",
         "key"
@@ -722,11 +724,13 @@
         "keyword_tier",
         "makedirs",
         "max",
+        "normalize_model",
         "plan_with_context",
         "pop",
         "price_tier",
         "reliability_map",
         "sorted",
+        "split",
         "start_tier",
         "sticky_model",
         "time",

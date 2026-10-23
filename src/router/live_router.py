@@ -193,10 +193,24 @@ class LiveRouter:
              now: Optional[float] = None) -> List[str]:
         return self.plan_with_context(payload, session_id, now)[0]
 
+    def normalize_model(self, model: Optional[str]) -> str:
+        """Strip leaked client-side provider prefixes (``custom:``, ``oracle-router:``).
+
+        Only *leading* ``name:`` segments without ``/`` are removed, and only while the
+        current string is unknown — suffixes like ``:free``/``:batch`` stay intact.
+        """
+        m = model or "oracle/auto"
+        while m not in VIRTUAL_PROFILES and m not in self.profiles and ":" in m:
+            head, rest = m.split(":", 1)
+            if "/" in head or not rest:
+                break
+            m = rest
+        return m
+
     def plan_with_context(self, payload: Dict[str, Any], session_id: Optional[str] = None,
                           now: Optional[float] = None):
         """Return (ordered candidates, bucket, start tier). Raises KeyError for unknown models."""
-        requested = payload.get("model") or "oracle/auto"
+        requested = self.normalize_model(payload.get("model"))
         messages = payload.get("messages") or []
         kw_tier = keyword_tier(messages)
         bucket = bucket_for(payload, kw_tier)

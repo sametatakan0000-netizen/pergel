@@ -203,3 +203,15 @@ class TestLiveRouterNousRegistry(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestModelPrefixNormalization(unittest.TestCase):
+    def test_leaked_provider_prefix_is_stripped(self):
+        r = LiveRouter.__new__(LiveRouter)
+        r.profiles = {"vendor/m:free": object()}
+        self.assertEqual(r.normalize_model("oracle-router:oracle/auto"), "oracle/auto")
+        self.assertEqual(r.normalize_model("custom:oracle-router:oracle/auto"), "oracle/auto")
+        self.assertEqual(r.normalize_model("vendor/m:free"), "vendor/m:free")
+        self.assertEqual(r.normalize_model("oracle-router:vendor/m:free"), "vendor/m:free")
+        self.assertEqual(r.normalize_model(None), "oracle/auto")
+        self.assertEqual(r.normalize_model("nope:unknown/x"), "unknown/x")  # still KeyError later

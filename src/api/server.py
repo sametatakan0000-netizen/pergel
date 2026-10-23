@@ -234,7 +234,8 @@ class BrowserFarmSaaSServer:
                         self._send_json(400, {"error": "messages must be a nonempty array"})
                         return
                     session_id = self.headers.get("x-hermes-session-id", "") or None
-                    routed = (payload.get("model") or "oracle/auto") in VIRTUAL_PROFILES
+                    payload["model"] = parent.live.normalize_model(payload.get("model"))
+                    routed = payload["model"] in VIRTUAL_PROFILES
                     if routed and parent.live.learner.on_request(session_id, payload) == "user_retry":
                         parent.live.clear_sticky(session_id)  # regenerate = dissatisfied: re-pick
                     try:
