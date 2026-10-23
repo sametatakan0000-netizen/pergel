@@ -35,8 +35,14 @@ This repository does **not** modify the running Hermes gateway or its default mo
     `ratio`, `reason`) without sending anything upstream.
   - Measured on the real snapshot (107K-token prompt): hard turn single `$0.095` → 2 members
     `$0.190`; with `spent_today_usd=20` the same turn falls back to single. **Execution is not
-    wired yet** — `/v1/chat/completions` still sends one model, so members are a plan, not
-    parallel calls.
+    wired yet** — superseded: execution is wired (see below).
+  - **Execution (`src/router/moa_exec.py`, `server.py::_apply_moa`)** — behind `ORACLE_MOA=1`,
+    **default off**. Members run in parallel, non-streaming, with the same tools; their drafts
+    go in as one system note before the last user turn; the Amiral streams the final answer.
+    Member failures are dropped silently; no usable member → plain single-model path. Member
+    usage counts toward spend accounting, member outcomes do NOT feed the learner. E2E test
+    with a fake upstream (`tests/test_moa_e2e.py`). Turning it on is a real token-spend
+    decision and is left to the user's observation of traffic.
 - **Self-evolution (`src/router/outcome_learning.py`)** — learns from real traffic, zero extra inference:
   - structural checks: malformed tool-call JSON, unknown tool names, empty answers (stream and non-stream);
   - implicit feedback on the next user turn: regenerate −1, correction phrasing −0.5, continuing after a final answer +0.5; tool-loop turns neutral; aux calls (explicit models sharing the session id) ignored;
