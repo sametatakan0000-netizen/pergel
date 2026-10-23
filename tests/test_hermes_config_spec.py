@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import unittest
 from src.infra.hermes_config_builder import (
     build_optimal_hermes_spec,
@@ -52,10 +54,27 @@ class TestHermesConfigSpec(unittest.TestCase):
         self.assertEqual(spec["moa"]["privacy_filter"], "display")
 
         cmds = generate_hermes_cli_commands(spec)
-        self.assertTrue(any("hermes proxy start" in c for c in cmds))
+        self.assertFalse(any("hermes proxy start" in c for c in cmds))
+        self.assertFalse(any("smart_model_routing" in c for c in cmds))
+        self.assertFalse(any("hermes config set model.provider" in c for c in cmds))
         self.assertTrue(any("hermes config set providers.oracle-router.api http://127.0.0.1:8090/v1" in c for c in cmds))
-        self.assertTrue(any("hermes config set SEARXNG_URL http://localhost:8888" in c for c in cmds))
-        self.assertTrue(any("hermes config set FIRECRAWL_API_URL http://localhost:3002" in c for c in cmds))
+        self.assertFalse(any("skills install" in c or "FIRECRAWL_API_URL" in c for c in cmds))
+
+    def test_cli_exposes_serving_and_catalog_refresh_commands(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "src.cli", "--help"],
+            capture_output=True, text=True, check=True,
+        )
+        self.assertIn("serve", result.stdout)
+        self.assertIn("refresh-catalog", result.stdout)
+
+    def test_doctor_does_not_report_ready_without_upstream(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "src.cli", "doctor"],
+            capture_output=True, text=True, check=True,
+        )
+        report = __import__("json").loads(result.stdout)
+        self.assertNotEqual(report["status"], "READY")
 
 
 if __name__ == "__main__":

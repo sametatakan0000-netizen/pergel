@@ -166,6 +166,50 @@ class TestOracleRouter(unittest.TestCase):
             self.assertGreaterEqual(exported["total_models"], 64)
             self.assertIn("qwen/qwen3.8-27b", exported["profiles"])
             self.assertIn("role_persona", exported["profiles"]["qwen/qwen3.8-27b"])
+            self.assertEqual(exported["profiles"]["qwen/qwen3.8-27b"]["metadata_status"], "unverified")
+            self.assertNotIn("google/gemini-3.7-flash:free", router.tiers[0])
+
+    def test_catalog_refresh_persists_verified_ids_without_guessing_capabilities(self):
+        import json
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from threading import Thread
+
+        class Catalog(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_GET(self):
+                data = json.dumps({"version": 1, "providers": {"nous": {
+                    "models": [{"id": "test/new-model", "default": False}]
+                }}}).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+        catalog = ThreadingHTTPServer(("127.0.0.1", 0), Catalog)
+        thread = Thread(target=catalog.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                db_path = os.path.join(tmp, "router.db")
+                url = f"http://127.0.0.1:{catalog.server_port}/catalog.json"
+                router = DynamicOracleRouter(db_path=db_path)
+                self.assertEqual(router.refresh_catalog(url), ["test/new-model"])
+                new_profile = router.inventory["test/new-model"]
+                self.assertFalse(new_profile.supports_vision)
+                self.assertFalse(new_profile.supports_tools)
+                self.assertIn("test/new-model", DynamicOracleRouter(db_path=db_path).inventory)
+        finally:
+            catalog.shutdown()
+            catalog.server_close()
+            thread.join(timeout=3)
+
+    def test_catalog_sync_rejects_unverified_shape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            router = DynamicOracleRouter(db_path=os.path.join(tmp, "router.db"))
+            with self.assertRaises(ValueError):
+                router.sync_live_model_catalog({"providers": {"nous": {"models": "not a list"}}})
+            self.assertNotIn("n", router.inventory)
 
 
 if __name__ == "__main__":

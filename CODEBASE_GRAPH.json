@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 23,
     "total_classes": 10,
-    "total_functions": 65,
-    "total_loc": 2281
+    "total_functions": 68,
+    "total_loc": 2322
   },
   "modules": [
     {
@@ -19,37 +19,54 @@
     {
       "module": "src.cli",
       "path": "src/cli.py",
-      "loc": 45,
+      "loc": 86,
       "classes": [],
       "functions": [
-        "main"
+        "main",
+        "catalog_loop"
       ],
       "imports": [
         "argparse",
         "json",
+        "src.api.server",
         "src.devtools.codebase_graph",
         "src.devtools.security_audit",
         "src.devtools.token_and_debt_hygiene",
         "src.infra.hermes_config_builder",
-        "sys"
+        "src.router.oracle_router",
+        "sys",
+        "threading",
+        "urllib.error"
       ],
       "calls": [
         "ArgumentParser",
+        "BrowserFarmSaaSServer",
+        "DynamicOracleRouter",
+        "Event",
+        "Thread",
+        "add_argument",
         "add_parser",
         "add_subparsers",
         "build_codebase_knowledge_graph",
         "build_optimal_hermes_spec",
         "dumps",
         "exit",
+        "is_set",
         "len",
         "main",
         "parse_args",
         "print",
         "print_help",
+        "refresh_catalog",
         "run_defensive_security_audit",
-        "scan_shortcut_debt"
+        "scan_shortcut_debt",
+        "set",
+        "shutdown",
+        "start",
+        "start_background",
+        "wait"
       ],
-      "change_risk": 3.16
+      "change_risk": 6.88
     },
     {
       "module": "src.api",
@@ -105,7 +122,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 263,
+      "loc": 284,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -132,17 +149,20 @@
         "src.router.oracle_router",
         "src.search.query_fanout",
         "threading",
-        "time",
-        "typing"
+        "typing",
+        "urllib.error",
+        "urllib.request"
       ],
       "calls": [
         "BrowserWorker",
         "DynamicOracleRouter",
         "JobStore",
-        "OracleSignal",
+        "Lock",
+        "Request",
         "SelfHealingWatchdog",
         "Thread",
         "ThreadingHTTPServer",
+        "ValueError",
         "WebhookDispatcher",
         "_read_json",
         "_send_json",
@@ -151,6 +171,7 @@
         "classify_chat_request",
         "create_job",
         "decode",
+        "dict",
         "dispatch",
         "dumps",
         "encode",
@@ -158,10 +179,12 @@
         "execute_fanout_and_ground",
         "execute_task",
         "export_model_profiles_json",
+        "flush",
         "get",
         "get_adaptive_tuning",
         "get_job",
         "int",
+        "isinstance",
         "items",
         "join",
         "len",
@@ -169,9 +192,10 @@
         "makedirs",
         "mark_completed",
         "mark_running",
+        "pop",
         "read",
-        "record_outcome",
-        "route_and_execute",
+        "readline",
+        "rstrip",
         "run",
         "run_cycle",
         "select_best_in_tier",
@@ -185,8 +209,7 @@
         "startswith",
         "str",
         "strip",
-        "time",
-        "upstream_chat_fn",
+        "urlopen",
         "write"
       ],
       "change_risk": 10.0
@@ -443,7 +466,7 @@
     {
       "module": "src.infra.hermes_config_builder",
       "path": "src/infra/hermes_config_builder.py",
-      "loc": 195,
+      "loc": 146,
       "classes": [],
       "functions": [
         "build_optimal_hermes_spec",
@@ -452,13 +475,8 @@
       "imports": [
         "typing"
       ],
-      "calls": [
-        "append",
-        "items",
-        "lower",
-        "str"
-      ],
-      "change_risk": 3.04
+      "calls": [],
+      "change_risk": 2.02
     },
     {
       "module": "src.infra.self_healing_watchdog",
@@ -566,7 +584,7 @@
     {
       "module": "src.router.oracle_router",
       "path": "src/router/oracle_router.py",
-      "loc": 879,
+      "loc": 907,
       "classes": [
         "OracleSignal",
         "ModelProfile",
@@ -578,6 +596,8 @@
         "__init__",
         "_connect",
         "_init_db",
+        "_add_unverified_model",
+        "refresh_catalog",
         "sync_live_model_catalog",
         "record_outcome",
         "get_model_score",
@@ -601,11 +621,14 @@
         "sqlite3",
         "src.devtools.self_evolution_engine",
         "time",
-        "typing"
+        "typing",
+        "urllib.request"
       ],
       "calls": [
         "ModelProfile",
+        "ValueError",
         "__setattr__",
+        "_add_unverified_model",
         "_build_full_nous_inventory",
         "_connect",
         "_init_db",
@@ -615,7 +638,6 @@
         "any",
         "append",
         "asdict",
-        "bool",
         "close",
         "commit",
         "connect",
@@ -641,6 +663,7 @@
         "join",
         "len",
         "list",
+        "load",
         "lower",
         "makedirs",
         "max",
@@ -656,9 +679,12 @@
         "sorted",
         "startswith",
         "str",
+        "strip",
         "sum",
+        "sync_live_model_catalog",
         "time",
-        "tuple"
+        "tuple",
+        "urlopen"
       ],
       "change_risk": 10.0
     },
@@ -721,7 +747,7 @@
     "src.api.server.do_GET",
     "src.api.server.do_POST",
     "src.api.server.log_message",
-    "src.api.server.start_background",
+    "src.cli.catalog_loop",
     "src.devtools.security_audit.audit_skill_markdown",
     "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",
     "src.devtools.self_evolution_engine.evaluate_silent_watchdog",
@@ -730,7 +756,7 @@
     "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
     "src.router.oracle_router.combined_score",
     "src.router.oracle_router.get_evolution_ledger",
-    "src.router.oracle_router.sync_live_model_catalog",
+    "src.router.oracle_router.route_and_execute",
     "src.search.query_fanout.default_searxng_search"
   ]
 }

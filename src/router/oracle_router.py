@@ -6,6 +6,7 @@ import os
 import re
 import sqlite3
 import time
+import urllib.request
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.devtools.self_evolution_engine import distill_evolution_record
@@ -351,7 +352,6 @@ class DynamicOracleRouter:
             "deepseek/deepseek-v4.1-flash-1017",
             "openai/gpt-6-luna",
             "anthropic/claude-haiku-5.5",
-            "google/gemini-3.7-flash:free",
             "qwen/qwen3.6-27b",
         ],
         [
@@ -437,34 +437,60 @@ class DynamicOracleRouter:
                 )
                 """
             )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS discovered_models (model_id TEXT PRIMARY KEY, first_seen REAL NOT NULL)"
+            )
             conn.commit()
+            for (mid,) in conn.execute("SELECT model_id FROM discovered_models"):
+                if mid not in self.inventory:
+                    self._add_unverified_model(mid)
         finally:
             if self._conn is None:
                 conn.close()
+
+    def _add_unverified_model(self, mid: str) -> None:
+        self.inventory[mid] = ModelProfile(
+            model_id=mid, provider="nous", tier=2,
+            default_reasoning_effort="medium", default_temperature=0.2,
+            input_cost_per_mtok=-1.0, output_cost_per_mtok=-1.0,
+            supports_vision=False, supports_tools=False,
+        )
+        self.tiers[1].append(mid)
+
+    def refresh_catalog(self, url: str = "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json") -> List[str]:
+        """Fetch curated IDs; persist additions, but leave capabilities/pricing unknown."""
+        with urllib.request.urlopen(url, timeout=10) as response:
+            payload = json.load(response)
+        if payload.get("version") != 1:
+            raise ValueError("Unsupported model catalog schema")
+        return self.sync_live_model_catalog(payload)
 
     def sync_live_model_catalog(self, catalog_payload: Dict[str, Any]) -> List[str]:
         """https://hermes-agent.nousresearch.com/docs/api/model-catalog.json verisinden yeni Nous modellerini otonom ekler."""
         nous_block = catalog_payload.get("providers", {}).get("nous", {})
         models = nous_block.get("models", [])
+        if not isinstance(models, list) or any(
+            not isinstance(entry, dict) or not isinstance(entry.get("id"), str)
+            or not entry["id"].strip() for entry in models
+        ):
+            raise ValueError("Nous curated catalog must contain model ID objects")
         added: List[str] = []
         now = time.time()
         for entry in models:
             mid = entry.get("id") if isinstance(entry, dict) else str(entry)
             if not mid or mid in self.inventory:
                 continue
-            self.inventory[mid] = ModelProfile(
-                model_id=mid,
-                provider="nous",
-                tier=2,
-                default_reasoning_effort="medium",
-                default_temperature=0.2,
-                input_cost_per_mtok=0.50,
-                output_cost_per_mtok=2.00,
-                supports_vision="vision" in mid.lower() or "gemini" in mid.lower(),
-                supports_tools=True,
-                is_silent_default=bool(isinstance(entry, dict) and entry.get("default")),
-            )
-            self.tiers[1].append(mid)
+            self._add_unverified_model(mid)
+            conn = self._connect()
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO discovered_models (model_id, first_seen) VALUES (?, ?)",
+                    (mid, now),
+                )
+                conn.commit()
+            finally:
+                if self._conn is None:
+                    conn.close()
             added.append(mid)
 
         if added:
@@ -594,6 +620,8 @@ class DynamicOracleRouter:
         for mid, prof in sorted(self.inventory.items(), key=lambda kv: (kv[1].tier, kv[1].input_cost_per_mtok, kv[0])):
             d = asdict(prof)
             d["strengths"] = list(prof.strengths)
+            # Catalog membership is known, but prices/capabilities/personas here are guesses.
+            d["metadata_status"] = "unverified"
             d["live_score"] = round(self.get_model_score(mid), 4)
             profiles_dict[mid] = d
 
