@@ -27,9 +27,10 @@ This repository does **not** modify the running Hermes gateway or its default mo
 
 Dry run with the real registry and an echo upstream: `python3 scripts/routing_dry_run.py` (no inference).
 
-## Not verified yet
+## Verified on host (2026-10-23)
 
-- **No real Nous inference through the router.** The agent's Docker sandbox cannot reach the host loopback (`127.0.0.1:8645`); this is expected — the router belongs on the host. Run the host steps below.
+- **Real Nous inference through the router works.** A live Hermes Telegram session runs on `/model custom:oracle-router:oracle/auto`; Hermes leaks the provider prefix into the model name, which the router now normalizes (`normalize_model`). Fix landed because the raw form previously returned `Unknown model`.
+- Router health (host): 391 routable models, registry fresh; `hermes proxy` Nous adapter ready.
 - Learning starts empty: quality ordering is benchmark-driven until real traffic accumulates evidence. The keyword tier guess is crude by design; floors correct it per bucket over time.
 - Correction detection is a regex (TR/EN) — a weak signal by design (−0.5).
 

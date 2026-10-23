@@ -1,0 +1,13 @@
+1) hermes proxy status
+       Hermes proxy upstream adapters
+       
+         [nous    ] Nous Portal — ready (bearer expires 2026-10-23T18:02:27+00:00)
+         [xai     ] xAI Grok OAuth — not logged in
+       
+       Start the proxy with: hermes proxy start [--provider <name>]
+2) upstream proxy model list (http://127.0.0.1:8645/v1)
+  [OK]   hermes proxy answers /models (425 models)
+3) router health (http://127.0.0.1:8090/v1)
+  [OK]   router healthy: {'fetched_at': '2026-10-23T17:13:44+00:00', 'routable': 391}
+
+Free checks: 2 ok, 0 failed. Add --spend-tokens for the real end-to-end completions.
