@@ -2,3 +2,7 @@ __pycache__/
 *.py[cod]
 *.db
 .pytest_cache/
+model_registry.json
+live_router.db
+live_router.db-*
+*.tmp

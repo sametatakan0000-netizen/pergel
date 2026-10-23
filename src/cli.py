@@ -9,7 +9,7 @@ from src.devtools.codebase_graph import build_codebase_knowledge_graph
 from src.devtools.security_audit import run_defensive_security_audit
 from src.devtools.token_and_debt_hygiene import scan_shortcut_debt
 from src.infra.hermes_config_builder import build_optimal_hermes_spec
-from src.router.oracle_router import DynamicOracleRouter
+from src.router.model_registry import fetch_profiles, save_snapshot
 from src.api.server import BrowserFarmSaaSServer
 
 
@@ -23,15 +23,20 @@ def main() -> int:
     serve.add_argument("--port", type=int, default=8090)
     serve.add_argument("--db-dir", default="/root/ai_browser_farm")
     serve.add_argument("--nous-proxy-url", default="http://127.0.0.1:8645/v1")
-    refresh = sub.add_parser("refresh-catalog", help="Fetch curated Nous IDs into persistent router DB")
-    refresh.add_argument("--db-path", default="/root/ai_browser_farm/router.db")
-    refresh.add_argument("--url", default="https://hermes-agent.nousresearch.com/docs/api/model-catalog.json")
+    refresh = sub.add_parser("refresh-catalog", help="Rebuild verified model registry from public catalog + metadata (no inference)")
+    refresh.add_argument("--registry-path", default="/root/ai_browser_farm/model_registry.json")
 
     args = parser.parse_args()
     if args.command == "refresh-catalog":
-        router = DynamicOracleRouter(db_path=args.db_path)
-        added = router.refresh_catalog(args.url)
-        print(json.dumps({"added": added, "total_known": len(router.inventory)}))
+        from datetime import datetime, timezone
+        fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        profiles = fetch_profiles(fetched_at)
+        save_snapshot(args.registry_path, profiles, fetched_at)
+        print(json.dumps({
+            "fetched_at": fetched_at, "total": len(profiles),
+            "routable": sum(p.routable for p in profiles.values()),
+            "catalog_only": sorted(m for m, p in profiles.items() if p.status == "catalog_only"),
+        }, indent=2))
         return 0
     if args.command == "serve":
         server = BrowserFarmSaaSServer(
@@ -42,9 +47,9 @@ def main() -> int:
         def catalog_loop() -> None:
             while not stop.is_set():
                 try:
-                    server.router.refresh_catalog()
+                    server.refresh_registry()
                 except (OSError, ValueError, json.JSONDecodeError) as exc:
-                    print(f"Catalog refresh failed (retaining last known IDs): {exc}", file=sys.stderr)
+                    print(f"Registry refresh failed (keeping last snapshot): {exc}", file=sys.stderr)
                 stop.wait(1200)
 
         threading.Thread(target=catalog_loop, daemon=True).start()

@@ -3,8 +3,11 @@ import asyncio
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
+from dataclasses import asdict
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional
 
@@ -12,20 +15,32 @@ from src.api.job_store import JobStore
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
-from src.router.oracle_router import DynamicOracleRouter
+from src.router.live_router import VIRTUAL_PROFILES, LiveRouter
+from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
 from src.search.query_fanout import execute_fanout_and_ground
+
+# Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
+RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
+
+
+def _elapsed_ms(started: float) -> int:
+    return int((time.monotonic() - started) * 1000)
+
+
+def _usage_from(raw: bytes) -> Dict[str, Any]:
+    try:
+        usage = json.loads(raw).get("usage")
+    except (ValueError, AttributeError):
+        return {}
+    return usage if isinstance(usage, dict) else {}
 
 
 class BrowserFarmSaaSServer:
     """SaaS uçları + Hermes `provider: custom` için OpenAI-uyumlu `/v1/models` ve `/v1/chat/completions` Proxy."""
 
-    VIRTUAL_ROUTING_PROFILES = [
-        "oracle/auto",
-        "oracle/eco",
-        "oracle/free",
-        "oracle/agentic",
-        "oracle/premium",
-    ]
+    VIRTUAL_ROUTING_PROFILES = list(VIRTUAL_PROFILES)
+    MAX_ATTEMPTS = 3
+    UPSTREAM_TIMEOUT = 600
 
     def __init__(
         self,
@@ -35,6 +50,8 @@ class BrowserFarmSaaSServer:
         nous_proxy_url: str = "http://127.0.0.1:8645/v1",
         driver_fn: Optional[Callable[[str, str, str], str]] = None,
         webhook_sender_fn: Optional[Callable[[str, bytes, Dict[str, str]], int]] = None,
+        profiles: Optional[Dict[str, Any]] = None,
+        registry_path: Optional[str] = None,
     ) -> None:
         if host not in {"127.0.0.1", "::1", "localhost"}:
             raise ValueError("Unauthenticated router must bind to loopback only")
@@ -43,7 +60,13 @@ class BrowserFarmSaaSServer:
         self.nous_proxy_url = nous_proxy_url
         os.makedirs(self.db_dir, exist_ok=True)
         self.job_store = JobStore(os.path.join(self.db_dir, "jobs.db"))
-        self.router = DynamicOracleRouter(os.path.join(self.db_dir, "router.db"))
+        self.registry_path = registry_path or os.path.join(self.db_dir, "model_registry.json")
+        self.registry_fetched_at: Optional[str] = None
+        if profiles is None and os.path.exists(self.registry_path):
+            profiles, self.registry_fetched_at = load_snapshot(self.registry_path)
+        self.live = LiveRouter(os.path.join(self.db_dir, "live_router.db"), profiles or {})
+        # The loopback Hermes subscription proxy holds the real Portal credentials.
+        self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(driver_fn=driver_fn)
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)
         self._sessions_lock = threading.Lock()
@@ -83,38 +106,43 @@ class BrowserFarmSaaSServer:
                             upstream_ready = response.status == 200
                     except (urllib.error.URLError, TimeoutError, OSError):
                         upstream_ready = False
+                    routable = sum(p.routable for p in parent.live.profiles.values())
                     self._send_json(200, {
-                        "status": "ok" if upstream_ready else "degraded",
-                        "upstream_ready": upstream_ready, "watchdog": report,
+                        "status": "ok" if upstream_ready and routable else "degraded",
+                        "upstream_ready": upstream_ready,
+                        "registry": {"fetched_at": parent.registry_fetched_at, "routable": routable},
+                        "watchdog": report,
                     })
                     return
 
                 if self.path == "/v1/models/profiles":
-                    self._send_json(200, parent.router.export_model_profiles_json())
+                    profiles = parent.live.profiles
+                    self._send_json(200, {
+                        "fetched_at": parent.registry_fetched_at,
+                        "total_models": len(profiles),
+                        "routable": sum(p.routable for p in profiles.values()),
+                        "profiles": {mid: asdict(p) for mid, p in sorted(profiles.items())},
+                    })
                     return
 
                 if self.path == "/v1/models":
-                    data_rows: List[Dict[str, Any]] = [
-                        {
-                            "id": vp,
-                            "object": "model",
-                            "owned_by": "oracle-router",
-                            "context_length": 1000000,
-                        }
-                        for vp in parent.VIRTUAL_ROUTING_PROFILES
+                    routable = [p for p in parent.live.profiles.values() if p.routable]
+                    contexts = [p.context_window for p in routable if p.context_window]
+                    # Conservative: a virtual profile may resolve to any routable model.
+                    virtual_context = min(contexts) if contexts else None
+                    rows: List[Dict[str, Any]] = [
+                        {"id": vp, "object": "model", "owned_by": "oracle-router",
+                         "context_length": virtual_context}
+                        for vp in VIRTUAL_PROFILES
                     ]
-                    for mid, prof in parent.router.inventory.items():
-                        data_rows.append(
-                            {
-                                "id": mid,
-                                "object": "model",
-                                "owned_by": prof.provider,
-                                "tier": prof.tier,
-                                "supports_vision": prof.supports_vision,
-                                "sale_badge": prof.sale_badge,
-                            }
-                        )
-                    self._send_json(200, {"object": "list", "data": data_rows})
+                    for mid, p in sorted(parent.live.profiles.items()):
+                        rows.append({
+                            "id": mid, "object": "model", "owned_by": mid.split("/", 1)[0],
+                            "context_length": p.context_window, "status": p.status,
+                            "routable": p.routable, "supports_vision": p.supports_vision,
+                            "supports_tools": p.supports_tools,
+                        })
+                    self._send_json(200, {"object": "list", "data": rows})
                     return
 
                 if self.path.startswith("/v1/jobs/"):
@@ -194,77 +222,16 @@ class BrowserFarmSaaSServer:
                     if not isinstance(payload.get("messages"), list) or not payload["messages"]:
                         self._send_json(400, {"error": "messages must be a nonempty array"})
                         return
-                    requested = payload.get("model", "oracle/auto")
-                    if requested not in parent.VIRTUAL_ROUTING_PROFILES and requested not in parent.router.inventory:
+                    session_id = self.headers.get("x-hermes-session-id", "") or None
+                    try:
+                        plan = parent.live.plan(payload, session_id=session_id)
+                    except KeyError:
                         self._send_json(400, {"error": "Unknown model"})
                         return
-                    session_id = self.headers.get("x-hermes-session-id", "")
-                    task_type, needs_vision, target_tier = parent.router.classify_chat_request(
-                        payload, session_id=session_id
-                    )
-                    with parent._sessions_lock:
-                        sticky = parent.router.session_sticky_models.get(session_id) if session_id else None
-                        if requested in parent.router.inventory:
-                            chosen_model = requested
-                        elif sticky and requested == "oracle/auto":
-                            chosen_model = sticky
-                        else:
-                            tier_models = parent.router.tiers[target_tier - 1]
-                            candidates = [
-                                m for m in tier_models if m in parent.router.inventory
-                                and parent.router.inventory[m].supports_tools
-                                and (not needs_vision or parent.router.inventory[m].supports_vision)
-                            ]
-                            if requested == "oracle/free":
-                                candidates = [m for m in candidates if parent.router.inventory[m].input_cost_per_mtok == 0
-                                              and parent.router.inventory[m].output_cost_per_mtok == 0]
-                            if not candidates:
-                                self._send_json(422, {"error": "No verified eligible model for requested profile"})
-                                return
-                            chosen_model = parent.router.select_best_in_tier(candidates, task_type=task_type)
-                    tuning = parent.router.get_adaptive_tuning(chosen_model, task_type=task_type)
-                    upstream_payload = dict(payload)
-                    upstream_payload["model"] = chosen_model
-                    # Preserve caller-supplied generation controls; do not forward router-only metadata.
-                    upstream_payload.pop("oracle_routing", None)
-                    request = urllib.request.Request(
-                        parent.nous_proxy_url.rstrip("/") + "/chat/completions",
-                        data=json.dumps(upstream_payload).encode("utf-8"), method="POST",
-                        headers={"Content-Type": "application/json", "Authorization": "Bearer sk-local-router"},
-                    )
-                    response_started = False
-                    try:
-                        with urllib.request.urlopen(request, timeout=120) as upstream:
-                            if session_id:
-                                with parent._sessions_lock:
-                                    parent.router.session_sticky_models[session_id] = chosen_model
-                            content_type = upstream.headers.get("Content-Type", "application/json")
-                            self.send_response(upstream.status)
-                            self.send_header("Content-Type", content_type)
-                            self.send_header("X-Oracle-Selected-Model", chosen_model)
-                            self.end_headers()
-                            response_started = True
-                            if content_type.startswith("text/event-stream"):
-                                while line := upstream.readline():
-                                    self.wfile.write(line)
-                                    self.wfile.flush()
-                            else:
-                                while chunk := upstream.read(16384):
-                                    self.wfile.write(chunk)
-                                    self.wfile.flush()
-                    except urllib.error.HTTPError as exc:
-                        body = exc.read()
-                        self.send_response(exc.code)
-                        self.send_header("Content-Type", exc.headers.get("Content-Type", "application/json"))
-                        self.send_header("Content-Length", str(len(body)))
-                        self.end_headers()
-                        self.wfile.write(body)
-                    except (BrokenPipeError, ConnectionResetError):
-                        # The client closed a streaming response. Headers were already sent.
+                    if not plan:
+                        self._send_json(422, {"error": "No verified eligible model for requested profile"})
                         return
-                    except (urllib.error.URLError, TimeoutError, OSError):
-                        if not response_started:
-                            self._send_json(502, {"error": "Nous subscription proxy unavailable"})
+                    parent._forward_chat(self, payload, plan[: parent.MAX_ATTEMPTS], session_id)
                     return
 
                 self._send_json(404, {"error": "Unknown endpoint"})
@@ -272,6 +239,90 @@ class BrowserFarmSaaSServer:
         self._httpd = ThreadingHTTPServer((host, port), RequestHandler)
         self.port = int(self._httpd.server_address[1])
         self._thread: Optional[threading.Thread] = None
+
+    def refresh_registry(self) -> int:
+        """Re-read public catalog + metadata (no inference). Returns routable model count."""
+        fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        profiles = fetch_profiles(fetched_at)
+        save_snapshot(self.registry_path, profiles, fetched_at)
+        self.live.update_profiles(profiles)
+        self.registry_fetched_at = fetched_at
+        return sum(p.routable for p in profiles.values())
+
+    def _forward_chat(self, handler: BaseHTTPRequestHandler, payload: Dict[str, Any],
+                      plan: List[str], session_id: Optional[str]) -> None:
+        last_error = None
+        for model_id in plan:
+            upstream_payload = self.live.prepare_payload(payload, model_id)
+            upstream_payload.pop("oracle_routing", None)
+            request = urllib.request.Request(
+                self.nous_proxy_url.rstrip("/") + "/chat/completions",
+                data=json.dumps(upstream_payload).encode("utf-8"), method="POST",
+                headers={"Content-Type": "application/json",
+                         "Authorization": f"Bearer {self.upstream_api_key}"},
+            )
+            started = time.monotonic()
+            try:
+                upstream = urllib.request.urlopen(request, timeout=self.UPSTREAM_TIMEOUT)
+            except urllib.error.HTTPError as exc:
+                body = exc.read()
+                self.live.record_upstream(model_id, exc.code, _elapsed_ms(started))
+                last_error = (exc.code, exc.headers.get("Content-Type", "application/json"), body, model_id)
+                if exc.code in RETRYABLE_STATUSES:
+                    continue
+                break
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                # Proxy-level failure, not the model's fault: no cooldown, no fallback.
+                timed_out = isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError)
+                handler._send_json(504 if timed_out else 502, {
+                    "error": "Nous subscription proxy timed out" if timed_out else "Nous subscription proxy unavailable"
+                })
+                return
+            with upstream:
+                self._relay_success(handler, upstream, model_id, session_id, started,
+                                    routed=(payload.get("model") or "oracle/auto") in VIRTUAL_PROFILES)
+            return
+
+        status, content_type, body, model_id = last_error
+        handler.send_response(status)
+        handler.send_header("Content-Type", content_type)
+        handler.send_header("X-Oracle-Selected-Model", model_id)
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+
+    def _relay_success(self, handler: BaseHTTPRequestHandler, upstream: Any, model_id: str,
+                       session_id: Optional[str], started: float, routed: bool = True) -> None:
+        if routed:
+            # Only router decisions define session affinity. Explicit-model calls that share the
+            # session id (Hermes titles/compression) must not overwrite the conversation's model.
+            self.live.commit_choice(session_id, model_id)
+        content_type = upstream.headers.get("Content-Type", "application/json")
+        handler.send_response(upstream.status)
+        handler.send_header("Content-Type", content_type)
+        handler.send_header("X-Oracle-Selected-Model", model_id)
+        usage: Dict[str, Any] = {}
+        if content_type.startswith("text/event-stream"):
+            handler.end_headers()
+            try:
+                while line := upstream.readline():
+                    handler.wfile.write(line)
+                    handler.wfile.flush()
+                    if line.startswith(b"data: {") and b'"usage"' in line:
+                        usage = _usage_from(line[6:]) or usage
+            except OSError:
+                pass  # client or upstream closed mid-stream; headers are already sent
+        else:
+            body = upstream.read()
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            try:
+                handler.wfile.write(body)
+            except OSError:
+                pass
+            usage = _usage_from(body)
+        self.live.record_upstream(model_id, upstream.status, _elapsed_ms(started),
+                                  usage.get("prompt_tokens"), usage.get("completion_tokens"))
 
     def start_background(self) -> None:
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
