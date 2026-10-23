@@ -12,6 +12,7 @@ for url in http://127.0.0.1:8645/v1/models http://127.0.0.1:8090/v1/models; do
  done
 hermes config set providers.oracle-router.api http://127.0.0.1:8090/v1
 hermes config set providers.oracle-router.transport chat_completions
+hermes config set providers.oracle-router.api_key local-router   # placeholder, not a secret: router is loopback-only
 hermes config set providers.oracle-router.session_affinity_header x-hermes-session-id
 hermes config set providers.oracle-router.catalog_provider nous
 hermes config set providers.oracle-router.default_model oracle/auto

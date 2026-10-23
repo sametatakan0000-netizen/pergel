@@ -33,6 +33,14 @@ Dry run with the real registry and an echo upstream: `python3 scripts/routing_dr
 - Learning starts empty: quality ordering is benchmark-driven until real traffic accumulates evidence. The keyword tier guess is crude by design; floors correct it per bucket over time.
 - Correction detection is a regex (TR/EN) — a weak signal by design (−0.5).
 
+## Remote one-shot (from a remote-desktop session on the host)
+
+```bash
+bash ~/.hermes/sandboxes/docker/default/home/ai_browser_farm/scripts/host/remote_quickstart.sh
+```
+Installs + verifies (2 tiny real requests) + registers the provider; writes `host_quickstart.log`
+into the repo so the sandboxed agent can read the result without copy/paste.
+
 ## Host steps (Ubuntu host, not the agent sandbox)
 
 ```bash

@@ -6,3 +6,4 @@ model_registry.json
 live_router.db
 live_router.db-*
 *.tmp
+host_quickstart.log
