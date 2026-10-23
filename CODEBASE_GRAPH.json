@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 26,
     "total_classes": 11,
-    "total_functions": 121,
-    "total_loc": 2495
+    "total_functions": 125,
+    "total_loc": 2569
   },
   "modules": [
     {
@@ -130,7 +130,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 382,
+      "loc": 386,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -159,6 +159,7 @@
         "json",
         "os",
         "src.api.job_store",
+        "src.browser_engine.browser_orchestrator",
         "src.browser_engine.worker",
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
@@ -173,6 +174,7 @@
         "urllib.request"
       ],
       "calls": [
+        "BrowserFarmOrchestrator",
         "BrowserWorker",
         "JobStore",
         "LiveRouter",
@@ -277,38 +279,61 @@
     {
       "module": "src.browser_engine.browser_orchestrator",
       "path": "src/browser_engine/browser_orchestrator.py",
-      "loc": 109,
+      "loc": 179,
       "classes": [
         "BrowserFarmOrchestrator"
       ],
       "functions": [
         "__init__",
+        "_init_db",
+        "_load_state",
+        "_persist_floor",
+        "_persist_apis",
         "_extract_domain",
         "select_engine",
         "record_domain_escalation",
         "build_session_task"
       ],
       "imports": [
+        "contextlib",
+        "json",
+        "os",
+        "sqlite3",
         "src.devtools.self_evolution_engine",
         "typing",
         "urllib.parse"
       ],
       "calls": [
         "_extract_domain",
+        "_init_db",
+        "_load_state",
+        "_persist_apis",
+        "_persist_floor",
+        "abspath",
         "append",
+        "closing",
+        "commit",
+        "connect",
+        "dirname",
         "distill_evolution_record",
+        "dumps",
+        "execute",
+        "executescript",
         "extend",
+        "fetchall",
         "get",
         "join",
         "len",
+        "loads",
         "lower",
+        "makedirs",
         "replace",
         "select_engine",
         "setdefault",
         "strip",
         "urlparse"
       ],
-      "change_risk": 5.16
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.worker",

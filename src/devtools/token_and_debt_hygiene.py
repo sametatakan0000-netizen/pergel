@@ -39,7 +39,7 @@ def compress_cli_output(raw_output: str, max_lines: int = 20) -> str:
 
 def scan_shortcut_debt(root_dir: str) -> List[Dict[str, Any]]:
     """Kod tabanındaki `# shortcut:` (Ponytail) ve `# TODO:` teknik borç kayıtlarını toplar."""
-    pattern = re.compile(r"#\s*(shortcut|TODO)\s*:\s*(.+)$", re.IGNORECASE)
+    pattern = re.compile(r"^\s*#\s*(shortcut|TODO)\s*:\s*(.+)$", re.IGNORECASE)
     debt_items: List[Dict[str, Any]] = []
 
     for dirpath, dirnames, filenames in os.walk(root_dir):

@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional
 
 from src.api.job_store import JobStore
+from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
@@ -71,7 +72,10 @@ class BrowserFarmSaaSServer:
                                explore_epsilon=epsilon)
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
-        self.worker = BrowserWorker(driver_fn=driver_fn)
+        self.worker = BrowserWorker(
+            driver_fn=driver_fn,
+            orchestrator=BrowserFarmOrchestrator(db_path=os.path.join(self.db_dir, "browser_memory.db")),
+        )
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)
         self._sessions_lock = threading.Lock()
         self.watchdog = SelfHealingWatchdog(

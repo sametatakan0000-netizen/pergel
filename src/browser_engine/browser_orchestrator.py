@@ -1,4 +1,8 @@
 """Çoklu Motorlu Self-Evolving Tarayıcı Orkestratörü (Lightpanda, Chromium Browser-Use, Camofox)."""
+import contextlib
+import json
+import os
+import sqlite3
 import urllib.parse
 from typing import Any, Dict, List, Optional
 
@@ -14,10 +18,76 @@ class BrowserFarmOrchestrator:
         "camofox": 2,
     }
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        self.db_path = db_path
         self.domain_engine_floors: Dict[str, str] = {}
         self.domain_discovered_apis: Dict[str, List[str]] = {}
         self.evolution_ledger: List[Dict[str, str]] = []
+        if self.db_path:
+            os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
+            self._init_db()
+            self._load_state()
+
+    def _init_db(self) -> None:
+        if not self.db_path:
+            return
+        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS domain_floors (
+                    domain TEXT PRIMARY KEY,
+                    engine TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS domain_apis (
+                    domain TEXT PRIMARY KEY,
+                    apis_json TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS evolution_ledger (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    record_json TEXT NOT NULL
+                );
+                """
+            )
+            conn.commit()
+
+    def _load_state(self) -> None:
+        if not self.db_path:
+            return
+        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+            for domain, engine in conn.execute("SELECT domain, engine FROM domain_floors").fetchall():
+                self.domain_engine_floors[domain] = engine
+            for domain, apis_json in conn.execute("SELECT domain, apis_json FROM domain_apis").fetchall():
+                self.domain_discovered_apis[domain] = json.loads(apis_json)
+            for (rec_json,) in conn.execute("SELECT record_json FROM evolution_ledger ORDER BY id").fetchall():
+                self.evolution_ledger.append(json.loads(rec_json))
+
+    def _persist_floor(self, domain: str, engine: str, record: Dict[str, str]) -> None:
+        if not self.db_path:
+            return
+        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO domain_floors (domain, engine) VALUES (?, ?)",
+                (domain, engine),
+            )
+            conn.execute(
+                "INSERT INTO evolution_ledger (record_json) VALUES (?)",
+                (json.dumps(record, ensure_ascii=False),),
+            )
+            conn.commit()
+
+    def _persist_apis(self, domain: str, apis: List[str], record: Dict[str, str]) -> None:
+        if not self.db_path:
+            return
+        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO domain_apis (domain, apis_json) VALUES (?, ?)",
+                (domain, json.dumps(apis, ensure_ascii=False)),
+            )
+            conn.execute(
+                "INSERT INTO evolution_ledger (record_json) VALUES (?)",
+                (json.dumps(record, ensure_ascii=False),),
+            )
+            conn.commit()
 
     @staticmethod
     def _extract_domain(url: str) -> str:
@@ -63,28 +133,28 @@ class BrowserFarmOrchestrator:
             and self.ENGINE_RANK.get(final_engine, 0) > self.ENGINE_RANK.get(current_floor, 0)
         ):
             self.domain_engine_floors[domain] = final_engine
-            self.evolution_ledger.append(
-                distill_evolution_record(
-                    mode="FIX",
-                    source=f"BrowserFarmOrchestrator:{domain}",
-                    decision=f"Promote default browser engine floor for '{domain}' from {attempted_engines[0]} to {final_engine}",
-                    evidence=f"Attempted={attempted_engines} -> Oracle passed on {final_engine}",
-                )
+            rec = distill_evolution_record(
+                mode="FIX",
+                source=f"BrowserFarmOrchestrator:{domain}",
+                decision=f"Promote default browser engine floor for '{domain}' from {attempted_engines[0]} to {final_engine}",
+                evidence=f"Attempted={attempted_engines} -> Oracle passed on {final_engine}",
             )
+            self.evolution_ledger.append(rec)
+            self._persist_floor(domain, final_engine, rec)
 
         if discovered_apis:
             existing = self.domain_discovered_apis.setdefault(domain, [])
             new_apis = [api for api in discovered_apis if api not in existing]
             if new_apis:
                 existing.extend(new_apis)
-                self.evolution_ledger.append(
-                    distill_evolution_record(
-                        mode="CAPTURED",
-                        source=f"HAR-Discovery:{domain}",
-                        decision=f"Cache {len(new_apis)} direct XHR/JSON endpoints for '{domain}'",
-                        evidence=", ".join(new_apis[:3]),
-                    )
+                rec = distill_evolution_record(
+                    mode="CAPTURED",
+                    source=f"HAR-Discovery:{domain}",
+                    decision=f"Cache {len(new_apis)} direct XHR/JSON endpoints for '{domain}'",
+                    evidence=", ".join(new_apis[:3]),
                 )
+                self.evolution_ledger.append(rec)
+                self._persist_apis(domain, existing, rec)
 
     def build_session_task(
         self,
