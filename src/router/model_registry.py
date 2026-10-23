@@ -14,7 +14,9 @@ from typing import Any, Dict, Optional, Tuple
 
 CATALOG_URL = "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json"
 MODELS_DEV_URL = "https://models.dev/api.json"
+OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 METADATA_SOURCE = "models.dev:openrouter"
+OPENROUTER_SOURCE = "openrouter:/api/v1/models"
 
 # Canonical effort order used only to find the nearest level a model supports.
 EFFORT_ORDER: Tuple[str, ...] = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
@@ -42,6 +44,12 @@ class VerifiedProfile:
     release_date: str = ""
     knowledge_cutoff: str = ""
     is_silent_default: bool = False
+    default_effort: Optional[str] = None
+    reasoning_mandatory: bool = False
+    # Public third-party benchmark data (Artificial Analysis via OpenRouter). None = not published.
+    intelligence_index: Optional[float] = None
+    coding_index: Optional[float] = None
+    agentic_index: Optional[float] = None
     fetched_at: str = field(default="", compare=False)
 
     @property
@@ -129,6 +137,75 @@ def build_profiles(catalog: Dict[str, Any], models_dev: Dict[str, Any], fetched_
     return profiles
 
 
+def _per_million(value: Any) -> Optional[float]:
+    """OpenRouter prices are USD-per-token strings; negative means variable (router models)."""
+    try:
+        price = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if price < 0 else round(price * 1_000_000, 6)
+
+
+def _canonical_efforts(values: Any) -> Tuple[str, ...]:
+    if not isinstance(values, list):
+        return ()
+    known = [lvl for lvl in EFFORT_ORDER if lvl in values]
+    extras = [v for v in values if isinstance(v, str) and v not in EFFORT_ORDER]
+    return tuple(known + extras)
+
+
+def build_profiles_from_openrouter(catalog: Dict[str, Any], openrouter: Dict[str, Any], fetched_at: str) -> Dict[str, VerifiedProfile]:
+    entries = _catalog_entries(catalog)
+    data = openrouter.get("data") if isinstance(openrouter, dict) else None
+    if not isinstance(data, list):
+        raise ValueError("OpenRouter payload lacks data list")
+    index = {m["id"]: m for m in data if isinstance(m, dict) and isinstance(m.get("id"), str)}
+    profiles: Dict[str, VerifiedProfile] = {}
+    for entry in entries:
+        mid = entry["id"].strip()
+        silent_default = bool(entry.get("default"))
+        meta = index.get(mid)
+        if meta is None:
+            profiles[mid] = VerifiedProfile(model_id=mid, status="catalog_only",
+                                            is_silent_default=silent_default, fetched_at=fetched_at)
+            continue
+        arch = meta.get("architecture") or {}
+        inputs = tuple(m for m in arch.get("input_modalities") or [] if isinstance(m, str))
+        top = meta.get("top_provider") or {}
+        contexts = [c for c in (_int(meta.get("context_length")), _int(top.get("context_length"))) if c]
+        params = meta.get("supported_parameters") or []
+        reasoning = meta.get("reasoning") if isinstance(meta.get("reasoning"), dict) else {}
+        pricing = meta.get("pricing") or {}
+        aa = (meta.get("benchmarks") or {}).get("artificial_analysis") or {}
+        profiles[mid] = VerifiedProfile(
+            model_id=mid,
+            status="verified_metadata",
+            metadata_source=OPENROUTER_SOURCE,
+            name=str(meta.get("name") or ""),
+            description=str(meta.get("description") or ""),
+            family=str(meta.get("canonical_slug") or ""),
+            supports_tools="tools" in params,
+            supports_vision="image" in inputs,
+            supports_reasoning=bool(reasoning) or "reasoning" in params,
+            effort_levels=_canonical_efforts(reasoning.get("supported_efforts")),
+            input_modalities=inputs,
+            context_window=min(contexts) if contexts else None,
+            max_output=_int(top.get("max_completion_tokens")),
+            list_cost_in=_per_million(pricing.get("prompt")),
+            list_cost_out=_per_million(pricing.get("completion")),
+            list_cost_cache_read=_per_million(pricing.get("input_cache_read")),
+            knowledge_cutoff=str(meta.get("knowledge_cutoff") or ""),
+            is_silent_default=silent_default,
+            default_effort=reasoning.get("default_effort") if isinstance(reasoning.get("default_effort"), str) else None,
+            reasoning_mandatory=reasoning.get("mandatory") is True,
+            intelligence_index=_num(aa.get("intelligence_index")),
+            coding_index=_num(aa.get("coding_index")),
+            agentic_index=_num(aa.get("agentic_index")),
+            fetched_at=fetched_at,
+        )
+    return profiles
+
+
 def clamp_effort(profile: VerifiedProfile, desired: Optional[str]) -> Optional[str]:
     """Map a requested effort onto a level the model accepts; None means omit the field."""
     levels = profile.effort_levels
@@ -172,9 +249,18 @@ def load_snapshot(path: str) -> Tuple[Dict[str, VerifiedProfile], str]:
     return profiles, payload["fetched_at"]
 
 
-def fetch_profiles(fetched_at: str, catalog_url: str = CATALOG_URL, models_dev_url: str = MODELS_DEV_URL) -> Dict[str, VerifiedProfile]:
-    with urllib.request.urlopen(catalog_url, timeout=15) as response:
-        catalog = json.load(response)
-    with urllib.request.urlopen(models_dev_url, timeout=30) as response:
-        models_dev = json.load(response)
-    return build_profiles(catalog, models_dev, fetched_at=fetched_at)
+def _get_json(url: str, timeout: int) -> Any:
+    request = urllib.request.Request(url, headers={"User-Agent": "ai-browser-farm-registry/1"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.load(response)
+
+
+def fetch_profiles(fetched_at: str, catalog_url: str = CATALOG_URL,
+                   openrouter_url: str = OPENROUTER_MODELS_URL,
+                   models_dev_url: str = MODELS_DEV_URL) -> Dict[str, VerifiedProfile]:
+    """Public, key-less sources only. No model inference is performed."""
+    catalog = _get_json(catalog_url, 15)
+    try:
+        return build_profiles_from_openrouter(catalog, _get_json(openrouter_url, 30), fetched_at)
+    except (OSError, ValueError):
+        return build_profiles(catalog, _get_json(models_dev_url, 30), fetched_at)
