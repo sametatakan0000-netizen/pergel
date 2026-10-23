@@ -19,7 +19,7 @@ NOUS_MODELS_URL = "https://inference-api.nousresearch.com/v1/models"
 METADATA_SOURCE = "models.dev:openrouter"
 OPENROUTER_SOURCE = "openrouter:/api/v1/models"
 NOUS_SOURCE = "nous:/v1/models"
-AUTO_VARIANTS = {"free"}
+AUTO_VARIANTS = {"free", "batch"}  # user-confirmed: :batch works for interactive chat
 
 # Canonical effort order used only to find the nearest level a model supports.
 EFFORT_ORDER: Tuple[str, ...] = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
@@ -265,8 +265,8 @@ def build_registry(catalog: Dict[str, Any], nous_models: Dict[str, Any],
         profiles[mid] = _profile_from_meta(
             mid, meta, NOUS_SOURCE, fetched_at,
             silent_default=mid in defaults,
-            # Auto-pool: curated IDs and their ':free' variants only. ':batch' (half price,
-            # interactive behaviour unverified) and region-pinned variants stay explicit-only.
+            # Auto-pool: curated IDs plus their ':free' and ':batch' variants (user-confirmed to
+            # work for interactive chat). Region-pinned variants (':US') stay explicit-only.
             curated=mid in curated_ids or (variant in AUTO_VARIANTS and base in curated_ids),
             benchmarks=(bench.get(mid) or bench.get(base) or {}).get("benchmarks") or {},
         )

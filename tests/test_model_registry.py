@@ -37,7 +37,12 @@ NOUS = {"data": [
         "architecture": {"input_modalities": ["text"]},
         "supported_parameters": ["tools"], "pricing": {"prompt": "0.0000001", "completion": "0.0000001"},
     },
-    {   # batch variant of a curated model: cheaper, but interactive suitability unverified
+    {   # region-pinned variant: explicit-only
+        "id": "vendor/strong:US", "name": "Strong (US)", "context_length": 1000000,
+        "architecture": {"input_modalities": ["text"]},
+        "supported_parameters": ["tools"], "pricing": {"prompt": "0.000004", "completion": "0.00002"},
+    },
+    {   # batch variant of a curated model: half price, works for chat
         "id": "vendor/strong:batch", "name": "Strong (batch)", "context_length": 1000000,
         "architecture": {"input_modalities": ["text"]},
         "supported_parameters": ["tools"], "pricing": {"prompt": "0.000001", "completion": "0.000005"},
@@ -202,9 +207,10 @@ class TestModelRegistry(unittest.TestCase):
         self.assertEqual(reg["vendor/catalog-only"].status, "catalog_only")  # curated, absent on Nous
         self.assertFalse(reg["vendor/catalog-only"].auto_eligible)
         self.assertTrue(reg["vendor/cheap"].is_silent_default)
-        batch = reg["vendor/strong:batch"]
-        self.assertTrue(batch.routable)          # explicitly requestable
-        self.assertFalse(batch.auto_eligible)    # only base IDs and :free variants are auto-picked
+        self.assertTrue(reg["vendor/strong:batch"].auto_eligible)   # :batch joins the auto-pool
+        self.assertEqual(reg["vendor/strong:batch"].intelligence_index, 57.6)  # base benchmarks
+        self.assertTrue(reg["vendor/strong:US"].routable)
+        self.assertFalse(reg["vendor/strong:US"].auto_eligible)     # region-pinned: explicit-only
 
     def test_nous_registry_works_without_benchmark_source(self):
         reg = build_registry(CATALOG, NOUS, None, fetched_at="t")
