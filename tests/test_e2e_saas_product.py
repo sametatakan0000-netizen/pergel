@@ -109,7 +109,9 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 model_ids = {m["id"] for m in models_payload["data"]}
                 self.assertIn("oracle/auto", model_ids)
                 self.assertIn("oracle/free", model_ids)
-                self.assertIn("google/gemini-4-argon", model_ids)
+                # Only virtual profiles are advertised; raw ids stay routable but unlisted.
+                self.assertNotIn("google/gemini-4-argon", model_ids)
+                self.assertEqual(len(model_ids), 5)
 
                 chat_req_body = json.dumps(
                     {

@@ -3,7 +3,7 @@
     "total_files": 26,
     "total_classes": 11,
     "total_functions": 126,
-    "total_loc": 2584
+    "total_loc": 2580
   },
   "modules": [
     {
@@ -130,7 +130,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 387,
+      "loc": 383,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -193,7 +193,6 @@
         "_send_json",
         "_usage_from",
         "analyze_response",
-        "append",
         "as_response",
         "asdict",
         "bool",

@@ -138,6 +138,10 @@ class BrowserFarmSaaSServer:
                     return
 
                 if self.path == "/v1/models":
+                    # Only the 5 virtual routing profiles are advertised. Raw registry models
+                    # stay routable by explicit id (plan passes them through) and inspectable
+                    # at /v1/models/profiles — but a 430-entry picker list is noise, and a
+                    # misclick on a raw id would silently bypass routing policy.
                     # Largest window per profile: plan() skips candidates a request outgrows,
                     # so Hermes does not have to compress down to the smallest model's window.
                     rows: List[Dict[str, Any]] = [
@@ -145,14 +149,6 @@ class BrowserFarmSaaSServer:
                          "context_length": parent.live.virtual_context_length(vp)}
                         for vp in VIRTUAL_PROFILES
                     ]
-                    for mid, p in sorted(parent.live.profiles.items()):
-                        rows.append({
-                            "id": mid, "object": "model", "owned_by": mid.split("/", 1)[0],
-                            "context_length": p.context_window, "status": p.status,
-                            "routable": p.routable, "auto_eligible": p.auto_eligible,
-                            "supports_vision": p.supports_vision, "supports_tools": p.supports_tools,
-                            "billed_cost_in": p.billed_cost_in, "discount_pct": p.discount_pct,
-                        })
                     self._send_json(200, {"object": "list", "data": rows})
                     return
 
