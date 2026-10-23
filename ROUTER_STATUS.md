@@ -68,3 +68,9 @@ Tests: `python3 -m unittest discover -s tests -t .` · Status: `python3 -m src.c
   Tier 2 is harder than tier 1, but tier 3 ("architecture/design/analysis") is *not* harder, so the tier-3 keywords are not a reliable hardness signal.
 - 78% of queries land in tier 1, so the keyword guess alone would send most traffic to the cheapest band; the learned per-bucket floors and escalation are what protect quality, not the classifier.
 - Not shown: end-to-end router score (our router starts at a tier floor and escalates, it does not hard-route). Next step if wanted: replay the full `plan()` logic on this data.
+
+### Diagnosis of the tier-3 result (same data) — decision: keyword lists unchanged
+- Tier-3 hits are 27/59 `mmlu`, 14 `arc_challenge`, 13 `mmlu_pro`: multiple-choice questions that merely *mention* "security"/"design". That is a benchmark artifact, so it does not show that real "refactor this architecture" chat requests are easy. Retuning keywords on it would overfit the wrong distribution.
+- Tier 2 keywords (`code`, `python`, `function`, `test`) do mark harder queries (mean ease ≈0.50 vs 0.62 overall); `regex` is very hard (0.01, n=16).
+- Prompt length correlates with difficulty (r = −0.265), but the learner bucket already includes size (`s/m/l`), so length is covered without a classifier change.
+- Real evidence must come from our own traffic: `GET /v1/router/learning` floors per bucket. Revisit after a few hundred requests, not before.
