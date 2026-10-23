@@ -1,10 +1,13 @@
 """AI-Native Browser Engine (SaaS) & OpenAI-Compatible Custom Provider Proxy Sunucusu."""
 import asyncio
+import ipaddress
 import json
 import os
+import socket
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -37,6 +40,26 @@ def _usage_from(raw: bytes) -> Dict[str, Any]:
     return usage if isinstance(usage, dict) else {}
 
 
+def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
+    """Reject non-http(s) and loopback/private/link-local targets (SSRF guard). Returns error text or None."""
+    if not isinstance(url, str) or not url:
+        return "url is required"
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        return "url must be http(s) with a host"
+    if allow_private:
+        return None
+    try:
+        infos = socket.getaddrinfo(parts.hostname, None)
+    except socket.gaierror:
+        return None  # shortcut: unresolvable host passes (fetch fails itself); DNS-rebinding/redirect-to-private not covered, pin resolved IP when exposed publicly
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return "target resolves to a private/loopback address"
+    return None
+
+
 class BrowserFarmSaaSServer:
     """SaaS uçları + Hermes `provider: custom` için OpenAI-uyumlu `/v1/models` ve `/v1/chat/completions` Proxy."""
 
@@ -55,10 +78,14 @@ class BrowserFarmSaaSServer:
         profiles: Optional[Dict[str, Any]] = None,
         registry_path: Optional[str] = None,
         explore_epsilon: Optional[float] = None,
+        search_fn: Optional[Callable[[str], Any]] = None,
+        allow_private_targets: bool = False,
     ) -> None:
         if host not in {"127.0.0.1", "::1", "localhost"}:
             raise ValueError("Unauthenticated router must bind to loopback only")
         self.host = host
+        self.search_fn = search_fn  # None -> SearXNG default (ORACLE_SEARXNG_URL)
+        self.allow_private_targets = allow_private_targets
         self.db_dir = db_dir
         self.nous_proxy_url = nous_proxy_url
         os.makedirs(self.db_dir, exist_ok=True)
@@ -170,6 +197,10 @@ class BrowserFarmSaaSServer:
                     needs_vision = bool(payload.get("needs_vision", False))
                     js_complexity = payload.get("js_complexity", "low")
                     webhook_url = payload.get("webhook_url")
+                    err = _validate_target(url, parent.allow_private_targets)
+                    if err:
+                        self._send_json(400, {"error": err})
+                        return
 
                     job = parent.job_store.create_job(
                         target_url=url,
@@ -193,6 +224,8 @@ class BrowserFarmSaaSServer:
                     )
                     completed_job = parent.job_store.get_job(job["job_id"])
                     completed_job["discovered_apis"] = exec_res["discovered_apis"]
+                    completed_job["attempted_engines"] = exec_res["attempted_engines"]
+                    completed_job["blocked"] = bool(exec_res.get("blocked"))
                     if webhook_url:
                         wh_res = parent.webhook_dispatcher.dispatch(
                             webhook_url, completed_job
@@ -202,22 +235,15 @@ class BrowserFarmSaaSServer:
                     return
 
                 if self.path == "/v1/search/fanout":
-                    query = payload.get("query", "")
-                    res = asyncio.run(
-                        execute_fanout_and_ground(
-                            query,
-                            search_fn=lambda sq: asyncio.sleep(
-                                0,
-                                result=[
-                                    {
-                                        "url": f"https://indexed.local/{len(sq)}",
-                                        "title": sq,
-                                        "snippet": f"Grounded result for {sq}",
-                                    }
-                                ],
-                            ),
-                        )
-                    )
+                    query = str(payload.get("query", "")).strip()
+                    if not query:
+                        self._send_json(400, {"error": "query must be a non-empty string"})
+                        return
+                    try:
+                        res = asyncio.run(execute_fanout_and_ground(query, search_fn=parent.search_fn))
+                    except Exception as exc:  # never fabricate sources when the index is unreachable
+                        self._send_json(502, {"error": f"search backend unavailable: {type(exc).__name__}"})
+                        return
                     self._send_json(200, res)
                     return
 

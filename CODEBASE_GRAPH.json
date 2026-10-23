@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 26,
     "total_classes": 12,
-    "total_functions": 128,
-    "total_loc": 2647
+    "total_functions": 129,
+    "total_loc": 2675
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 383,
+      "loc": 409,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -144,6 +144,7 @@
       "functions": [
         "_elapsed_ms",
         "_usage_from",
+        "_validate_target",
         "__init__",
         "refresh_registry",
         "_forward_chat",
@@ -162,8 +163,10 @@
         "dataclasses",
         "datetime",
         "http.server",
+        "ipaddress",
         "json",
         "os",
+        "socket",
         "src.api.job_store",
         "src.browser_engine.browser_orchestrator",
         "src.browser_engine.worker",
@@ -177,6 +180,7 @@
         "time",
         "typing",
         "urllib.error",
+        "urllib.parse",
         "urllib.request"
       ],
       "calls": [
@@ -198,6 +202,7 @@
         "_relay_stream",
         "_send_json",
         "_usage_from",
+        "_validate_target",
         "abspath",
         "analyze_response",
         "as_response",
@@ -222,8 +227,10 @@
         "flush",
         "get",
         "get_job",
+        "getaddrinfo",
         "getattr",
         "int",
+        "ip_address",
         "isinstance",
         "isoformat",
         "items",
@@ -257,7 +264,6 @@
         "send_response",
         "server_close",
         "shutdown",
-        "sleep",
         "sorted",
         "split",
         "start",
@@ -266,8 +272,10 @@
         "strip",
         "sum",
         "summary",
+        "type",
         "update_profiles",
         "urlopen",
+        "urlsplit",
         "values",
         "virtual_context_length",
         "write"
@@ -988,7 +996,7 @@
     {
       "module": "src.search.query_fanout",
       "path": "src/search/query_fanout.py",
-      "loc": 88,
+      "loc": 90,
       "classes": [],
       "functions": [
         "decompose_query",
@@ -999,6 +1007,7 @@
       "imports": [
         "asyncio",
         "json",
+        "os",
         "re",
         "typing",
         "urllib.parse",
@@ -1026,7 +1035,7 @@
         "urlopen",
         "zip"
       ],
-      "change_risk": 5.9
+      "change_risk": 6.12
     }
   ],
   "dead_code_candidates": [

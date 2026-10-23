@@ -1,6 +1,7 @@
 """Canlı İndeks Sorgu Yayılımı (Query Fan-Out) ve Gerçek Zamanlı Tabanlama (Grounding) Motoru."""
 import asyncio
 import json
+import os
 import re
 import urllib.parse
 import urllib.request
@@ -30,9 +31,10 @@ def decompose_query(query: str, max_subqueries: int = 4) -> List[str]:
 
 
 async def default_searxng_search(
-    subquery: str, searxng_url: str = "http://localhost:8888"
+    subquery: str, searxng_url: Optional[str] = None
 ) -> List[Dict[str, str]]:
-    """Yerel SearXNG JSON API üzerinden arama yürütür."""
+    """Yerel SearXNG JSON API üzerinden arama yürütür (ORACLE_SEARXNG_URL, varsayılan localhost:8888)."""
+    searxng_url = searxng_url or os.environ.get("ORACLE_SEARXNG_URL", "http://localhost:8888")
     encoded = urllib.parse.urlencode({"q": subquery, "format": "json"})
     url = f"{searxng_url.rstrip('/')}/search?{encoded}"
 
