@@ -97,4 +97,4 @@ for _ in $(seq 1 30); do
 done
 printf '\nHealth:\n'; curl -fsS --max-time 5 http://127.0.0.1:8090/v1/health || printf 'router not healthy yet: journalctl --user -u oracle-router -n 50\n'
 printf '\n\nNext: bash %s/scripts/host/verify_live.sh\n' "$REPO_SRC"
-printf 'Optional (keep services running while logged out): loginctl enable-linger %s\n' "$USER"
+printf 'Optional (keep services running while logged out): loginctl enable-linger %s\n' "${USER:-$(id -un)}"
