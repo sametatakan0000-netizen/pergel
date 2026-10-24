@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 30,
+    "total_files": 31,
     "total_classes": 14,
-    "total_functions": 167,
-    "total_loc": 3381
+    "total_functions": 174,
+    "total_loc": 3491
   },
   "modules": [
     {
@@ -81,6 +81,52 @@
         "wait"
       ],
       "change_risk": 7.58
+    },
+    {
+      "module": "src.mcp_server",
+      "path": "src/mcp_server.py",
+      "loc": 110,
+      "classes": [],
+      "functions": [
+        "_load_browse_key",
+        "_default_http",
+        "build_mcp",
+        "browse_url",
+        "search_fanout",
+        "list_models",
+        "router_health"
+      ],
+      "imports": [
+        "fastmcp",
+        "json",
+        "os",
+        "typing",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "calls": [
+        "FastMCP",
+        "Request",
+        "RuntimeError",
+        "_default_http",
+        "_load_browse_key",
+        "build_mcp",
+        "dumps",
+        "encode",
+        "expanduser",
+        "get",
+        "http",
+        "loads",
+        "open",
+        "read",
+        "rstrip",
+        "run",
+        "split",
+        "startswith",
+        "strip",
+        "urlopen"
+      ],
+      "change_risk": 8.98
     },
     {
       "module": "src.api",
@@ -1268,6 +1314,10 @@
     "src.devtools.self_evolution_engine.evaluate_silent_watchdog",
     "src.devtools.token_and_debt_hygiene.compress_cli_output",
     "src.infra.hermes_config_builder.generate_hermes_cli_commands",
+    "src.mcp_server.browse_url",
+    "src.mcp_server.list_models",
+    "src.mcp_server.router_health",
+    "src.mcp_server.search_fanout",
     "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
     "src.router.live_router.classify_tier",
     "src.router.live_router.key",
