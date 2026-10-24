@@ -1,0 +1,17 @@
+{
+  "id": "brave",
+  "app_dir": "/home/pc/.local/share/bench-browsers/brave",
+  "bundled_extensions": [
+    {
+      "path": "MEIPreload/manifest.json",
+      "name": "MEI Preload",
+      "version": "1.0.7.1652906823",
+      "manifest_version": 2,
+      "findings": []
+    }
+  ],
+  "vendor_endpoints": [
+    "https://clients2.google.com/service/update2/crx"
+  ],
+  "version_files": {}
+}

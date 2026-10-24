@@ -1,0 +1,35 @@
+{
+  "id": "chrome-cft",
+  "app_dir": "/home/pc/.local/share/bench-browsers/chrome-cft/chrome-linux64",
+  "bundled_extensions": [
+    {
+      "path": "MEIPreload/manifest.json",
+      "name": "MEI Preload",
+      "version": "1.0.7.1652906823",
+      "manifest_version": 2,
+      "findings": []
+    },
+    {
+      "path": "WidevineCdm/manifest.json",
+      "name": "WidevineCdm",
+      "version": "4.10.3112.0",
+      "manifest_version": 2,
+      "findings": []
+    },
+    {
+      "path": "hyphen-data/manifest.json",
+      "name": "hyphens-data",
+      "version": "1.0.0.0",
+      "manifest_version": 2,
+      "findings": []
+    }
+  ],
+  "vendor_endpoints": [
+    "https://clients2.google.com/service/update2/crx",
+    "https://docs.google.com/*",
+    "https://docs.google.com/document*",
+    "https://docs.sandbox.google.com/*",
+    "https://docs.sandbox.google.com/document*"
+  ],
+  "version_files": {}
+}
