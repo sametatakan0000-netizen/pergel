@@ -1,6 +1,6 @@
 # Product status — browser engine SaaS (verified slices only)
 
-Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (168 pass; system python skips the trafilatura + playwright tests).
+Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (170 pass; system python skips the trafilatura + playwright tests).
 
 ## Verified real (2026-10-24, host)
 - Search: SearXNG in Docker (`searxng`, 127.0.0.1:8888, `restart unless-stopped`, config `~/.local/share/searxng/settings.yml`). Fan-out returned 10 deduped cited sources for a TR/EN query.
