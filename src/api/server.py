@@ -27,7 +27,7 @@ from src.router.moa_exec import build_aggregator_payload, member_usage_summary, 
 from src.router.moa_plan import plan_moa
 from src.router.moa_policy import MoaPolicy
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
-from src.search.query_fanout import execute_fanout_and_ground
+from src.search.query_fanout import decompose_query_llm, execute_fanout_and_ground, llm_decompose_prompt
 
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
@@ -311,7 +311,8 @@ class BrowserFarmSaaSServer:
                         self._send_json(400, {"error": "query must be a non-empty string"})
                         return
                     try:
-                        res = asyncio.run(execute_fanout_and_ground(query, search_fn=parent.search_fn))
+                        res = asyncio.run(execute_fanout_and_ground(query, search_fn=parent.search_fn,
+                                                            decompose_fn=parent._fanout_decompose_fn()))
                     except Exception as exc:  # never fabricate sources when the index is unreachable
                         self._send_json(502, {"error": f"search backend unavailable: {type(exc).__name__}"})
                         return
@@ -383,6 +384,36 @@ class BrowserFarmSaaSServer:
         self.live.update_profiles(profiles)
         self.registry_fetched_at = fetched_at
         return sum(p.routable for p in profiles.values())
+
+    def _fanout_decompose_fn(self):
+        """Opt-in semantic query decomposition (ORACLE_FANOUT_LLM=1): one tiny call to the
+        cheapest served priced model per fan-out. Default off — no hidden model calls.
+        Any failure falls back to lexical decomposition inside decompose_query_llm."""
+        if os.environ.get("ORACLE_FANOUT_LLM", "0") != "1":
+            return None
+
+        def _decompose(query: str):
+            served = self.live.served_models()
+            priced = [(mid, (p.billed_cost_in or 0.0) + (p.billed_cost_out or 0.0))
+                      for mid, p in self.live.profiles.items()
+                      if mid in served and p.billed_cost_in is not None]
+            if not priced:
+                return None
+            model_id = min(priced, key=lambda t: t[1])[0]
+
+            def _call(prompt: str) -> str:
+                status, body = self._call_upstream(model_id, {
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 200,
+                })
+                if status != 200:
+                    raise RuntimeError(f"decompose call failed: HTTP {status}")
+                choices = body.get("choices") or []
+                return ((choices[0].get("message") or {}).get("content") or "")
+
+            return decompose_query_llm(query, _call)
+
+        return _decompose
 
     def _call_upstream(self, model_id: str, payload: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
         """Non-streaming call for a subagent. Usage is recorded (spend accounting) but the

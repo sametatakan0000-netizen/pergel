@@ -201,3 +201,25 @@ class RateLimitTests(_Base):
         for _ in range(5):
             status, _ = call(base, "/v1/jobs/unknown-id")
             self.assertEqual(status, 404)
+
+
+class FanoutDecomposeWiringTests(_Base):
+    def test_decompose_fn_is_none_without_opt_in(self):
+        import os
+        os.environ.pop("ORACLE_FANOUT_LLM", None)
+        srv = self._srv()
+        self.assertIsNone(srv._fanout_decompose_fn())
+
+    def test_decompose_fn_is_none_when_no_served_models(self):
+        import os
+        os.environ["ORACLE_FANOUT_LLM"] = "1"
+        self.addCleanup(os.environ.pop, "ORACLE_FANOUT_LLM", None)
+        srv = self._srv()
+        fn = srv._fanout_decompose_fn()
+        self.assertIsNone(fn("cok uzun bir arama sorgusu burada yaziyor"))  # no served model yet
+
+    def _srv(self):
+        import tempfile
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return BrowserFarmSaaSServer(port=0, db_dir=tmp.name, profiles={}, driver_fn=lambda e, u, s: PAGE)

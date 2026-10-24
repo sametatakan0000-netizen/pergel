@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 31,
     "total_classes": 15,
-    "total_functions": 182,
-    "total_loc": 3589
+    "total_functions": 187,
+    "total_loc": 3673
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 564,
+      "loc": 595,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -194,12 +194,14 @@
         "_validate_target",
         "__init__",
         "refresh_registry",
+        "_fanout_decompose_fn",
         "_call_upstream",
         "_apply_moa",
         "_forward_chat",
         "_relay_stream",
         "start_background",
         "shutdown",
+        "_decompose",
         "learn",
         "log_message",
         "_send_json",
@@ -207,7 +209,8 @@
         "_jobs_authorized",
         "_throttled",
         "do_GET",
-        "do_POST"
+        "do_POST",
+        "_call"
       ],
       "imports": [
         "asyncio",
@@ -247,6 +250,7 @@
         "Lock",
         "MoaPolicy",
         "Request",
+        "RuntimeError",
         "SelfHealingWatchdog",
         "StreamAccumulator",
         "Thread",
@@ -255,7 +259,9 @@
         "WebhookDispatcher",
         "_allow_request",
         "_apply_moa",
+        "_call_upstream",
         "_elapsed_ms",
+        "_fanout_decompose_fn",
         "_forward_chat",
         "_jobs_authorized",
         "_read_json",
@@ -276,6 +282,7 @@
         "compare_digest",
         "create_job",
         "decode",
+        "decompose_query_llm",
         "dirname",
         "dispatch",
         "dumps",
@@ -333,6 +340,7 @@
         "save_snapshot",
         "send_header",
         "send_response",
+        "served_models",
         "server_close",
         "settle",
         "shutdown",
@@ -1285,10 +1293,12 @@
     {
       "module": "src.search.query_fanout",
       "path": "src/search/query_fanout.py",
-      "loc": 94,
+      "loc": 147,
       "classes": [],
       "functions": [
         "decompose_query",
+        "llm_decompose_prompt",
+        "decompose_query_llm",
         "default_searxng_search",
         "execute_fanout_and_ground",
         "_fetch"
@@ -1307,14 +1317,20 @@
         "active_search",
         "add",
         "append",
+        "call_fn",
         "decode",
         "decompose_query",
+        "find",
+        "format",
         "gather",
         "get",
+        "isinstance",
         "join",
         "len",
+        "llm_decompose_prompt",
         "loads",
         "read",
+        "rfind",
         "rstrip",
         "set",
         "split",
@@ -1325,7 +1341,7 @@
         "urlopen",
         "zip"
       ],
-      "change_risk": 6.18
+      "change_risk": 10.0
     }
   ],
   "dead_code_candidates": [
