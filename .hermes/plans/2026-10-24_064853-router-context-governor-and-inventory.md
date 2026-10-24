@@ -139,3 +139,15 @@ Soru: Amiral-subagent için 1 mi N aday mı? Cevap deney değil **maliyet-aritme
 1. Etkin pencere 200K uygun mu, yoksa 128K daha mı sıkı olsun?
 2. Yumuşak tur tavanı $0.30: günlük $5 hedefine göre ~16 tur/gün; daha esnek istersen $0.50.
 3. Sıkıştırma özeti için model: haiku-5.5 (güvenilir, $0.1/$0.5) mi, deepseek-v4.1-flash (en ucuz, $0.02/$1) mi? Önerim haiku (özet kalitesi riski düşük).
+
+
+---
+## Uygulama durumu (2026-10-24, commit'ler a1e1102 / 04fb95b)
+- DONE Task 1 (cached_tokens + `cost_model.turn_cost_usd`, DB migration, 3 kayıt noktası) — 246 test.
+- DONE Task 2 (etkin pencere 200K; canlıda `oracle/auto` -> 200000).
+- DONE Task 5 (`unproven_premium`: canlı havuzda 10 model, hepsi benchmark'sız + hiç servis etmemiş + $4–30 giriş).
+- DONE Task 6 (MoA `ORACLE_MOA` varsayılan 0).
+- N/A Task 4: sıkıştırma modeli zaten `google/gemini-3.7-flash` (ucuz); eşik 0.5 x 200K = ~100K.
+- AÇIK Task 3 (tur-başı maliyet freni) — cached_tokens verisi birikince kalibre edilecek.
+- AÇIK Task 7 (`candidate_spread` raporu), Task 0 (SOTA araştırma notu), Task 8 (14 gün sonra MoA kodu kararı).
+- Ölçüm: oturum bağlamı 420K -> ~148K; son 15 dk harcama $16.01 -> $7.70 (düzeltme sırasında, kısmi pencere).
