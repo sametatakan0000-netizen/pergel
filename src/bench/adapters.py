@@ -21,6 +21,21 @@ class FetchResult:
     error: str = ""
 
 
+def kill_process_tree(proc: "subprocess.Popen") -> None:
+    """Kill the leader's whole process group (browsers fork zygote/gpu/renderer children).
+    Requires the process to have been started with start_new_session=True."""
+    import os
+    import signal
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except Exception:
+        pass
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -133,7 +148,8 @@ class CdpAdapter:
     def _start_impl(self) -> None:
         port, self._profile = free_port(), tempfile.mkdtemp(prefix="bench-prof-")
         self._proc = subprocess.Popen(self._argv_fn(port, self._profile),
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                      start_new_session=True)
         deadline = time.monotonic() + 20
         while time.monotonic() < deadline:
             try:
@@ -160,8 +176,7 @@ class CdpAdapter:
             except Exception:
                 pass
         if self._proc:
-            self._proc.kill()
-            self._proc.wait()
+            kill_process_tree(self._proc)
         shutil.rmtree(self._profile, ignore_errors=True)
 
 

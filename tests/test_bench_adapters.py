@@ -22,3 +22,28 @@ class AdapterHelperTests(unittest.TestCase):
     def test_fetch_result_defaults(self):
         r = FetchResult(ok=True, ms=1.5, html_len=10)
         self.assertEqual(r.error, "")
+
+
+class ProcessGroupCleanupTests(unittest.TestCase):
+    """Chromium-family browsers are multi-process: stop() must reap the WHOLE tree, not just the leader."""
+
+    def test_stop_kills_grandchildren(self):
+        import os, subprocess, sys, time
+        from src.bench.adapters import kill_process_tree
+        script = "import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-c','import time;time.sleep(60)'])\ntime.sleep(60)"
+        p = subprocess.Popen([sys.executable, "-c", script], start_new_session=True)
+        time.sleep(0.6)
+        from src.bench.procmem import tree_pids
+        pids = tree_pids(p.pid)
+        self.assertGreaterEqual(len(pids), 2)
+        kill_process_tree(p)
+        time.sleep(0.3)
+        alive = [x for x in pids if os.path.exists(f"/proc/{x}") and open(f"/proc/{x}/stat").read().split(")")[-1].split()[0] != "Z"]
+        self.assertEqual(alive, [])
+
+    def test_kill_process_tree_is_safe_on_already_dead_process(self):
+        import subprocess, sys
+        from src.bench.adapters import kill_process_tree
+        p = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
+        p.wait()
+        kill_process_tree(p)  # must not raise

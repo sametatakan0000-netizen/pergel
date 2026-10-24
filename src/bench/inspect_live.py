@@ -78,7 +78,8 @@ def startup_ms(exe: str, argv_fn, reps: int = 5) -> float:
         port = free_port()
         t0 = time.perf_counter()
         proc = subprocess.Popen(argv_fn(port, f"/tmp/inspect-{port}"),
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                start_new_session=True)
         try:
             deadline = time.monotonic() + 20
             while time.monotonic() < deadline:
@@ -89,7 +90,7 @@ def startup_ms(exe: str, argv_fn, reps: int = 5) -> float:
                     time.sleep(0.01)
             times.append((time.perf_counter() - t0) * 1000)
         finally:
-            proc.kill()
-            proc.wait()
+            from src.bench.adapters import kill_process_tree
+            kill_process_tree(proc)
     times.sort()
     return times[len(times) // 2]
