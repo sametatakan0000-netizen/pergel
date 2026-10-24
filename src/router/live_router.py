@@ -37,6 +37,7 @@ from typing import Any, Dict, List, Optional
 
 from src.router.model_registry import VerifiedProfile, clamp_effort
 from src.router.context_governor import advised_context_length
+from src.router.cost_model import turn_cost_usd
 from src.router.outcome_learning import OutcomeLearner, bucket_for
 from src.router.request_features import estimate_tokens, has_image, keyword_tier
 
@@ -155,11 +156,15 @@ class LiveRouter:
                     session_id TEXT PRIMARY KEY, model_id TEXT NOT NULL, updated_at REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS upstream_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, model_id TEXT NOT NULL, status INTEGER NOT NULL,
-                    latency_ms INTEGER, prompt_tokens INTEGER, completion_tokens INTEGER, ts REAL NOT NULL);
+                    latency_ms INTEGER, prompt_tokens INTEGER, completion_tokens INTEGER, ts REAL NOT NULL,
+                    cached_tokens INTEGER);
                 CREATE TABLE IF NOT EXISTS model_cooldowns (
                     model_id TEXT PRIMARY KEY, until REAL NOT NULL, status INTEGER NOT NULL);
                 """
             )
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(upstream_events)")}
+            if "cached_tokens" not in cols:  # migrate databases created before cache accounting
+                conn.execute("ALTER TABLE upstream_events ADD COLUMN cached_tokens INTEGER")
 
     @contextlib.contextmanager
     def _conn(self):
@@ -200,14 +205,14 @@ class LiveRouter:
 
     def record_upstream(self, model_id: str, status: int, latency_ms: int,
                         prompt_tokens: Optional[int] = None, completion_tokens: Optional[int] = None,
-                        now: Optional[float] = None) -> None:
+                        now: Optional[float] = None, cached_tokens: Optional[int] = None) -> None:
         now = time.time() if now is None else now
         cooldown = COOLDOWN_SECONDS.get(status, SERVER_ERROR_COOLDOWN if status >= 500 else 0)
         with self._conn() as conn:
             conn.execute(
-                "INSERT INTO upstream_events (model_id, status, latency_ms, prompt_tokens, completion_tokens, ts) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (model_id, status, latency_ms, prompt_tokens, completion_tokens, now),
+                "INSERT INTO upstream_events (model_id, status, latency_ms, prompt_tokens, completion_tokens, ts, "
+                "cached_tokens) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (model_id, status, latency_ms, prompt_tokens, completion_tokens, now, cached_tokens),
             )
             if cooldown and status == 404:
                 # A model that keeps 404ing upstream (e.g. unserved variants) backs off
@@ -260,16 +265,16 @@ class LiveRouter:
         now = time.time() if now is None else now
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT model_id, COALESCE(SUM(prompt_tokens),0), COALESCE(SUM(completion_tokens),0) "
-                "FROM upstream_events WHERE status = 200 AND ts >= ? AND ts <= ? GROUP BY model_id",
+                "SELECT model_id, COALESCE(SUM(prompt_tokens),0), COALESCE(SUM(completion_tokens),0), "
+                "COALESCE(SUM(cached_tokens),0) FROM upstream_events "
+                "WHERE status = 200 AND ts >= ? AND ts <= ? GROUP BY model_id",
                 (since, now)).fetchall()
         total = 0.0
-        for model_id, prompt_tokens, completion_tokens in rows:
+        for model_id, prompt_tokens, completion_tokens, cached_tokens in rows:
             profile = self.profiles.get(model_id)
             if profile is None or profile.billed_cost_in is None or profile.billed_cost_out is None:
                 continue
-            total += (prompt_tokens * profile.billed_cost_in
-                      + completion_tokens * profile.billed_cost_out) / 1_000_000
+            total += turn_cost_usd(profile, prompt_tokens, completion_tokens, cached_tokens)
         return total
 
     def spent_today(self, now: Optional[float] = None) -> float:

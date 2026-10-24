@@ -23,6 +23,7 @@ from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
+from src.router.cost_model import cached_tokens_from
 from src.router.moa_exec import build_aggregator_payload, member_usage_summary, run_members
 from src.router.moa_plan import plan_moa
 from src.router.moa_policy import MoaPolicy
@@ -442,7 +443,8 @@ class BrowserFarmSaaSServer:
             body = {}
         usage = body.get("usage") if isinstance(body, dict) and isinstance(body.get("usage"), dict) else {}
         self.live.record_upstream(model_id, status, _elapsed_ms(started),
-                                  usage.get("prompt_tokens"), usage.get("completion_tokens"))
+                                  usage.get("prompt_tokens"), usage.get("completion_tokens"),
+                                  cached_tokens=cached_tokens_from(usage))
         return status, body if isinstance(body, dict) else {}
 
     def _apply_moa(self, payload: Dict[str, Any], plan: List[str], session_id: Optional[str],
@@ -530,7 +532,8 @@ class BrowserFarmSaaSServer:
             ok, final, reason = analyze_response(parsed, tools) if isinstance(parsed, dict) else (False, False, "unparseable")
             usage = parsed.get("usage") if isinstance(parsed, dict) and isinstance(parsed.get("usage"), dict) else {}
             self.live.record_upstream(model_id, status, _elapsed_ms(started),
-                                      usage.get("prompt_tokens"), usage.get("completion_tokens"))
+                                      usage.get("prompt_tokens"), usage.get("completion_tokens"),
+                                      cached_tokens=cached_tokens_from(usage))
             learn(model_id, ok, final, reason)
             if not ok and index < len(plan) - 1:
                 # Self-healing: a broken non-stream answer never reaches the client if another
@@ -581,7 +584,8 @@ class BrowserFarmSaaSServer:
         except OSError:
             pass  # client or upstream closed mid-stream; headers are already sent
         self.live.record_upstream(model_id, upstream.status, _elapsed_ms(started),
-                                  usage.get("prompt_tokens"), usage.get("completion_tokens"))
+                                  usage.get("prompt_tokens"), usage.get("completion_tokens"),
+                                  cached_tokens=cached_tokens_from(usage))
         ok, final, reason = analyze_response(accumulator.as_response(), tools)
         learn(model_id, ok, final, reason)
 
