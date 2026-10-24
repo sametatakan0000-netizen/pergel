@@ -51,6 +51,8 @@ Wants=hermes-subscription-proxy.service
 
 [Service]
 WorkingDirectory=$APP
+# Bearer key for /v1/jobs/* lives in a 0600 env file outside the repo (never committed).
+EnvironmentFile=-$HOME/.config/oracle-router/browse_api.env
 ExecStart=$PYTHON_BIN -m src.cli serve --port 8090 --db-dir $DATA --nous-proxy-url http://127.0.0.1:8645/v1
 Restart=on-failure
 RestartSec=5
