@@ -4,6 +4,7 @@ import shutil
 import socket
 import subprocess
 import tempfile
+import threading
 import time
 import urllib.request
 from dataclasses import dataclass
@@ -37,8 +38,62 @@ def lightpanda_argv(exe: str, port: int) -> List[str]:
     return [exe, "serve", "--host", "127.0.0.1", "--port", str(port)]
 
 
+def _on_affine_thread(self, fn, *args, **kwargs):
+    """Every Playwright call for one adapter runs on the SAME thread (sync API is thread-local)."""
+    if not hasattr(self, "_affinity"):
+        self._affinity = _SingleThreadExecutor()
+    return self._affinity.submit(fn, *args, **kwargs)
+
+
+class _SingleThreadExecutor:
+    def __init__(self):
+        self._q = __import__("queue").Queue()
+        self._t = threading.Thread(target=self._loop, daemon=True)
+        self._t.start()
+
+    def _loop(self):
+        while True:
+            fn, args, kwargs, box = self._q.get()
+            try:
+                box["out"] = fn(*args, **kwargs)
+            except Exception as exc:
+                box["err"] = exc
+            box["done"].set()
+
+    def submit(self, fn, *args, **kwargs):
+        box = {"done": threading.Event()}
+        self._q.put((fn, args, kwargs, box))
+        box["done"].wait()
+        if "err" in box:
+            raise box["err"]
+        return box.get("out")
+
+
+def _in_thread(fn, *args, **kwargs):
+    """Playwright sync API is thread-local; a second session in an existing asyncio loop raises.
+    Running each session in its own dedicated thread keeps adapters independent and reentrant."""
+    box = {}
+
+    def _run():
+        try:
+            box["out"] = fn(*args, **kwargs)
+        except Exception as exc:
+            box["err"] = exc
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join()
+    if "err" in box:
+        raise box["err"]
+    return box["out"]
+
+
 def _fetch(self, url: str, marker: str, timeout_s: float = 30.0) -> FetchResult:
     """Shared measurement code path for every adapter: goto, then poll content until marker shows."""
+    return _on_affine_thread(self, self._fetch_impl, url, marker, timeout_s)
+
+
+def _fetch_impl(self, url: str, marker: str, timeout_s: float = 30.0) -> FetchResult:
     t0 = time.perf_counter()
     ctx = None
     try:
@@ -64,6 +119,7 @@ def _fetch(self, url: str, marker: str, timeout_s: float = 30.0) -> FetchResult:
 class CdpAdapter:
     POLL_S = 0.02  # marker polling quantum; same for every engine (documented in methodology)
     fetch = _fetch
+    _fetch_impl = _fetch_impl
 
     def __init__(self, target_id: str, argv_fn: Callable[[int, str], List[str]]) -> None:
         self.id, self._argv_fn = target_id, argv_fn
@@ -72,6 +128,9 @@ class CdpAdapter:
         self._profile = ""
 
     def start(self) -> None:
+        _on_affine_thread(self, self._start_impl)
+
+    def _start_impl(self) -> None:
         port, self._profile = free_port(), tempfile.mkdtemp(prefix="bench-prof-")
         self._proc = subprocess.Popen(self._argv_fn(port, self._profile),
                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -92,6 +151,9 @@ class CdpAdapter:
         return [self._proc.pid] if self._proc else []
 
     def stop(self) -> None:
+        _on_affine_thread(self, self._stop_impl)
+
+    def _stop_impl(self) -> None:
         for closer in (lambda: self._browser.close(), lambda: self._pw.stop()):
             try:
                 closer()
@@ -108,12 +170,16 @@ class PlaywrightAdapter:
     # shortcut: patched Firefox/WebKit, not vendor Firefox/Safari. Upgrade: Firefox via WebDriver BiDi."""
     POLL_S = CdpAdapter.POLL_S
     fetch = _fetch
+    _fetch_impl = _fetch_impl
 
     def __init__(self, target_id: str, browser_name: str, exe_prefix: str) -> None:
         self.id, self._name, self._prefix = target_id, browser_name, exe_prefix
         self._pw = self._browser = None
 
     def start(self) -> None:
+        _on_affine_thread(self, self._start_impl)
+
+    def _start_impl(self) -> None:
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
         self._browser = getattr(self._pw, self._name).launch(headless=True)
@@ -122,6 +188,9 @@ class PlaywrightAdapter:
         return pids_with_exe_prefix(self._prefix)
 
     def stop(self) -> None:
+        _on_affine_thread(self, self._stop_impl)
+
+    def _stop_impl(self) -> None:
         for closer in (lambda: self._browser.close(), lambda: self._pw.stop()):
             try:
                 closer()
