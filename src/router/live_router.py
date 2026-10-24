@@ -36,6 +36,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from src.router.model_registry import VerifiedProfile, clamp_effort
+from src.router.context_governor import advised_context_length
 from src.router.outcome_learning import OutcomeLearner, bucket_for
 from src.router.request_features import estimate_tokens, has_image, keyword_tier
 
@@ -290,10 +291,10 @@ class LiveRouter:
         return pool
 
     def virtual_context_length(self, profile_name: str) -> Optional[int]:
-        """Largest window a virtual profile can resolve to; plan() skips models a request outgrows."""
+        """Window advertised for a virtual profile: pool maximum capped at ORACLE_EFFECTIVE_CONTEXT
+        (default 200K) so Hermes compresses at an economic size, not at the 1M+ real maximum."""
         pool = self._pool(free_only=VIRTUAL_PROFILES.get(profile_name) == 0)
-        contexts = [p.context_window for p in pool if p.context_window]
-        return max(contexts) if contexts else None
+        return advised_context_length([p.context_window for p in pool])
 
     def _ordered(self, start_tier: int, needs_vision: bool, free_only: bool, min_context: int = 0,
                  learned: Optional[Dict[str, float]] = None) -> List[str]:

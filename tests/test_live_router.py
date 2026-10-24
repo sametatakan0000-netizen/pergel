@@ -285,8 +285,8 @@ class TestLiveRouterNousRegistry(unittest.TestCase):
         from src.router.live_router import estimate_tokens
         self.assertLess(estimate_tokens(payload), 10000)  # would be ~133K if base64 were counted
 
-    def test_virtual_context_length_is_largest_window_in_profile_pool(self):
-        self.assertEqual(self.router.virtual_context_length("oracle/auto"), 1000000)
+    def test_virtual_context_length_is_pool_max_capped_at_effective_window(self):
+        self.assertEqual(self.router.virtual_context_length("oracle/auto"), 200000)
         self.assertEqual(self.router.virtual_context_length("oracle/free"), 32000)
 
 
