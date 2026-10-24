@@ -1,14 +1,17 @@
 # Product status — browser engine SaaS (verified slices only)
 
-Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (94 pass; system python skips the trafilatura test).
+Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (141 pass; system python skips the trafilatura + playwright tests).
 
-## Verified real (2026-10-23, host)
+## Verified real (2026-10-24, host)
 - Search: SearXNG in Docker (`searxng`, 127.0.0.1:8888, `restart unless-stopped`, config `~/.local/share/searxng/settings.yml`). Fan-out returned 10 deduped cited sources for a TR/EN query.
 - Fetch+extract: real fetch of lightpanda.io via the HTTP driver -> 6007 chars clean markdown; github.com page -> 15807 chars.
 - Policy: robots.txt, 2 MB cap, content-type guard, SSRF guard, policy blocks never escalate.
+- Engines (2026-10-24): tier-1 `lightpanda` 1.1.0-nightly (`~/.local/bin/lightpanda`, `fetch --dump html`) + tier-2 Chromium (Playwright 1.64 headless shell 156) installed and verified against a local HTTP server. Wired via `src/browser_engine/engine_drivers.py` (`engine_driver`, server default since today); failure/empty output escalates the ladder, robots.txt checked before any engine runs. Tests: `tests/test_engine_drivers.py` (stub-binary unit + real-engine integration).
+- HAR/XHR discovery false positives fixed: `<link>/<meta>` manifests stripped, trailing escape residue (`\n`… and `\\`) removed from candidates.
 
 ## Not real yet
-- All three engine tiers are the same plain-HTTP fetch. No JS rendering: lightpanda/chromium binaries not installed.
-- HAR/XHR discovery regex gives false positives (favicon manifest.json, trailing `\`) — fix pending.
-- Fan-out subquery split is a crude regex (TR/EN conjunctions or half-split).
-- No auth/rate limiting on the SaaS API (loopback only).
+- tier-3 `camofox` deliberately deferred (stealth, legal/ToS opt-in) -> falls back to plain-HTTP driver.
+- Browser launches are one-shot per fetch (no pool/reuse) — `# shortcut:` in engine_drivers.py.
+- SaaS auth: `/v1/jobs/*` requires `Authorization: Bearer $BROWSE_API_KEY` when the env var is set (constant-time compare). Router paths (`/v1/chat/completions`, `/v1/router/*`, `/v1/models`) intentionally stay open for Hermes. No rate limiting yet.
+- Fan-out decomposition: lexical split on explicit conjunctions/punctuation only; no mid-phrase cuts (semantic split needs an LLM call, excluded by cost policy).
+- Router `spent_today` prices every prompt token at the plain input rate: cache-read/write split not recorded (`prompt_tokens_details` dropped at `record_upstream`) — spend figure is an upper-mid estimate.

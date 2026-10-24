@@ -36,6 +36,11 @@ class TestBrowserWorker(unittest.TestCase):
             ["https://example.com/api/v2/pricing.json", "https://example.com/graphql"],
         )
 
+    def test_har_discovery_strips_trailing_escaped_backslash(self):
+        raw_html = '<script>fetch("/api/data.json\\\\");</script>'
+        endpoints = discover_har_api_endpoints(raw_html, base_url="https://example.com")
+        self.assertEqual(endpoints, ["https://example.com/api/data.json"])
+
     def test_worker_escalates_engine_when_lightpanda_returns_empty(self):
         called_engines = []
 

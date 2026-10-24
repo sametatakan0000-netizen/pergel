@@ -11,6 +11,14 @@ class TestQueryFanout(unittest.TestCase):
         self.assertTrue(any("arama" in s.lower() for s in subs))
         self.assertTrue(any("model" in s.lower() or "yönlendirme" in s.lower() for s in subs))
 
+    def test_decompose_query_does_not_cut_phrases_without_a_conjunction(self):
+        q = "lightpanda chromium playwright headless tarayici performans farki"
+        self.assertEqual(decompose_query(q), [q])
+
+    def test_decompose_query_drops_dangling_function_words(self):
+        subs = decompose_query("Rust ve Go performans karşılaştırması nedir?")
+        self.assertEqual(subs, ["Rust", "Go performans karşılaştırması"])
+
     def test_execute_fanout_and_ground_deduplicates_and_formats_inline_citations(self):
         async def fake_search(subquery: str):
             return [

@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 29,
-    "total_classes": 13,
-    "total_functions": 162,
-    "total_loc": 3283
+    "total_files": 30,
+    "total_classes": 14,
+    "total_functions": 167,
+    "total_loc": 3381
   },
   "modules": [
     {
@@ -136,7 +136,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 501,
+      "loc": 519,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -157,6 +157,7 @@
         "log_message",
         "_send_json",
         "_read_json",
+        "_jobs_authorized",
         "do_GET",
         "do_POST"
       ],
@@ -164,6 +165,7 @@
         "asyncio",
         "dataclasses",
         "datetime",
+        "hmac",
         "http.server",
         "ipaddress",
         "json",
@@ -171,6 +173,7 @@
         "socket",
         "src.api.job_store",
         "src.browser_engine.browser_orchestrator",
+        "src.browser_engine.engine_drivers",
         "src.browser_engine.worker",
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
@@ -205,6 +208,7 @@
         "_apply_moa",
         "_elapsed_ms",
         "_forward_chat",
+        "_jobs_authorized",
         "_read_json",
         "_relay_stream",
         "_send_json",
@@ -219,6 +223,7 @@
         "choose",
         "clear_sticky",
         "commit_choice",
+        "compare_digest",
         "create_job",
         "decode",
         "dirname",
@@ -370,6 +375,51 @@
       "change_risk": 10.0
     },
     {
+      "module": "src.browser_engine.engine_drivers",
+      "path": "src/browser_engine/engine_drivers.py",
+      "loc": 76,
+      "classes": [
+        "EngineUnavailable"
+      ],
+      "functions": [
+        "_lightpanda_bin",
+        "_lightpanda_html",
+        "_chromium_html",
+        "engine_driver"
+      ],
+      "imports": [
+        "os",
+        "playwright.sync_api",
+        "shutil",
+        "src.browser_engine.worker",
+        "subprocess",
+        "typing"
+      ],
+      "calls": [
+        "EngineUnavailable",
+        "FetchBlocked",
+        "_allowed_by_robots",
+        "_chromium_html",
+        "_default_url_driver",
+        "_lightpanda_bin",
+        "_lightpanda_html",
+        "close",
+        "content",
+        "decode",
+        "exists",
+        "expanduser",
+        "get",
+        "goto",
+        "launch",
+        "new_page",
+        "run",
+        "strip",
+        "sync_playwright",
+        "which"
+      ],
+      "change_risk": 5.35
+    },
+    {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
       "loc": 198,
@@ -424,6 +474,7 @@
         "parse",
         "read",
         "record_domain_escalation",
+        "rstrip",
         "splitlines",
         "startswith",
         "strip",
@@ -1162,7 +1213,7 @@
     {
       "module": "src.search.query_fanout",
       "path": "src/search/query_fanout.py",
-      "loc": 90,
+      "loc": 94,
       "classes": [],
       "functions": [
         "decompose_query",
@@ -1196,12 +1247,13 @@
         "set",
         "split",
         "strip",
+        "sub",
         "to_thread",
         "urlencode",
         "urlopen",
         "zip"
       ],
-      "change_risk": 6.12
+      "change_risk": 6.18
     }
   ],
   "dead_code_candidates": [
@@ -1209,6 +1261,7 @@
     "src.api.server.do_GET",
     "src.api.server.do_POST",
     "src.api.server.log_message",
+    "src.browser_engine.engine_drivers.engine_driver",
     "src.cli.catalog_loop",
     "src.devtools.security_audit.audit_skill_markdown",
     "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",

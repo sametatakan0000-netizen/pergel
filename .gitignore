@@ -8,3 +8,4 @@ live_router.db-*
 *.tmp
 host_quickstart.log
 .venv/
+tests/_stubs/

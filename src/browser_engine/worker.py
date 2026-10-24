@@ -23,7 +23,7 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
     )
     found: List[str] = []
     for match in pattern.finditer(_strip_non_script_tags(raw_html)):
-        candidate = re.sub(r"(\\[nrt])+$", "", match.group(1).strip())
+        candidate = re.sub(r"(\\[nrt])+$", "", match.group(1).strip()).rstrip("\\")
         if base_url and candidate.startswith("/"):
             candidate = urllib.parse.urljoin(base_url, candidate)
         if candidate not in found:
@@ -103,7 +103,7 @@ def _allowed_by_robots(url: str, user_agent: str) -> bool:
 
 
 def _default_url_driver(engine: str, url: str, session_name: str) -> str:
-    """Plain-HTTP fetch (same for every tier until real browser binaries are wired). Honors robots.txt."""
+    """Plain-HTTP fetch fallback (camofox tier and engines without binaries). Honors robots.txt."""
     ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
     if not _allowed_by_robots(url, "HermesBrowserFarm"):
         raise FetchBlocked(f"robots.txt disallows {url}")

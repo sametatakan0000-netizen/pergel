@@ -127,3 +127,38 @@ class TestMoaPreview(_Base):
         self.assertIn("cap_usd", decision["moa"])
         st, _ = call(base, "/v1/router/moa", {"messages": []})
         self.assertEqual(st, 400)
+
+
+class JobsApiAuthTests(_Base):
+    """/v1/jobs/* requires a bearer key when BROWSE_API_KEY is set; router paths stay open."""
+
+    def setUp(self):
+        import os
+        os.environ["BROWSE_API_KEY"] = "test-key-123"
+        self.addCleanup(os.environ.pop, "BROWSE_API_KEY", None)
+
+    def test_jobs_post_without_key_is_rejected(self):
+        base = self.start()
+        status, body = call(base, "/v1/jobs/browse", {"url": "https://example.com/"})
+        self.assertEqual(status, 401)
+
+    def test_jobs_get_with_wrong_key_is_rejected(self):
+        base = self.start()
+        req = urllib.request.Request(base + "/v1/jobs/nope", headers={"Authorization": "Bearer wrong"})
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=5)
+        self.assertEqual(ctx.exception.code, 401)
+
+    def test_jobs_with_correct_key_passes_auth(self):
+        base = self.start()
+        req = urllib.request.Request(base + "/v1/jobs/browse", method="POST",
+                                     data=json.dumps({"url": "https://example.com/"}).encode(),
+                                     headers={"Content-Type": "application/json",
+                                              "Authorization": "Bearer test-key-123"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            self.assertEqual(r.status, 200)
+
+    def test_router_paths_stay_open_without_key(self):
+        base = self.start()
+        status, _ = call(base, "/v1/router/complete", {"prompt": "hi"})
+        self.assertNotEqual(status, 401)

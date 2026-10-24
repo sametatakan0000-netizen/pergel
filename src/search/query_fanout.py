@@ -9,25 +9,29 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 
 def decompose_query(query: str, max_subqueries: int = 4) -> List[str]:
-    """Karmaşık bir istemi anlamsal alt sorgulara (Query Fan-Out) ayrıştırır."""
+    """Karmaşık bir istemi anlamsal alt sorgulara (Query Fan-Out) ayrıştırır.
+
+    Yalnızca açık ayırıcılarda (bağlaç/noktalama) böler. Ayırıcı yoksa sorguyu olduğu
+    gibi tek parça döndürür; kelime-ortası kesim anlamsız yarım sorgu üretiyordu.
+    """
     cleaned = query.strip()
     if not cleaned:
         return []
+    # shortcut: lexical conjunction split only; semantic decomposition needs an LLM call (cost policy: none)
     parts = re.split(
-        r"\s+(?:ve|ile|ayrıca|veya|karşılaştırması|nelerdir\??|nedir\??|,|;)\s+",
+        r"\s+(?:ve|ile|ayrıca|veya|,|;)\s+|[,;]\s*",
         cleaned,
         flags=re.IGNORECASE,
     )
     subqueries: List[str] = []
     for part in parts:
-        p = part.strip(" ?.,;:")
+        p = re.sub(r"\s+(?:nelerdir|nedir)\??$", "", part.strip(" ?.,;:"), flags=re.IGNORECASE).strip()
         if len(p) >= 4 and p not in subqueries:
             subqueries.append(p)
-    if len(subqueries) < 2 and len(cleaned.split()) >= 4:
-        words = cleaned.strip(" ?.").split()
-        mid = len(words) // 2
-        subqueries = [" ".join(words[:mid]), " ".join(words[mid:])]
+    if not subqueries:
+        return [cleaned]
     return subqueries[:max_subqueries]
+
 
 
 async def default_searxng_search(

@@ -2,6 +2,7 @@
 import asyncio
 import ipaddress
 import json
+import hmac
 import os
 import socket
 import threading
@@ -16,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.api.job_store import JobStore
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
+from src.browser_engine.engine_drivers import engine_driver
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
@@ -107,7 +109,7 @@ class BrowserFarmSaaSServer:
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(
-            driver_fn=driver_fn,
+            driver_fn=driver_fn or engine_driver,
             orchestrator=BrowserFarmOrchestrator(db_path=os.path.join(self.db_dir, "browser_memory.db")),
         )
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)
@@ -140,7 +142,20 @@ class BrowserFarmSaaSServer:
                 raw = self.rfile.read(length).decode("utf-8")
                 return json.loads(raw)
 
+            def _jobs_authorized(self) -> bool:
+                """/v1/jobs/* needs BROWSE_API_KEY when it is set (empty = auth disabled, loopback only)."""
+                if not self.path.startswith("/v1/jobs/"):
+                    return True
+                key = os.environ.get("BROWSE_API_KEY", "")
+                if not key:
+                    return True
+                header = self.headers.get("Authorization", "")
+                return hmac.compare_digest(header, f"Bearer {key}")
+
             def do_GET(self) -> None:
+                if not self._jobs_authorized():
+                    self._send_json(401, {"error": "Unauthorized"})
+                    return
                 if self.path == "/v1/health":
                     report = parent.watchdog.run_cycle()
                     try:
@@ -198,6 +213,9 @@ class BrowserFarmSaaSServer:
                 self._send_json(404, {"error": "Not found"})
 
             def do_POST(self) -> None:
+                if not self._jobs_authorized():
+                    self._send_json(401, {"error": "Unauthorized"})
+                    return
                 payload = self._read_json()
                 if self.path == "/v1/jobs/browse":
                     url = payload.get("url", "")
