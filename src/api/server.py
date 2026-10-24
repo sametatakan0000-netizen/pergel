@@ -31,6 +31,32 @@ from src.search.query_fanout import execute_fanout_and_ground
 
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
+
+# ---- per-client rate limiting (SaaS surfaces only; router paths stay unthrottled) ----
+_RATE_BUCKETS: Dict[str, list] = {}
+_RATE_LOCK = threading.Lock()
+
+
+def _allow_request(client_key: str) -> Tuple[bool, float]:
+    """Token bucket per client; ORACLE_JOBS_RPM sets the refill rate (0 = disabled)."""
+    rpm = float(os.environ.get("ORACLE_JOBS_RPM", "60") or 0)
+    if rpm <= 0:
+        return True, 0.0
+    now = time.monotonic()
+    with _RATE_LOCK:
+        bucket = _RATE_BUCKETS.get(client_key)
+        if bucket is None:
+            bucket = _RATE_BUCKETS[client_key] = [float(rpm), now]
+        bucket[0] = min(rpm, bucket[0] + (now - bucket[1]) * rpm / 60.0)
+        bucket[1] = now
+        if bucket[0] >= 1.0:
+            bucket[0] -= 1.0
+            return True, 0.0
+        return False, (1.0 - bucket[0]) * 60.0 / rpm
+
+
+_RATE_LIMITED_PREFIXES = ("/v1/jobs/",)
+_RATE_LIMITED_PATHS = {"/v1/jobs/browse", "/v1/search/fanout"}
 # Amiral + subagent turns are governed per bucket by MoaPolicy (evidence from implicit
 # feedback). ORACLE_MOA=0 is an emergency kill-switch, not the policy.
 MOA_ENABLED = os.environ.get("ORACLE_MOA", "1") != "0"
@@ -127,11 +153,14 @@ class BrowserFarmSaaSServer:
             def log_message(self, format: str, *args: Any) -> None:
                 return
 
-            def _send_json(self, status: int, data: Dict[str, Any]) -> None:
+            def _send_json(self, status: int, data: Dict[str, Any],
+                           extra_headers: Optional[Dict[str, str]] = None) -> None:
                 body = json.dumps(data, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
+                for name, value in (extra_headers or {}).items():
+                    self.send_header(name, value)
                 self.end_headers()
                 self.wfile.write(body)
 
@@ -152,9 +181,23 @@ class BrowserFarmSaaSServer:
                 header = self.headers.get("Authorization", "")
                 return hmac.compare_digest(header, f"Bearer {key}")
 
+            def _throttled(self) -> bool:
+                limited = (self.path.startswith(_RATE_LIMITED_PREFIXES)
+                           or self.path in _RATE_LIMITED_PATHS)
+                if not limited:
+                    return False
+                ok, retry_after = _allow_request(self.client_address[0])
+                if ok:
+                    return False
+                self._send_json(429, {"error": "rate limit exceeded"},
+                                extra_headers={"Retry-After": str(max(1, int(retry_after + 0.5)))})
+                return True
+
             def do_GET(self) -> None:
                 if not self._jobs_authorized():
                     self._send_json(401, {"error": "Unauthorized"})
+                    return
+                if self._throttled():
                     return
                 if self.path == "/v1/health":
                     report = parent.watchdog.run_cycle()
@@ -215,6 +258,8 @@ class BrowserFarmSaaSServer:
             def do_POST(self) -> None:
                 if not self._jobs_authorized():
                     self._send_json(401, {"error": "Unauthorized"})
+                    return
+                if self._throttled():
                     return
                 payload = self._read_json()
                 if self.path == "/v1/jobs/browse":

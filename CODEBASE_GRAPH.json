@@ -1,9 +1,9 @@
 {
   "summary": {
     "total_files": 31,
-    "total_classes": 14,
-    "total_functions": 174,
-    "total_loc": 3491
+    "total_classes": 15,
+    "total_functions": 182,
+    "total_loc": 3589
   },
   "modules": [
     {
@@ -182,12 +182,13 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 519,
+      "loc": 564,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
       ],
       "functions": [
+        "_allow_request",
         "_elapsed_ms",
         "_usage_from",
         "_validate_target",
@@ -204,6 +205,7 @@
         "_send_json",
         "_read_json",
         "_jobs_authorized",
+        "_throttled",
         "do_GET",
         "do_POST"
       ],
@@ -251,6 +253,7 @@
         "ThreadingHTTPServer",
         "ValueError",
         "WebhookDispatcher",
+        "_allow_request",
         "_apply_moa",
         "_elapsed_ms",
         "_forward_chat",
@@ -258,6 +261,7 @@
         "_read_json",
         "_relay_stream",
         "_send_json",
+        "_throttled",
         "_usage_from",
         "_validate_target",
         "abspath",
@@ -306,6 +310,7 @@
         "mark_running",
         "max",
         "member_usage_summary",
+        "min",
         "monotonic",
         "normalize_model",
         "now",
@@ -423,17 +428,26 @@
     {
       "module": "src.browser_engine.engine_drivers",
       "path": "src/browser_engine/engine_drivers.py",
-      "loc": 76,
+      "loc": 129,
       "classes": [
-        "EngineUnavailable"
+        "EngineUnavailable",
+        "_ChromiumPool"
       ],
       "functions": [
         "_lightpanda_bin",
         "_lightpanda_html",
+        "shutdown_pools",
         "_chromium_html",
-        "engine_driver"
+        "engine_driver",
+        "__init__",
+        "fetch",
+        "_fetch_on_worker",
+        "_fetch_once",
+        "_reset"
       ],
       "imports": [
+        "atexit",
+        "concurrent.futures",
         "os",
         "playwright.sync_api",
         "shutil",
@@ -444,26 +458,38 @@
       "calls": [
         "EngineUnavailable",
         "FetchBlocked",
+        "ThreadPoolExecutor",
+        "_ChromiumPool",
         "_allowed_by_robots",
         "_chromium_html",
         "_default_url_driver",
+        "_fetch_once",
         "_lightpanda_bin",
         "_lightpanda_html",
+        "_reset",
         "close",
         "content",
         "decode",
         "exists",
         "expanduser",
+        "fetch",
         "get",
         "goto",
+        "hasattr",
+        "is_connected",
         "launch",
         "new_page",
+        "register",
+        "result",
         "run",
+        "start",
+        "stop",
         "strip",
+        "submit",
         "sync_playwright",
         "which"
       ],
-      "change_risk": 5.35
+      "change_risk": 8.81
     },
     {
       "module": "src.browser_engine.worker",
@@ -1308,6 +1334,7 @@
     "src.api.server.do_POST",
     "src.api.server.log_message",
     "src.browser_engine.engine_drivers.engine_driver",
+    "src.browser_engine.engine_drivers.shutdown_pools",
     "src.cli.catalog_loop",
     "src.devtools.security_audit.audit_skill_markdown",
     "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",

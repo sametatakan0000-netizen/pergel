@@ -162,3 +162,42 @@ class JobsApiAuthTests(_Base):
         base = self.start()
         status, _ = call(base, "/v1/router/complete", {"prompt": "hi"})
         self.assertNotEqual(status, 401)
+
+
+class RateLimitTests(_Base):
+    """ORACLE_JOBS_RPM throttles /v1/jobs/* and /v1/search/fanout per client; router paths stay unthrottled."""
+
+    def setUp(self):
+        import os
+        import src.api.server as srv
+        os.environ["ORACLE_JOBS_RPM"] = "2"
+        srv._RATE_BUCKETS.clear()
+        self.addCleanup(os.environ.pop, "ORACLE_JOBS_RPM", None)
+        self.addCleanup(srv._RATE_BUCKETS.clear)
+
+    def test_third_rapid_jobs_call_gets_429_with_retry_after(self):
+        base = self.start()
+        s1, _ = call(base, "/v1/jobs/unknown-id")
+        s2, _ = call(base, "/v1/jobs/unknown-id")
+        self.assertEqual((s1, s2), (404, 404))
+        req = urllib.request.Request(base + "/v1/jobs/unknown-id")
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=5)
+        self.assertEqual(ctx.exception.code, 429)
+        self.assertGreaterEqual(int(ctx.exception.headers.get("Retry-After", "0")), 1)
+
+    def test_router_models_path_is_not_throttled(self):
+        base = self.start()
+        for _ in range(6):
+            status, _ = call(base, "/v1/models")
+            self.assertEqual(status, 200)
+
+    def test_zero_rpm_disables_limiting(self):
+        import os
+        import src.api.server as srv
+        os.environ["ORACLE_JOBS_RPM"] = "0"
+        srv._RATE_BUCKETS.clear()
+        base = self.start()
+        for _ in range(5):
+            status, _ = call(base, "/v1/jobs/unknown-id")
+            self.assertEqual(status, 404)

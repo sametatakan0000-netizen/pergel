@@ -1,6 +1,6 @@
 # Product status — browser engine SaaS (verified slices only)
 
-Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (153 pass; system python skips the trafilatura + playwright tests).
+Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (161 pass; system python skips the trafilatura + playwright tests).
 
 ## Verified real (2026-10-24, host)
 - Search: SearXNG in Docker (`searxng`, 127.0.0.1:8888, `restart unless-stopped`, config `~/.local/share/searxng/settings.yml`). Fan-out returned 10 deduped cited sources for a TR/EN query.
@@ -11,8 +11,9 @@ Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (153 pass; syst
 
 ## Not real yet
 - tier-3 `camofox` deliberately deferred (stealth, legal/ToS opt-in) -> falls back to plain-HTTP driver.
-- Browser launches are one-shot per fetch (no pool/reuse) — `# shortcut:` in engine_drivers.py.
-- SaaS auth: `/v1/jobs/*` requires `Authorization: Bearer $BROWSE_API_KEY` when the env var is set (constant-time compare). Router paths (`/v1/chat/completions`, `/v1/router/*`, `/v1/models`) intentionally stay open for Hermes. No rate limiting yet.
+- Chromium pool (2026-10-24): persistent headless browser owned by a single worker thread, fresh page per fetch, dead-engine auto-relaunch (`engine_drivers.py`). lightpanda stays per-fetch subprocess (CLI model).
+- SaaS auth: `/v1/jobs/*` requires `Authorization: Bearer $BROWSE_API_KEY` when the env var is set (constant-time compare). Router paths (`/v1/chat/completions`, `/v1/router/*`, `/v1/models`) intentionally stay open for Hermes.
+- Rate limiting (2026-10-24): per-client token bucket on `/v1/jobs/*` + `/v1/search/fanout` (`ORACLE_JOBS_RPM`, default 60, 0=off; 429 with Retry-After). Router paths unthrottled.
 - Fan-out decomposition: lexical split on explicit conjunctions/punctuation only; no mid-phrase cuts (semantic split needs an LLM call, excluded by cost policy).
 - MCP tool surface (2026-10-24): `src/mcp_server.py` (FastMCP, stdio) wraps the REST API: `browse_url`, `search_fanout`, `list_models`, `router_health`. Verified live: browse_url -> lightpanda markdown via the running router; search_fanout -> 5 live sources. Bearer key: `BROWSE_API_KEY` env wins, else `~/.config/oracle-router/browse_api.env`.
 - Router `spent_today` prices every prompt token at the plain input rate: cache-read/write split not recorded (`prompt_tokens_details` dropped at `record_upstream`) — spend figure is an upper-mid estimate.

@@ -5,9 +5,11 @@ tier-2 Chromium (Playwright headless shell). tier-3 camofox bilinçli olarak ert
 Politika değişmezleri: robots.txt HER motordan ÖNCE kontrol edilir; politika bloğu
 FetchBlocked fırlatır ve eskalasyon asla bypass edemez. 2 MB gövde sınırı korunur.
 """
+import atexit
 import os
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from src.browser_engine.worker import (
@@ -47,21 +49,72 @@ def _lightpanda_html(url: str, session_name: str) -> str:
     return out[:MAX_BODY_BYTES]
 
 
-def _chromium_html(url: str, session_name: str) -> str:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as exc:  # shortcut: optional dep like trafilatura; require in production deploys
-        raise EngineUnavailable("playwright not installed") from exc
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+class _ChromiumPool:
+    """Kalıcı headless Chromium; tek işçi thread'i sahiplenir, her fetch yeni page açar.
+    sync Playwright oluşturan thread'e bağlı olduğu için havuz, tüm çağrıları tek
+    ThreadPoolExecutor işçisine yollar (ThreadingHTTPServer thread'leri arası güvenli)."""
+
+    def __init__(self) -> None:
+        self._exec = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chromium-pool")
+        self._pw = None
+        self._browser = None
+
+    def fetch(self, url: str, user_agent: str) -> str:
+        future = self._exec.submit(self._fetch_on_worker, url, user_agent)
+        # shortcut: a hung navigation blocks the single worker; result timeout only unblocks the caller
+        return future.result(timeout=CHROMIUM_TIMEOUT_S + 30)
+
+    def _fetch_on_worker(self, url: str, user_agent: str) -> str:
         try:
-            page = browser.new_page(
-                user_agent=f"{_UA_BASE} (chromium-browser-use; {session_name})")
-            page.goto(url, timeout=CHROMIUM_TIMEOUT_S * 1000, wait_until="load")
-            return page.content()[:MAX_BODY_BYTES]
+            return self._fetch_once(url, user_agent)
         finally:
-            browser.close()
-    # shortcut: one browser launch per fetch; pool/reuse when throughput matters
+            browser = self._browser
+            if browser is not None and hasattr(browser, "is_connected") and not browser.is_connected():
+                self._reset()  # dead engine -> fresh launch on next fetch
+
+    def _fetch_once(self, url: str, user_agent: str) -> str:
+        browser = self._browser
+        if browser is not None and hasattr(browser, "is_connected") and not browser.is_connected():
+            self._reset()  # engine died between fetches -> fresh launch
+        if self._pw is None:
+            try:
+                from playwright.sync_api import sync_playwright
+            except ImportError as exc:  # shortcut: optional dep like trafilatura
+                raise EngineUnavailable("playwright not installed") from exc
+            self._pw = sync_playwright().start()
+            self._browser = self._pw.chromium.launch(headless=True)
+        page = self._browser.new_page(user_agent=user_agent)
+        page.goto(url, timeout=CHROMIUM_TIMEOUT_S * 1000, wait_until="load")
+        return page.content()[:MAX_BODY_BYTES]
+
+    def _reset(self) -> None:
+        try:
+            if self._browser is not None:
+                self._browser.close()
+        except Exception:
+            pass
+        try:
+            if self._pw is not None:
+                self._pw.stop()
+        except Exception:
+            pass
+        self._pw = None
+        self._browser = None
+
+
+chromium_pool = _ChromiumPool()
+
+
+def shutdown_pools() -> None:
+    """Stop pooled engines (atexit / tests)."""
+    chromium_pool._reset()
+
+
+atexit.register(shutdown_pools)
+
+
+def _chromium_html(url: str, session_name: str) -> str:
+    return chromium_pool.fetch(url, user_agent=f"{_UA_BASE} (chromium-browser-use; {session_name})")
 
 
 def engine_driver(engine: str, url: str, session_name: str) -> str:
