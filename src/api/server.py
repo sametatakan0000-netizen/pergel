@@ -58,8 +58,9 @@ def _allow_request(client_key: str) -> Tuple[bool, float]:
 _RATE_LIMITED_PREFIXES = ("/v1/jobs/",)
 _RATE_LIMITED_PATHS = {"/v1/jobs/browse", "/v1/search/fanout"}
 # Amiral + subagent turns are governed per bucket by MoaPolicy (evidence from implicit
-# feedback). ORACLE_MOA=0 is an emergency kill-switch, not the policy.
-MOA_ENABLED = os.environ.get("ORACLE_MOA", "1") != "0"
+# feedback). Opt-in (ORACLE_MOA=1): each member re-reads the whole 100K+ context, so N members
+# multiply the dominant cost, and moa_policy.db holds no evidence MoA beat a single model.
+MOA_ENABLED = os.environ.get("ORACLE_MOA", "0") == "1"
 
 
 def _elapsed_ms(started: float) -> int:

@@ -100,6 +100,26 @@ def dominates(q: VerifiedProfile, p: VerifiedProfile) -> bool:
     return no_worse and strictly_better
 
 
+UNPROVEN_PREMIUM_FACTOR = 3.0   # unbenchmarked AND billed above this multiple of the benchmarked median
+MIN_BENCHMARKED_PEERS = 3
+
+
+def unproven_premium(p: VerifiedProfile, pool: List[VerifiedProfile]) -> bool:
+    """A model with no published benchmark that also bills far above its MEASURED peers asks the
+    user to pay a premium for an unverifiable quality claim. Cheap unknowns stay (nothing lost by
+    trying them); measured expensive models stay (the benchmark justifies the price). With fewer
+    than MIN_BENCHMARKED_PEERS measured peers there is no yardstick, so nothing is demoted
+    (absence of data across the whole pool says nothing about one model)."""
+    if p.intelligence_index is not None or p.billed_cost_in is None:
+        return False
+    prices = sorted(q.billed_cost_in for q in pool
+                    if q.intelligence_index is not None and q.billed_cost_in)
+    if len(prices) < MIN_BENCHMARKED_PEERS:
+        return False
+    median = prices[len(prices) // 2]
+    return p.billed_cost_in > UNPROVEN_PREMIUM_FACTOR * median
+
+
 def prune_dominated(pool: List[VerifiedProfile], dead: Optional[set] = None,
                     served: Optional[set] = None):
     """Split the pool into (primary, dominated). Dominated models are never worth picking
@@ -113,7 +133,7 @@ def prune_dominated(pool: List[VerifiedProfile], dead: Optional[set] = None,
     primary: List[VerifiedProfile] = []
     dominated: List[VerifiedProfile] = []
     for p in pool:
-        if any(dominates(q, p) for q in dominators if q is not p):
+        if unproven_premium(p, pool) or any(dominates(q, p) for q in dominators if q is not p):
             dominated.append(p)
         else:
             primary.append(p)
