@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 55,
-    "total_classes": 24,
-    "total_functions": 289,
-    "total_loc": 5160
+    "total_files": 58,
+    "total_classes": 29,
+    "total_functions": 315,
+    "total_loc": 5662
   },
   "modules": [
     {
@@ -1064,6 +1064,44 @@
       "change_risk": 0.0
     },
     {
+      "module": "src.browser_engine.abp_compiler",
+      "path": "src/browser_engine/abp_compiler.py",
+      "loc": 126,
+      "classes": [
+        "AbpStats",
+        "AbpResult"
+      ],
+      "functions": [
+        "_split_options",
+        "_compile_one",
+        "compile_abp_lines"
+      ],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "typing"
+      ],
+      "calls": [
+        "AbpResult",
+        "_compile_one",
+        "_split_options",
+        "all",
+        "append",
+        "endswith",
+        "field",
+        "get",
+        "len",
+        "lower",
+        "rfind",
+        "set",
+        "sorted",
+        "split",
+        "startswith",
+        "strip"
+      ],
+      "change_risk": 8.58
+    },
+    {
       "module": "src.browser_engine.browser_orchestrator",
       "path": "src/browser_engine/browser_orchestrator.py",
       "loc": 179,
@@ -1121,6 +1159,40 @@
         "urlparse"
       ],
       "change_risk": 10.0
+    },
+    {
+      "module": "src.browser_engine.cdp_bridge",
+      "path": "src/browser_engine/cdp_bridge.py",
+      "loc": 103,
+      "classes": [
+        "CDPBridge"
+      ],
+      "functions": [
+        "_dnr_type",
+        "decide_cdp_response",
+        "_headers_to_cdp",
+        "_cdp_headers_to_dict",
+        "__init__",
+        "on_request_paused"
+      ],
+      "imports": [
+        "__future__",
+        "rule_engine",
+        "typing"
+      ],
+      "calls": [
+        "_cdp_headers_to_dict",
+        "_dnr_type",
+        "_headers_to_cdp",
+        "_send",
+        "apply_to_headers",
+        "check",
+        "decide_cdp_response",
+        "dict",
+        "get",
+        "items"
+      ],
+      "change_risk": 3.09
     },
     {
       "module": "src.browser_engine.engine_drivers",
@@ -1187,6 +1259,84 @@
         "which"
       ],
       "change_risk": 8.81
+    },
+    {
+      "module": "src.browser_engine.rule_engine",
+      "path": "src/browser_engine/rule_engine.py",
+      "loc": 273,
+      "classes": [
+        "Decision",
+        "RuleEngine"
+      ],
+      "functions": [
+        "compile_rules",
+        "_validate_header_ops",
+        "_host_of",
+        "_regex_is_safe",
+        "_url_filter_to_regex",
+        "_url_filter_anchor",
+        "_is_literal_filter",
+        "_type_matches",
+        "__post_init__",
+        "apply_to_headers",
+        "match_domain",
+        "__init__",
+        "_add",
+        "check",
+        "_best_candidate",
+        "_prefer",
+        "_matches"
+      ],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "re",
+        "typing",
+        "urllib.parse"
+      ],
+      "calls": [
+        "Decision",
+        "RuleEngine",
+        "ValueError",
+        "_add",
+        "_best_candidate",
+        "_host_of",
+        "_is_literal_filter",
+        "_matches",
+        "_prefer",
+        "_regex_is_safe",
+        "_type_matches",
+        "_url_filter_anchor",
+        "_url_filter_to_regex",
+        "_validate_header_ops",
+        "add",
+        "any",
+        "append",
+        "compile",
+        "dict",
+        "endswith",
+        "enumerate",
+        "escape",
+        "field",
+        "get",
+        "id",
+        "int",
+        "join",
+        "len",
+        "list",
+        "lower",
+        "match_domain",
+        "pop",
+        "range",
+        "rstrip",
+        "search",
+        "setdefault",
+        "sorted",
+        "split",
+        "startswith",
+        "urlsplit"
+      ],
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.worker",
@@ -2300,8 +2450,11 @@
     "src.bench.suites.fidelity.log_message",
     "src.bench.suites.fidelity.robots_block_never_escalates",
     "src.bench.suites.fidelity.run_fidelity",
+    "src.browser_engine.abp_compiler.compile_abp_lines",
+    "src.browser_engine.cdp_bridge.on_request_paused",
     "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
+    "src.browser_engine.rule_engine.compile_rules",
     "src.cli.catalog_loop",
     "src.devtools.security_audit.audit_skill_markdown",
     "src.devtools.self_evolution_engine.compute_ecosystem_fingerprint",
