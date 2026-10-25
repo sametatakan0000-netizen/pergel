@@ -131,6 +131,7 @@ class TranslateTests(unittest.TestCase):
 
 def _has_chromium():
     try:
+        import websockets  # live CDP deps are optional
         from src.browser_engine.cdp_adblock_driver import _chromium
         return _chromium() is not None
     except Exception:
