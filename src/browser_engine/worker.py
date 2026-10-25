@@ -19,7 +19,7 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
     # shortcut: regex, not a DOM/JS parser; only quoted strings inside JS network calls
     # or script blocks count, so <link> icons/manifests are not reported as APIs.
     pattern = re.compile(
-        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'])((?:https?://|/)[^"'\s)<>]+?(?:api|graphql|\.json)[^"'\s)<>]*)["']""",
+        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'])((?:https?://|/)[^"'\s)<>]*?(?:api|graphql|\.json)[^"'\s)<>]*)["']""",
         re.IGNORECASE,
     )
     found: List[str] = []

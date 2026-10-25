@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 52,
-    "total_classes": 23,
-    "total_functions": 274,
-    "total_loc": 4879
+    "total_files": 54,
+    "total_classes": 24,
+    "total_functions": 282,
+    "total_loc": 4993
   },
   "modules": [
     {
@@ -937,6 +937,75 @@
         "split"
       ],
       "change_risk": 5.36
+    },
+    {
+      "module": "src.bench.suites",
+      "path": "src/bench/suites/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.bench.suites.fidelity",
+      "path": "src/bench/suites/fidelity.py",
+      "loc": 114,
+      "classes": [
+        "_DisallowedHandler"
+      ],
+      "functions": [
+        "_fetch_html",
+        "api_discovery_recall",
+        "boilerplate_removal",
+        "robots_block_never_escalates",
+        "body_cap_2mb",
+        "run_fidelity",
+        "log_message",
+        "do_GET"
+      ],
+      "imports": [
+        "http.server",
+        "src.bench.fixture_server",
+        "src.browser_engine.worker",
+        "threading",
+        "typing",
+        "urllib.parse",
+        "urllib.request"
+      ],
+      "calls": [
+        "BrowserWorker",
+        "Thread",
+        "ThreadingHTTPServer",
+        "_default_url_driver",
+        "any",
+        "append",
+        "case",
+        "decode",
+        "encode",
+        "end_headers",
+        "execute_task",
+        "get",
+        "join",
+        "len",
+        "lower",
+        "read",
+        "send_header",
+        "send_response",
+        "server_close",
+        "shutdown",
+        "sorted",
+        "splitlines",
+        "start",
+        "str",
+        "strip",
+        "type",
+        "urlopen",
+        "urlsplit",
+        "write"
+      ],
+      "change_risk": 7.23
     },
     {
       "module": "src.browser_engine",
@@ -2173,6 +2242,13 @@
     "src.bench.install.pick_cft_urls",
     "src.bench.install.unzip_keep_modes",
     "src.bench.procmem.cpu_seconds",
+    "src.bench.suites.fidelity.api_discovery_recall",
+    "src.bench.suites.fidelity.body_cap_2mb",
+    "src.bench.suites.fidelity.boilerplate_removal",
+    "src.bench.suites.fidelity.do_GET",
+    "src.bench.suites.fidelity.log_message",
+    "src.bench.suites.fidelity.robots_block_never_escalates",
+    "src.bench.suites.fidelity.run_fidelity",
     "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.cli.catalog_loop",

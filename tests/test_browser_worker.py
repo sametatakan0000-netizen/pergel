@@ -41,6 +41,15 @@ class TestBrowserWorker(unittest.TestCase):
         endpoints = discover_har_api_endpoints(raw_html, base_url="https://example.com")
         self.assertEqual(endpoints, ["https://example.com/api/data.json"])
 
+    def test_har_discovery_finds_segment_style_api_paths(self):
+        # fidelity suite caught: '/api/product' (no .json suffix) was invisible to the old regex
+        raw_html = "<script>fetch('/api/product');fetch('/api/reviews');</script>"
+        endpoints = discover_har_api_endpoints(raw_html, base_url="https://example.com")
+        self.assertEqual(
+            endpoints,
+            ["https://example.com/api/product", "https://example.com/api/reviews"],
+        )
+
     def test_worker_escalates_engine_when_lightpanda_returns_empty(self):
         called_engines = []
 
