@@ -299,6 +299,30 @@ def _is_literal_filter(pattern: str) -> bool:
     return not any(c in pattern for c in "*^|+$?()[]{}.\\")
 
 
+def _normalize_type(t: str) -> str:
+    """Canonicalize a resource type across the CDP and DNR naming schemes.
+
+    CDP ``Fetch`` reports types like ``Document``/``Stylesheet``/``Script``,
+    while DNR rules use ``main_frame``/``stylesheet``/``script``. Without this
+    bridge a ``main_frame`` rule would never match the ``Document`` requests the
+    live interception layer actually sees.
+    """
+    key = (t or "").lower()
+    return _TYPE_ALIAS.get(key, key)
+
+
+# CDP type -> DNR type.
+_TYPE_ALIAS = {
+    "document": "main_frame",
+    "subdocument": "sub_frame",
+    "xhr": "xmlhttprequest",
+    "fetch": "xmlhttprequest",
+}
+
+
 def _type_matches(rule: dict, resource_type: str) -> bool:
     types = (rule.get("condition") or {}).get("resourceTypes") or []
-    return not types or resource_type in types
+    if not types:
+        return True
+    want = _normalize_type(resource_type)
+    return any(_normalize_type(t) == want for t in types)
