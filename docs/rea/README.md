@@ -101,6 +101,14 @@ risk note says otherwise. The hard lines above still apply to every row.
 | OS/ISO images (Linux distros, Windows install/recovery media, any lawfully obtained image) | dynamic-ok | full-spectrum analysis per HFY 2026-10-25; run in KVM/Docker on our own machine |
 | dynamic-ok (any) | — | granted 2026-10-25 by HFY for all rows above (blanket approval); hard lines below still apply |
 
+## REA toolkit (installed 2026-10-25, A5.2)
+
+Available on our own machine (`/usr/bin`): `qemu-system-x86_64` 10.2.1 + `qemu-img`
++ OVMF (KVM at `/dev/kvm`) for OS/ISO boots; `unsquashfs` 4.7.5 for SquashFS rootfs;
+`7z` (p7zip-full) + `bsdtar` (libarchive-tools) for archives/asars/omni.ja;
+`genisoimage` for ISO build/inspect. Work dir `/tmp/rea/{downloads,extracted,logs}`.
+Per-target findings live in `docs/rea/<target>.md`.
+
 ## Method per target (summary — full template in the plan, §A5)
 
 1. **Acquire & fingerprint** — version, hash, signature status, package format,
