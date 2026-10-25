@@ -1,0 +1,64 @@
+[
+  {
+    "claim": "Lightpanda vs Chrome headless crawl: peak PSS, 25 workers, 933 pages of demo-browser.lightpanda.io/amiibo/ (AWS m5.xlarge x86_64; smem PSS sampled every 100 ms, peak taken)",
+    "value": "123.0 MB (Lightpanda, 25 processes) vs 2.0 GB (Chrome, 25 tabs)",
+    "source_url": "https://github.com/lightpanda-io/demo/blob/main/BENCHMARKS.md",
+    "retrieved": "2026-10-25",
+    "measured_by": "vendor",
+    "note": "Their own caveat: Chrome = tabs in one browser, Lightpanda = one process per task. Go+chromedp crawler over the internet; Chrome 143.0.7499.169; Lightpanda commit 7b1f157. Verified live 2026-10-25."
+  },
+  {
+    "claim": "Lightpanda vs Chrome headless crawl: wall clock, 25 workers, same 933-page run",
+    "value": "4.81 s (Lightpanda, 25 processes) vs 46.70 s (Chrome, 25 tabs)",
+    "source_url": "https://github.com/lightpanda-io/demo/blob/main/BENCHMARKS.md",
+    "retrieved": "2026-10-25",
+    "measured_by": "vendor",
+    "note": "Same run and caveat as the peak-PSS row. Verified live 2026-10-25."
+  },
+  {
+    "claim": "Chrome Speedometer 3.1 record score (MacBook Pro M5, macOS 26.0.1)",
+    "value": "61",
+    "source_url": "https://blog.google/chromium/a-double-victory-for-web-speed-chrome-breaks-records-again-on-speedometer-31-and-jetstream-3/",
+    "retrieved": "2026-10-25",
+    "measured_by": "vendor",
+    "note": "Apple-silicon MacBook Pro; not comparable to measurements on this Linux box — never place next to our scores."
+  },
+  {
+    "claim": "Chrome JetStream 3 record score (MacBook Pro M5, macOS 26.0.1)",
+    "value": "469",
+    "source_url": "https://blog.google/chromium/a-double-victory-for-web-speed-chrome-breaks-records-again-on-speedometer-31-and-jetstream-3/",
+    "retrieved": "2026-10-25",
+    "measured_by": "vendor",
+    "note": "Same hardware caveat as the Speedometer row."
+  },
+  {
+    "claim": "Online-Mind2Web top score (steel.dev leaderboard snapshot)",
+    "value": "Browser Use Cloud bu-max — 97.0%",
+    "source_url": "https://leaderboard.steel.dev/",
+    "retrieved": "2026-10-24",
+    "measured_by": "third-party",
+    "note": "Leaderboard snapshot taken during planning research; scores move — re-verify before quoting."
+  },
+  {
+    "claim": "WebVoyager top score (steel.dev leaderboard snapshot)",
+    "value": "browser-control (Fable 5) — 99.19%",
+    "source_url": "https://leaderboard.steel.dev/",
+    "retrieved": "2026-10-24",
+    "measured_by": "third-party"
+  },
+  {
+    "claim": "WebArena top score (steel.dev leaderboard snapshot)",
+    "value": "WebTactix (DeepSeek v3.2) — 74.3%",
+    "source_url": "https://leaderboard.steel.dev/",
+    "retrieved": "2026-10-24",
+    "measured_by": "third-party"
+  },
+  {
+    "claim": "Browser Use Bench v2.1 (Oct 2026) agent task-success snapshot",
+    "value": "GPT-6.1 Sol 79.6; Browser Use agent 72.9 at ~$0.11/task",
+    "source_url": "https://browser-use.com/benchmarks/models/gpt-6-1-sol",
+    "retrieved": "2026-10-24",
+    "measured_by": "vendor",
+    "note": "Vendor-run agent benchmark; task cost is vendor-reported."
+  }
+]

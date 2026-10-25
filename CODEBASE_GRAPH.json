@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 54,
     "total_classes": 24,
-    "total_functions": 282,
-    "total_loc": 4993
+    "total_functions": 284,
+    "total_loc": 5048
   },
   "modules": [
     {
@@ -750,36 +750,48 @@
     {
       "module": "src.bench.report",
       "path": "src/bench/report.py",
-      "loc": 57,
+      "loc": 112,
       "classes": [],
       "functions": [
         "aggregate",
         "_fmt",
         "_vs",
-        "render_markdown"
+        "render_markdown",
+        "load_reported",
+        "render_reported"
       ],
       "imports": [
+        "json",
+        "re",
         "src.bench.stats",
         "statistics",
         "typing"
       ],
       "calls": [
+        "ValueError",
         "_fmt",
         "_vs",
         "aggregate",
         "append",
         "col",
+        "fullmatch",
         "get",
+        "isinstance",
         "items",
         "join",
         "len",
+        "load",
         "mean",
+        "open",
         "ratio_claim",
         "setdefault",
         "sorted",
+        "startswith",
+        "str",
+        "strip",
         "summarize"
       ],
-      "change_risk": 4.51
+      "change_risk": 10.0
     },
     {
       "module": "src.bench.run",
@@ -2242,6 +2254,8 @@
     "src.bench.install.pick_cft_urls",
     "src.bench.install.unzip_keep_modes",
     "src.bench.procmem.cpu_seconds",
+    "src.bench.report.load_reported",
+    "src.bench.report.render_reported",
     "src.bench.suites.fidelity.api_discovery_recall",
     "src.bench.suites.fidelity.body_cap_2mb",
     "src.bench.suites.fidelity.boilerplate_removal",

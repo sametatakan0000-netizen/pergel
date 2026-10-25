@@ -1,4 +1,6 @@
 """Markdown report. Ratios only when 95% CIs do not overlap; failures shown, never hidden."""
+import json
+import re
 import statistics
 from typing import Dict, List, Tuple
 
@@ -54,4 +56,57 @@ def render_markdown(rows: List[Dict], env: Dict, baseline_id: str) -> str:
               "Method: each cell = independent lifecycles (fresh process); the sample unit is the per-lifecycle "
               "median of warm fetches; CIs are 95% bootstrap; a ratio is shown only when CIs do not overlap "
               "(n>=10 lifecycles). Latency compares only successful fetches; success rate is reported beside it."]
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Task 3.5 — reported numbers (vendor/third-party, cited; never mixed with ours)
+# ---------------------------------------------------------------------------
+
+REQUIRED_REPORTED_FIELDS = ("claim", "value", "source_url", "retrieved", "measured_by")
+_REPORTED_BY = ("vendor", "third-party")
+
+
+def load_reported(path: str = "bench/reported.json") -> List[Dict[str, str]]:
+    """Load the vendor/third-party reported-numbers table.
+
+    Every entry must carry claim, value, source_url (http/https), retrieved
+    (YYYY-MM-DD) and measured_by in {"vendor", "third-party"}; anything else
+    is rejected loudly rather than silently dropped — an uncited number must
+    never reach a report.
+    """
+    with open(path, encoding="utf-8") as fh:
+        entries = json.load(fh)
+    if not isinstance(entries, list):
+        raise ValueError("reported.json must contain a JSON list of entries")
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError(f"reported entry must be an object: {entry!r}")
+        for field in REQUIRED_REPORTED_FIELDS:
+            if not str(entry.get(field, "")).strip():
+                raise ValueError(f"reported entry missing {field!r}: {entry!r}")
+        if entry["measured_by"] not in _REPORTED_BY:
+            raise ValueError(
+                f"reported entry measured_by must be one of {_REPORTED_BY}: {entry!r}"
+            )
+        if not entry["source_url"].startswith(("http://", "https://")):
+            raise ValueError(f"reported entry source_url must be http(s): {entry!r}")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", entry["retrieved"]):
+            raise ValueError(f"reported entry retrieved must be YYYY-MM-DD: {entry!r}")
+    return entries
+
+
+def render_reported(entries: List[Dict[str, str]]) -> str:
+    """Vendor/third-party figures in their own separate section, cited and dated."""
+    lines = ["## Reported by others — not reproduced here", "",
+             "Vendor and third-party figures with source and retrieval date. "
+             "These were never measured on our hardware and are never mixed with our own results.", ""]
+    for entry in entries:
+        lines.append(
+            f"- **{entry['claim']}** — {entry['value']} "
+            f"({entry['measured_by']}-reported, retrieved {entry['retrieved']}; "
+            f"source: {entry['source_url']})"
+        )
+        if entry.get("note"):
+            lines.append(f"  - note: {entry['note']}")
     return "\n".join(lines)
