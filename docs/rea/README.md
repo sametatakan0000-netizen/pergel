@@ -157,6 +157,16 @@ store-policy rejection checklist, native-extension honesty bar). † = shut down
 positioning synthesis: MV3-only era (CWS killed MV2 31.08.2026) + Firefox as
 last blocking-webRequest holdout + MCP/CLI as expected agent surface.
 
+**Store content → native capability catalog (2026-10-25):**
+`native-capability-catalog.md` — the *content* side of the store analysis
+(extension-stores.md covers the infrastructure side). Maps the real 2026 category
+market (Productivity 55.5% of ~251k listings; AdBlock 65M, Grammarly 36M, uBO
+14M, Dark Reader 7M) onto our engine layers and classifies each category:
+native-now (adblock ✅), native-via-existing-layer (cookie/annoyance, reader,
+dark-mode, focus-block, note-capture, screenshot), or platform-surface
+(password managers, writing assistants, tab managers — supported via the MV3
+extension surface, not built natively).
+
 **OS/ISO images — done:** Ubuntu 26.04.1 LTS (`ubuntu-26.04.1.md`, KVM boot
 verified), Alpine 3.24.3 + Fedora 44 (`alpine-fedora.md`, direct-kernel KVM serial
 boot → Alpine login prompt + Fedora `Welcome to Fedora`; Fedora `squashfs.img` is
