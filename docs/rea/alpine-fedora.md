@@ -14,7 +14,16 @@
 - Fedora 44: dracut → `Welcome to Fedora` banner'ı yakalandı; 150 sn limitinde login prompt'una ulaşılamadı (süre sınırı, hata değil).
 - Ubuntu 26.04.1 (önceki tur): systemd `boot-complete`, `network-online`, `cloud-config` hedefleri; FAILED satırı yok.
 
+
+## Fedora 44 rootfs envanteri (EROFS mount ile doğrulandı)
+- EROFS: 436 MB sıkıştırılmamış alan, 147392 inode, 1982 RPM paketi (lzma + fragments + dedupe).
+- `/usr/lib/sysimage/rpm/rpmdb.sqlite` üzerinden paket adları okundu.
+- Tarayıcılar: `firefox` (RPM 150.0, Netscape Public License wrapper), `firefox-langpacks`, `fedora-chromium-config`, `fedora-chromium-config-gnome`. Snap yok (`snapd` paketi yok) — Fedora 44 varsayılan tarayıcıyı RPM olarak verir.
+- Chromium/Chrome/Edge yok (yalnızca config yardımcıları).
+- `/usr/bin/firefox` gerçek ELF, `/usr/bin/{chromium,chrome,edge}` boş dizin.
+- `os-release`: `Fedora Linux 44 (Workstation Edition)`, `RELEASE_TYPE=stable`.
+
 ## Bilinen sınırlar
 - Windows eval ISO: Microsoft Eval Center kayıt formu + zamanlı link gerektirir; otomatik çekilmedi (kayıt formuna sahte bilgi girilmedi).
-- EROFS içerik çıkarımı için `erofs-utils` gerekir; sudo etkileşimli şifre istediği için kurulamadı. Rootfs içerik envanteri yapılmadı.
+- ~~EROFS içerik çıkarımı bloke~~ — çözüldü: `erofs-utils` + EROFS mount ile envanter alındı.
 - Alpine ve Fedora için paket/CDP/eklenti analizi yapılmadı (sadece boot ve imaj yapısı).
