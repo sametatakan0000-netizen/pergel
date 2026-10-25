@@ -5,13 +5,16 @@ this README is the standing rulebook for every `docs/rea/<target>.md` document
 and every `scripts/rea/*` tool run. **Before any `dynamic-ok` work the user must
 flip that target's row below** — that is the standing review gate.
 
-## Goal
+## Goal (2026-10-25, per HFY)
 
-Understand each browser / AI-browser product's architecture, automation surface,
-extension model, update mechanism, network behaviour and security posture so the
-Vane extension can interoperate and can be positioned honestly (including
-"Where we lose"). This is research on products we lawfully obtained and run on
-our own machine — nothing more.
+Full-spectrum REA across the whole market: **every browser** (Chromium/Gecko/WebKit
+forks, AI browsers, automation-only builds — any vendor) **plus every OS/ISO image
+we can lawfully obtain** (Linux distributions, Windows install/recovery media,
+firmware-free images) **and anything else useful to us** — automation surface,
+extension model, update mechanism, network behaviour, security posture, and any
+reusable technique worth adopting. Analysis runs on our own machine (Docker/KVM/
+downloaded images); this is research on materials we lawfully obtained — nothing
+more. Positioning stays honest (including "Where we lose").
 
 ## What is allowed
 
@@ -75,8 +78,9 @@ decompile*.
 
 Levels: `observe-only` (what it does, no unpacking) < `static-ok` (unpack and
 inspect locally) < `dynamic-ok` (run it under mitmproxy/strace in a clean test
-profile). Every row is one-way conservative: upgrading a row requires the user's
-explicit go and an update to this table **before** the work.
+profile). HFY granted blanket approval (2026-10-25) for **all targets** — browsers
+and OS/ISO images alike — so new targets default to `dynamic-ok` unless a specific
+risk note says otherwise. The hard lines above still apply to every row.
 
 | Target | Level | Basis / notes |
 |---|---|---|
@@ -94,6 +98,7 @@ explicit go and an update to this table **before** the work.
 | Gemini in Chrome  | dynamic-ok | default for commercial AI browser |
 | Claude in Chrome (extension)  | dynamic-ok | CRX from the Web Store is public — still observe-only until flipped |
 | ChatGPT (Atlas) extension  | dynamic-ok | retired 2026-08-09; archive/analysis only |
+| OS/ISO images (Linux distros, Windows install/recovery media, any lawfully obtained image) | dynamic-ok | full-spectrum analysis per HFY 2026-10-25; run in KVM/Docker on our own machine |
 | dynamic-ok (any) | — | granted 2026-10-25 by HFY for all rows above (blanket approval); hard lines below still apply |
 
 ## Method per target (summary — full template in the plan, §A5)

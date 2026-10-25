@@ -27,7 +27,7 @@ Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (269 pass; test
 ## Still pending / awaits user (blocked on HFY input)
 1. `hermes login` to reconnect the Nous Portal connector (sticky fallback is covering meanwhile).
 2. Three cross-vendor evaluations for that connector's review (0/3 done).
-3. A8 questions for Phase 2b (multi-OS lab) + REA: Windows/macOS machine access, sudo install line, and which vendors accept `static-ok`/`dynamic-ok`.
+3. ~~A8 machine-access questions~~ — withdrawn (2026-10-25): REA scope is market-wide (all browsers + all OS/ISO images), run on our own machine under HFY's blanket approval; no external lab needed.
 
 ## Known side effects (2026-10-25)
 - Post-restart spend is MiMo-cache-shaped ($0.18 / 102 turns): ~37% cached-context turns; per-turn cap effective (~$0.018 max).
