@@ -109,6 +109,34 @@ Available on our own machine (`/usr/bin`): `qemu-system-x86_64` 10.2.1 + `qemu-i
 `genisoimage` for ISO build/inspect. Work dir `/tmp/rea/{downloads,extracted,logs}`.
 Per-target findings live in `docs/rea/<target>.md`.
 
+## Cross-target findings (Linux Chromium forks, 2026-10-25)
+
+**Patch-lag (Chromium `branch-heads/` extracted from each binary):**
+
+| Target | Product version | Chromium branch-heads | Update mechanism |
+|---|---|---|---|
+| Chrome for Testing | 156.0.8078.47 | 8078 | CRX component channel |
+| Opera | 138.0.6044.24 | 8037 | bundled `opera_autoupdate` 1.3.0 |
+| Edge | 156.0.4314.42 | 7727 | own updater + apt repo |
+| Brave | 1.52.126 | 5735 | apt repo |
+| Vivaldi | 8.2.4133.94-1 | (not found in strings) | `update-ffmpeg` + apt |
+
+Branch-heads = Chromium build branch, so a higher number is closer to the CFT
+reference (8078). Full major-version mapping still needs the dynamic
+`navigator.userAgent` check — the embedded `Chrome/` strings are legacy compat
+tokens, not the real base. Brave's low 5735 (vs 8078) + its odd `114.` version
+prefix is the biggest lag signal and is the top item for dynamic verification.
+
+**Shared third-party endpoints:** both Opera and Vivaldi embed `go.mail.ru` /
+`suggests.go.mail.ru` (and Opera `cashback.opera.com`) — vendor search/monetization
+deals that ship in the binary. These are the kind of third-party surfaces the
+benchmark's `discover_network_endpoints` should surface.
+
+**Component update paths differ by design:** CFT/Edge/Brave/Vivaldi use the Web-Store
+CRX update service (`clients2.google.com/service/update2/crx`) for Widevine/MEI;
+Opera instead ships a standalone `opera_autoupdate` binary; Vivaldi ships
+`update-ffmpeg` for proprietary codecs. Direct-repo signal for the SaaS product.
+
 ## Method per target (summary — full template in the plan, §A5)
 
 1. **Acquire & fingerprint** — version, hash, signature status, package format,
