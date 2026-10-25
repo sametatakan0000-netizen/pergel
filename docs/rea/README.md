@@ -148,6 +148,15 @@ Brave, Edge, Opera, Vivaldi → see `<target>.md` + cross-target table above.
 patch-lag risk column, and concrete product actions. Read that first for the
 consolidated view; per-target docs stay the evidence base.
 
+**AI-native browsers & extension stores (2026-10-25):** `ai-browsers.md` (Comet,
+ChatGPT Atlas†, Chrome+Gemini, Edge+Copilot, Brave Leo, Dia, Opera Neon,
+Genspark, Fellou, BrowserOS, Firefox Smart Window, Arc† — product layer over
+the fork REA) and `extension-stores.md` (CWS/Edge/AMO/Opera/Safari, MV3 quotas,
+store-policy rejection checklist, native-extension honesty bar). † = shut down
+/ frozen (Atlas 09.08.2026; Arc maintenance-only). Both feed into the
+positioning synthesis: MV3-only era (CWS killed MV2 31.08.2026) + Firefox as
+last blocking-webRequest holdout + MCP/CLI as expected agent surface.
+
 **OS/ISO images — done:** Ubuntu 26.04.1 LTS (`ubuntu-26.04.1.md`, KVM boot
 verified), Alpine 3.24.3 + Fedora 44 (`alpine-fedora.md`, direct-kernel KVM serial
 boot → Alpine login prompt + Fedora `Welcome to Fedora`; Fedora `squashfs.img` is

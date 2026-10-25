@@ -92,3 +92,32 @@ ortamı ise debloat gerektirir.
    bileşen kanalını (varsa) açıkça belgele.
 5. **Hedef-ortam hazırlığı:** Windows için kalıcı debloat (WIM-mount), Linux için
    Alpine/Fedora-temelli hafif imaj önerisi.
+
+## 7. 2026 AI-tarayıcı + mağaza tablosu eki (detay: `ai-browsers.md`,
+`extension-stores.md`)
+
+- **Rakip gerçekliği:** Comet (ücretsiz, 4 platform, agent) pazar lideri;
+  ChatGPT Atlas **9 ayda kapandı** (09.08.2026) → işlevler Chrome eklentisi +
+  masaüstü uygulamasına dağıldı. Pazar bu kadar hızlı dönüyor.
+- **MV3-only çağ:** CWS 31.08.2026'da son MV2 listelerini kaldırdı. Blocking
+  webRequest artık yalnızca Firefox'ta (AMO) — "MV3 + blocking yüzey" sunan
+  ilk Chromium-temelli motor, engelleme/gizlilik eklentileri için tek sığınak
+  olur (uBlock sınıfı için büyük boşluk).
+- **Agent yüzeyi standardı:** Opera Neon MCP/CLI ücretsiz (Ağu 2026+), ChatGPT
+  bulut tarayıcı, Gemini bulut tarayıcı → "dışarıdan agent sürme" artık
+  beklenen özellik. Bizde: CDP + MCP + CLI üçlüsü açık sunulmalı.
+- **Ayrı profil izolasyonu** Comet'in en zayıf noktası (prompt injection, agent
+  oturum çalar); ChatGPT/Opera ayrı-profil modelini seçti — bizde varsayılan
+  olmalı + içerik talimat filtresi + onay kapısı.
+
+### Ürün kararları (bu ekten doğanlar)
+
+6. **MV3 zorunlu taban** (MV2 legacy taşıma anlamsız).
+7. **Blocking DNR/webRequest süper-uzantı katmanı** = ana farklılaştırıcı hedefi.
+8. **Kendi imzalı bileşen/güncelleme kanalı** (Opera `.nex` modeli), CWS CRX
+   updater'a bağımlılığı kırmak için.
+9. **Kural-kotu kıran kendi engelleme motoru** (MV3 30k statik kural limiti aşan
+   listeler için).
+10. **Firefox build'i ayrı manifest override** (`gecko.id`,
+    `data_collection_permissions`) ile sürdür; `gecko.id` değişimi kullanıcı
+    verisini yetim bırakır.
