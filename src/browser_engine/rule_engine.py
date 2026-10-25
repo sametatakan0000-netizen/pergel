@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
+from .aho_corasick import AhoCorasick
+
 # Action-class rank for precedence: lower number = higher precedence.
 _ACTION_RANK = {"allow": 0, "block": 1, "modifyHeaders": 2, "redirect": 2}
 
@@ -82,8 +84,11 @@ class RuleEngine:
         self._global: list[dict] = []
         # Build-time-compiled matchers, keyed by id(rule) (dicts are unhashable).
         self._compiled_regex: dict[int, "re.Pattern"] = {}
-        # Literal-only global filters, matched with str.find (C speed).
+        # Literal-only global filters, matched in one Aho-Corasick pass.
         self._literal: list[tuple[str, dict]] = []
+        self._literal_by_pattern: dict[str, list[dict]] = {}
+        self._literal_matcher: Optional[AhoCorasick] = None
+        self._literal_dirty = False
         # Diagnostics: how many candidate rules the last check() actually walked.
         self.last_candidate_count: int = 0
         for rule in rules or ():
@@ -110,8 +115,10 @@ class RuleEngine:
             for dom in domains:
                 self._by_domain.setdefault(dom.lower().rstrip("."), []).append(rule)
         elif url_filter is not None and anchor is None and _is_literal_filter(url_filter):
-            # Pure substring, no wildcard/anchor: matched with str.find at C speed.
+            # Pure substring, no wildcard/anchor: one Aho-Corasick pass covers all.
             self._literal.append((url_filter, rule))
+            self._literal_by_pattern.setdefault(url_filter, []).append(rule)
+            self._literal_dirty = True
         else:
             self._global.append(rule)
 
@@ -153,10 +160,15 @@ class RuleEngine:
             if not self._matches(rule, url, host, resource_type):
                 continue
             best, best_rank, best_prio = self._prefer(best, best_rank, best_prio, rule)
-        # Literal-only filters: pure substring test, no regex machinery.
-        for pattern, rule in self._literal:
-            if pattern in url and _type_matches(rule, resource_type):
-                best, best_rank, best_prio = self._prefer(best, best_rank, best_prio, rule)
+        # Literal-only filters: one Aho-Corasick pass finds every pattern.
+        if self._literal_by_pattern:
+            if self._literal_dirty:
+                self._literal_matcher = AhoCorasick(self._literal_by_pattern)
+                self._literal_dirty = False
+            for pattern in self._literal_matcher.find(url):
+                for rule in self._literal_by_pattern[pattern]:
+                    if _type_matches(rule, resource_type):
+                        best, best_rank, best_prio = self._prefer(best, best_rank, best_prio, rule)
         return best
 
     @staticmethod

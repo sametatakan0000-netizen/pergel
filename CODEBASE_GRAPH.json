@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 58,
-    "total_classes": 29,
-    "total_functions": 315,
-    "total_loc": 5662
+    "total_files": 59,
+    "total_classes": 30,
+    "total_functions": 317,
+    "total_loc": 5747
   },
   "modules": [
     {
@@ -1102,6 +1102,33 @@
       "change_risk": 8.58
     },
     {
+      "module": "src.browser_engine.aho_corasick",
+      "path": "src/browser_engine/aho_corasick.py",
+      "loc": 73,
+      "classes": [
+        "AhoCorasick"
+      ],
+      "functions": [
+        "__init__",
+        "find"
+      ],
+      "imports": [
+        "__future__",
+        "typing"
+      ],
+      "calls": [
+        "append",
+        "get",
+        "items",
+        "len",
+        "list",
+        "set",
+        "update",
+        "values"
+      ],
+      "change_risk": 6.11
+    },
+    {
       "module": "src.browser_engine.browser_orchestrator",
       "path": "src/browser_engine/browser_orchestrator.py",
       "loc": 179,
@@ -1263,7 +1290,7 @@
     {
       "module": "src.browser_engine.rule_engine",
       "path": "src/browser_engine/rule_engine.py",
-      "loc": 273,
+      "loc": 285,
       "classes": [
         "Decision",
         "RuleEngine"
@@ -1289,12 +1316,14 @@
       ],
       "imports": [
         "__future__",
+        "aho_corasick",
         "dataclasses",
         "re",
         "typing",
         "urllib.parse"
       ],
       "calls": [
+        "AhoCorasick",
         "Decision",
         "RuleEngine",
         "ValueError",
@@ -1318,6 +1347,7 @@
         "enumerate",
         "escape",
         "field",
+        "find",
         "get",
         "id",
         "int",
