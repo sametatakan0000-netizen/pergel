@@ -21,12 +21,25 @@ def _fake_dns(host, *args, **kwargs):
     return _REAL_GETADDRINFO(host, *args, **kwargs)
 
 
+_saved_adblock_env = None
+
+
 def setUpModule():
     _socket.getaddrinfo = _fake_dns
+    # Hermetic: this suite exercises API plumbing, not adblock enforcement
+    # (which has its own live tests). Force the plain driver so the enforced
+    # CDP path (bundle compile + browser launch) never slows or hangs the run.
+    global _saved_adblock_env
+    _saved_adblock_env = os.environ.get("ORACLE_ADBLOCK_LISTS")
+    os.environ["ORACLE_ADBLOCK_LISTS"] = "off"
 
 
 def tearDownModule():
     _socket.getaddrinfo = _REAL_GETADDRINFO
+    if _saved_adblock_env is None:
+        os.environ.pop("ORACLE_ADBLOCK_LISTS", None)
+    else:
+        os.environ["ORACLE_ADBLOCK_LISTS"] = _saved_adblock_env
 
 
 def _or_model(mid, cost_in, vision=False, efforts=("low", "medium", "high"), ctx=200000, aa=None):

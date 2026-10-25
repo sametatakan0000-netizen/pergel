@@ -3,6 +3,7 @@ import asyncio
 import ipaddress
 import json
 import hmac
+import logging
 import os
 import socket
 import threading
@@ -99,16 +100,53 @@ def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
     return None
 
 
-def _resolve_driver(adblock_list_paths):
-    """Pick the fetch driver: adblock-enforcing CDP when filter lists are given.
+# Default-on adblock enforcement. Filter lists live here (mirror of the public
+# EasyList + uAssets downloads). ORACLE_ADBLOCK_LISTS overrides with a
+# os.pathsep-separated list of files, or "off" to disable enforcement.
+DEFAULT_FILTER_LISTS_DIR = os.environ.get(
+    "ORACLE_FILTER_LISTS_DIR",
+    os.path.join(os.path.expanduser("~"), ".local", "share", "browser_farm", "filterlists"),
+)
 
-    ``adblock_list_paths=None`` (default) keeps the plain ``engine_driver``, so
-    every existing caller is unaffected. When paths are provided, the enforced
-    CDP driver blocks ads and hides elements during fetch.
+
+def _with_fallback(enforced):
+    """Fail-open on availability: if the enforced driver raises, use the plain driver.
+
+    Policy blocks never reach here (they are decided before any engine runs), so
+    this only covers infrastructure failure (Chromium missing, CDP crash, timeout).
     """
-    if not adblock_list_paths:
+    def wrapped(engine, url, session_name):
+        try:
+            return enforced(engine, url, session_name)
+        except Exception as exc:  # noqa: BLE001 - availability fallback, logged
+            logging.warning("adblock enforcement failed for %s (%s); plain driver", url, exc)
+            return engine_driver(engine, url, session_name)
+    return wrapped
+
+
+def _resolve_driver(adblock_list_paths):
+    """Pick the fetch driver. Adblock enforcement is ON by default.
+
+    Order: explicit paths arg -> ORACLE_ADBLOCK_LISTS (paths, or "off") ->
+    default lists dir. Missing lists or "off" -> plain ``engine_driver``.
+    """
+    env = os.environ.get("ORACLE_ADBLOCK_LISTS", "").strip()
+    if env.lower() == "off":
         return engine_driver
-    return make_adblock_driver(load_adblock_bundle(adblock_list_paths))
+    if adblock_list_paths:
+        paths = list(adblock_list_paths)
+    elif env:
+        paths = [p for p in env.split(os.pathsep) if p]
+    else:
+        paths = []
+        if os.path.isdir(DEFAULT_FILTER_LISTS_DIR):
+            paths = sorted(
+                os.path.join(DEFAULT_FILTER_LISTS_DIR, f)
+                for f in os.listdir(DEFAULT_FILTER_LISTS_DIR) if f.endswith(".txt"))
+    paths = [p for p in paths if os.path.isfile(p)]
+    if not paths:
+        return engine_driver
+    return _with_fallback(make_adblock_driver(load_adblock_bundle(paths)))
 
 
 class BrowserFarmSaaSServer:
