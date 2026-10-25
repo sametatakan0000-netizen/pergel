@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 65,
     "total_classes": 33,
-    "total_functions": 358,
-    "total_loc": 6729
+    "total_functions": 360,
+    "total_loc": 6767
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 619,
+      "loc": 657,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -192,7 +192,9 @@
         "_elapsed_ms",
         "_usage_from",
         "_validate_target",
+        "_with_fallback",
         "_resolve_driver",
+        "wrapped",
         "__init__",
         "refresh_registry",
         "_fanout_decompose_fn",
@@ -221,6 +223,7 @@
         "http.server",
         "ipaddress",
         "json",
+        "logging",
         "os",
         "socket",
         "src.api.job_store",
@@ -276,6 +279,7 @@
         "_throttled",
         "_usage_from",
         "_validate_target",
+        "_with_fallback",
         "abspath",
         "analyze_response",
         "as_response",
@@ -296,10 +300,14 @@
         "dumps",
         "encode",
         "end_headers",
+        "endswith",
+        "enforced",
+        "engine_driver",
         "enumerate",
         "execute_fanout_and_ground",
         "execute_task",
         "exists",
+        "expanduser",
         "feed",
         "fetch_profiles",
         "float",
@@ -310,6 +318,8 @@
         "getattr",
         "int",
         "ip_address",
+        "isdir",
+        "isfile",
         "isinstance",
         "isoformat",
         "items",
@@ -318,9 +328,11 @@
         "learn",
         "len",
         "list",
+        "listdir",
         "load_adblock_bundle",
         "load_snapshot",
         "loads",
+        "lower",
         "make_adblock_driver",
         "makedirs",
         "mark_completed",
@@ -370,6 +382,7 @@
         "urlsplit",
         "values",
         "virtual_context_length",
+        "warning",
         "write"
       ],
       "change_risk": 10.0
@@ -2758,6 +2771,7 @@
     "src.api.server.do_GET",
     "src.api.server.do_POST",
     "src.api.server.log_message",
+    "src.api.server.wrapped",
     "src.bench.adapters.root_pids",
     "src.bench.fixture_server.do_GET",
     "src.bench.fixture_server.log_message",
@@ -2786,7 +2800,6 @@
     "src.browser_engine.adblock_session.build_network_engine",
     "src.browser_engine.cdp_adblock_driver.browse",
     "src.browser_engine.cdp_adblock_driver.driver",
-    "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.browser_engine.scriptlets.supported_scriptlets",
     "src.browser_engine.telemetry.top_rules",
