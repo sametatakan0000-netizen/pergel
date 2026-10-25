@@ -11,7 +11,7 @@ import tempfile
 import unittest
 import urllib.request
 
-from tests.test_cdp_e2e_live import _find_chromium
+from tests.test_cdp_e2e_live import _find_chromium, websockets
 from src.browser_engine.procedural import compile_procedural, procedural_js
 from src.browser_engine.scriptlets import compile_scriptlets, scriptlet_js
 
@@ -19,6 +19,8 @@ from src.browser_engine.scriptlets import compile_scriptlets, scriptlet_js
 class TestScriptletLive(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if _find_chromium() is None or websockets is None:
+            raise unittest.SkipTest("no chromium binary or websockets lib")
         cls.tmp = tempfile.mkdtemp()
         cls.port = 9501
         cls.proc = subprocess.Popen(
@@ -136,6 +138,8 @@ class TestScriptletLive(unittest.TestCase):
 class TestProceduralLive(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if _find_chromium() is None or websockets is None:
+            raise unittest.SkipTest("no chromium binary or websockets lib")
         cls.tmp = tempfile.mkdtemp()
         cls.port = 9502
         cls.proc = subprocess.Popen(
