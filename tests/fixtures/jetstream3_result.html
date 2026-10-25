@@ -1,0 +1,21 @@
+<!--
+  Structure captured from WebKit/JetStream JetStreamDriver.js: when the run
+  finishes it adds class "done" to #result-summary and writes summaryHtml:
+  <div class="score">{uiFriendlyScore(overallScore)}</div><label>Score</label>
+  followed by per-category <span class="result detail"> rows. uiFriendlyScore
+  prints integers as-is and floats with 2 decimals.
+-->
+<div id="result-summary" class="done">
+    <div class="score">469.07</div>
+    <label>Score</label>
+    <div class="benchmark benchmark-done">
+        <span class="result detail">
+            <span>501.23</span>
+            <label>Time</label>
+        </span>
+        <span class="result detail">
+            <span>439.61</span>
+            <label>Throughput</label>
+        </span>
+    </div>
+</div>

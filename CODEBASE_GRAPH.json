@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 54,
+    "total_files": 55,
     "total_classes": 24,
-    "total_functions": 284,
-    "total_loc": 5048
+    "total_functions": 289,
+    "total_loc": 5159
   },
   "modules": [
     {
@@ -959,6 +959,40 @@
       "imports": [],
       "calls": [],
       "change_risk": 0.0
+    },
+    {
+      "module": "src.bench.suites.browserbench",
+      "path": "src/bench/suites/browserbench.py",
+      "loc": 111,
+      "classes": [],
+      "functions": [
+        "_visible_html",
+        "_parse_score_text",
+        "extract_speedometer_score",
+        "extract_jetstream_score",
+        "run_suite"
+      ],
+      "imports": [
+        "re",
+        "typing"
+      ],
+      "calls": [
+        "ValueError",
+        "_parse_score_text",
+        "_visible_html",
+        "fetch",
+        "float",
+        "fullmatch",
+        "group",
+        "items",
+        "next",
+        "parser",
+        "replace",
+        "search",
+        "strip",
+        "sub"
+      ],
+      "change_risk": 4.19
     },
     {
       "module": "src.bench.suites.fidelity",
@@ -2256,6 +2290,9 @@
     "src.bench.procmem.cpu_seconds",
     "src.bench.report.load_reported",
     "src.bench.report.render_reported",
+    "src.bench.suites.browserbench.extract_jetstream_score",
+    "src.bench.suites.browserbench.extract_speedometer_score",
+    "src.bench.suites.browserbench.run_suite",
     "src.bench.suites.fidelity.api_discovery_recall",
     "src.bench.suites.fidelity.body_cap_2mb",
     "src.bench.suites.fidelity.boilerplate_removal",
