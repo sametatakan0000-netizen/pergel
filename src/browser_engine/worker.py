@@ -34,7 +34,7 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
 
 try:
     import trafilatura
-except ImportError:  # shortcut: regex fallback is boilerplate-blind, require trafilatura in production deploys
+except ImportError:  # shortcut: regex fallback drops only nav/header/footer/aside landmarks, trafilatura preferred in production deploys
     trafilatura = None
 
 _MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; regex path keeps them
@@ -62,6 +62,7 @@ def _regex_markdown(raw_html: str) -> str:
     """Ham HTML'den script/style gürültüsünü temizler, başlık ve linkleri koruyarak Markdown üretir."""
 
     text = re.sub(r"<(script|style|noscript)[^>]*>.*?</\1>", "", raw_html, flags=re.S | re.I)
+    text = re.sub(r"<(nav|header|footer|aside)\b[^>]*>.*?</\1>", "", text, flags=re.S | re.I)
     text = re.sub(r"<h1[^>]*>(.*?)</h1>", r"\n# \1\n", text, flags=re.S | re.I)
     text = re.sub(r"<h2[^>]*>(.*?)</h2>", r"\n## \1\n", text, flags=re.S | re.I)
     text = re.sub(r"<h3[^>]*>(.*?)</h3>", r"\n### \1\n", text, flags=re.S | re.I)
