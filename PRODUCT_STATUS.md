@@ -24,6 +24,12 @@ Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (269 pass; test
 - `src/bench/suites/browserbench.py` (`0b427e4`): Speedometer 3.1 / JetStream 3.0 score parsers + `run_suite()`; automation hooks read from the suites' own sources (recorded in the module docstring); Lightpanda = `n/a (unsupported Web APIs)`, never 0. Live run = manual receipt.
 - `docs/rea/README.md` (A5.1): REA rules, US/EU/TR legal basis, responsible-disclosure policy, per-vendor risk column (default `observe-only`; `dynamic-ok` needs a per-row user go).
 
+## Adblock enforcement integration (target plan core, 2026-10-25)
+The isolated rule layers are now one enforceable fetch path, not standalone modules:
+- `src/browser_engine/adblock_session.py` — `AdblockBundle` + `compile_adblock` + `load_adblock_bundle` compose all four layers (network DNR, cosmetic CSS, scriptlets, procedural DOM) into one bundle; `build_injection` packages the 3 renderer layers as a single `document-start` JS. `load_adblock_bundle` compiles real EasyList + uAssets (~92k lines) into all layers in ~0.35s and blocks live ad endpoints (googlesyndication/doubleclick).
+- `src/browser_engine/cdp_adblock_driver.py` — `AdblockBrowserSession` runs a real headless Chromium over CDP (WebSocket, `Fetch` interception + `Page.addScriptToEvaluateOnNewDocument`) and enforces all four layers on fetch+browse. `make_adblock_driver(bundle)` adapts it to the blocking `driver_fn(engine, url, session) -> raw_html` contract.
+- Wired into the product: `BrowserWorker.html_to_clean_markdown` runs ad-free markdown through the adblock driver (proved end-to-end); `server.BrowserFarmSaaSServer(adblock_list_paths=[...])` opt-in switches the default fetch path to enforcement (default `None` keeps `engine_driver`, no caller breaks). Tests: `test_adblock_session`, `test_adblock_live`, `test_cdp_adblock_driver_live`, `test_worker_adblock_integration`, `test_adblock_real_lists` (407/407 pass).
+
 ## Still pending / awaits user (blocked on HFY input)
 1. `hermes login` to reconnect the Nous Portal connector (sticky fallback is covering meanwhile).
 2. Three cross-vendor evaluations for that connector's review (0/3 done).
