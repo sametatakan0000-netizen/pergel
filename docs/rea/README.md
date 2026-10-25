@@ -143,6 +143,11 @@ Opera instead ships a standalone `opera_autoupdate` binary; Vivaldi ships
 **Linux Chromium forks — COMPLETE (static + dynamic CDP):** Chrome for Testing,
 Brave, Edge, Opera, Vivaldi → see `<target>.md` + cross-target table above.
 
+**Synthesis (2026-10-25):** all REA findings (5 forks + 4 OS/ISO) distilled into
+`positioning-synthesis.md` — the "where we win / where we lose" market position,
+patch-lag risk column, and concrete product actions. Read that first for the
+consolidated view; per-target docs stay the evidence base.
+
 **OS/ISO images — done:** Ubuntu 26.04.1 LTS (`ubuntu-26.04.1.md`, KVM boot
 verified), Alpine 3.24.3 + Fedora 44 (`alpine-fedora.md`, direct-kernel KVM serial
 boot → Alpine login prompt + Fedora `Welcome to Fedora`; Fedora `squashfs.img` is
