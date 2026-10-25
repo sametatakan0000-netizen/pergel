@@ -111,21 +111,22 @@ Per-target findings live in `docs/rea/<target>.md`.
 
 ## Cross-target findings (Linux Chromium forks, 2026-10-25)
 
-**Patch-lag (Chromium `branch-heads/` extracted from each binary):**
+**Patch-lag (Chromium major CONFIRMED via headless CDP dynamic probe 2026-10-25):**
 
-| Target | Product version | Chromium branch-heads | Update mechanism |
-|---|---|---|---|
-| Chrome for Testing | 156.0.8078.47 | 8078 | CRX component channel |
-| Opera | 138.0.6044.24 | 8037 | bundled `opera_autoupdate` 1.3.0 |
-| Edge | 156.0.4314.42 | 7727 | own updater + apt repo |
-| Brave | 1.52.126 | 5735 | apt repo |
-| Vivaldi | 8.2.4133.94-1 | (not found in strings) | `update-ffmpeg` + apt |
+| Target | Product version | Chromium base (UA) | V8 | Majors behind CFT | Update mechanism |
+|---|---|---|---|---|---|
+| Chrome for Testing | 156.0.8078.47 | 156.0.8078.47 | 15.6 | 0 | CRX component channel |
+| Edge | 156.0.4314.42 | 156.0.4314.42 | 15.6 | 0 | own updater + apt |
+| Opera | 138.0.6044.24 | 154.0.8037.99 | 15.4 | 2 | bundled `opera_autoupdate` 1.3.0 |
+| Vivaldi | 8.2.4133.94-1 | 152.0.0.0 | 15.2 | 4 | `update-ffmpeg` + apt |
+| Brave | 1.52.126 | 114.0.5735.133 | 11.4 | **42** | apt repo |
 
-Branch-heads = Chromium build branch, so a higher number is closer to the CFT
-reference (8078). Full major-version mapping still needs the dynamic
-`navigator.userAgent` check — the embedded `Chrome/` strings are legacy compat
-tokens, not the real base. Brave's low 5735 (vs 8078) + its odd `114.` version
-prefix is the biggest lag signal and is the top item for dynamic verification.
+Method: each fork launched headless with `--remote-debugging-port`, read
+`/json/version` → `Browser`, `User-Agent`, `V8-Version`; three signals
+triangulated per target. The earlier static `Chrome/` strings were legacy compat
+tokens and correctly discarded. **Brave is the outlier**: the newest `stable` in
+its apt repo still runs Chromium 114 — 42 majors behind, the single largest lag
+we found; worth an explicit security/patch-lag column in the product's risk table.
 
 **Shared third-party endpoints:** both Opera and Vivaldi embed `go.mail.ru` /
 `suggests.go.mail.ru` (and Opera `cashback.opera.com`) — vendor search/monetization

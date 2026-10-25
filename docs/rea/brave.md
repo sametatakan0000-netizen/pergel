@@ -7,7 +7,7 @@
 - **Package:** `brave-browser_1.52.126_amd64.deb`, 103M.
 - **sha256:** `33fdb9605a844f81bcf52ee286216281ed38efe7e4fe358aa44883f0edb65bbe` — **matches the repo `SHA256:` record exactly.**
 - **Version (`brave --version`):** `Brave Browser 114.1.52.126`.
-- **Chromium branch-heads (extracted):** `5735` (`fbfa2ce68d01b2201d8c667c2e73f648a61c4f4a`).
+- **Chromium base (CONFIRMED dynamic 2026-10-25):** `Chrome/114.0.5735.133`, **V8 11.4.183.23**, branch-heads `5735`. Three signals agree: CDP `Browser` field, `navigator.userAgent` (`Chrome/114.0.0.0`), V8 version.
 - **Installed-Size:** 332,249 KiB (~324M). **Maintainer:** Brave Software. **Section:** web.
 - **Signature:** `.deb` channel is signed by the Brave apt repo (GPG); not re-verified here beyond the apt `SHA256:` match.
 
@@ -18,8 +18,11 @@
 ## Embedded hosts (strings, host level)
 `www.googleap…` (truncated, 41×), `support.google.com`, `www.google.com`, `beacons*.gvt2.com`/`beacons*.gvt3.com`/`beacons.gcp.gvt2.com` (21× each), `support.brave.com`, `www.bing.com`. Bing presence = Brave's default-search deals (a differentiator vs stock Chromium).
 
-## What we could NOT verify (static)
-- Exact Chromium major base — the `--version` prefix `114.` and branch-heads `5735` disagree with a naive read; embedded `Chrome/` strings are legacy compat tokens (70.x/99.x), not the real base. Resolve via dynamic `navigator.userAgent` / `brave://version`.
+## Dynamic phase (2026-10-25)
+- **Chromium base RESOLVED: 114.0.5735.133 / V8 11.4** (was the open question — now confirmed via headless CDP). Brave is the single biggest patch-lag outlier: **42 major versions behind** Chrome-for-Testing/Edge (156).
+
+## What we could NOT verify
+- Why Brave 1.52.126 (newest `stable` in its apt repo) is still on Chromium 114 — either the apt `stable` channel lags or Brave's 1.x numbering doesn't track recency. Flag for follow-up.
 - Widevine presence/behavior (on-demand fetch).
 - Actual traffic, auto-update path, telemetry endpoints (truncated strings).
 
