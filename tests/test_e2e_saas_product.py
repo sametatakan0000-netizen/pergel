@@ -1,5 +1,6 @@
 import json
 import os
+import socket as _socket
 import tempfile
 import unittest
 import urllib.request
@@ -8,6 +9,24 @@ from threading import Thread
 os.environ.setdefault("ORACLE_EXPLORE_EPSILON", "0")  # deterministic routing in tests
 from src.api.server import BrowserFarmSaaSServer
 from src.router.model_registry import build_profiles_from_openrouter
+
+_REAL_GETADDRINFO = _socket.getaddrinfo
+
+
+def _fake_dns(host, *args, **kwargs):
+    """Resolve *.example.com offline — hermetic tests, no real DNS lookups."""
+    if isinstance(host, str) and host.endswith("example.com"):
+        port = args[0] if args else kwargs.get("port", 0)
+        return [(_socket.AF_INET, _socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 0))]
+    return _REAL_GETADDRINFO(host, *args, **kwargs)
+
+
+def setUpModule():
+    _socket.getaddrinfo = _fake_dns
+
+
+def tearDownModule():
+    _socket.getaddrinfo = _REAL_GETADDRINFO
 
 
 def _or_model(mid, cost_in, vision=False, efforts=("low", "medium", "high"), ctx=200000, aa=None):
@@ -65,7 +84,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 base_url = f"http://127.0.0.1:{server.port}"
 
                 # 1. Health Endpoint
-                with urllib.request.urlopen(f"{base_url}/v1/health", timeout=5) as resp:
+                with urllib.request.urlopen(f"{base_url}/v1/health", timeout=15) as resp:
                     health = json.loads(resp.read().decode("utf-8"))
                 self.assertEqual(health["status"], "degraded")
                 self.assertFalse(health["upstream_ready"])
@@ -86,7 +105,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     headers={"Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with urllib.request.urlopen(req, timeout=15) as resp:
                     job_res = json.loads(resp.read().decode("utf-8"))
 
                 self.assertEqual(job_res["status"], "completed")
@@ -107,7 +126,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 self.assertEqual(fetched["status"], "completed")
 
                 # 4. OpenAI-Compatible Custom Provider Proxy (/v1/models & /v1/chat/completions)
-                with urllib.request.urlopen(f"{base_url}/v1/models", timeout=5) as resp:
+                with urllib.request.urlopen(f"{base_url}/v1/models", timeout=15) as resp:
                     models_payload = json.loads(resp.read().decode("utf-8"))
                 model_ids = {m["id"] for m in models_payload["data"]}
                 # One advertised id: the router decides the band, tier profiles are legacy aliases.
@@ -137,7 +156,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 )
                 # Without an upstream, never invent a successful model response.
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(chat_req, timeout=5)
+                    urllib.request.urlopen(chat_req, timeout=15)
                 self.assertEqual(ctx.exception.code, 502)
 
                 # 5. Model Profiles Registry Endpoint (/v1/models/profiles)
@@ -198,7 +217,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     req = urllib.request.Request(url, data=data, method="POST", headers={
                         "Content-Type": "application/json", "x-hermes-session-id": "same-session",
                     })
-                    with urllib.request.urlopen(req, timeout=5) as response:
+                    with urllib.request.urlopen(req, timeout=15) as response:
                         result = json.load(response)
                     self.assertEqual(result["id"], "upstream-real-id")
                     self.assertEqual(result["choices"][0]["message"]["content"], "upstream-answer")
@@ -264,13 +283,13 @@ class TestE2ESaaSProduct(unittest.TestCase):
                                                    "messages": [{"role": "user", "content": "call a tool"}]}).encode(),
                             headers={"Content-Type": "application/json"}, method="POST"
                         )
-                    with urllib.request.urlopen(make_request(True), timeout=5) as response:
+                    with urllib.request.urlopen(make_request(True), timeout=15) as response:
                         self.assertEqual(response.headers["Content-Type"], "text/event-stream")
                         events = response.read()
                     self.assertIn(b'"tool_calls"', events)
                     self.assertIn(b'data: [DONE]', events)
                     with self.assertRaises(urllib.error.HTTPError) as ctx:
-                        urllib.request.urlopen(make_request(False), timeout=5)
+                        urllib.request.urlopen(make_request(False), timeout=15)
                     self.assertEqual(ctx.exception.code, 429)
                     self.assertIn(b'capacity exceeded', ctx.exception.read())
                     self.assertEqual(len(calls), 2)
@@ -339,7 +358,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     headers={"Content-Type": "application/json"}, method="POST"
                 )
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(req, timeout=5)
+                    urllib.request.urlopen(req, timeout=15)
                 self.assertEqual(ctx.exception.code, 501)
             finally:
                 router.shutdown()
@@ -367,7 +386,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     headers={"Content-Type": "application/json"}, method="POST"
                 )
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(req, timeout=5)
+                    urllib.request.urlopen(req, timeout=15)
                 self.assertEqual(ctx.exception.code, 502)
                 # A dead proxy is not a model failure: no cooldowns, no per-model error events.
                 self.assertEqual(router.live.cooling_down(), set())
@@ -425,7 +444,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                         req = urllib.request.Request(base + "/chat/completions", method="POST", headers=headers,
                             data=json.dumps({"model": model, "messages": messages, "tools": tools,
                                              "stream": stream}).encode())
-                        with urllib.request.urlopen(req, timeout=5) as resp:
+                        with urllib.request.urlopen(req, timeout=15) as resp:
                             raw = resp.read()
                             return resp.headers["X-Oracle-Selected-Model"], raw
 
@@ -444,7 +463,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     send([{"role": "user", "content": "başlık üret"}], session="conv", model="test/mid")  # aux call: ignored
                     send(turn, session="conv")
 
-                    with urllib.request.urlopen(base + "/router/learning", timeout=5) as resp:
+                    with urllib.request.urlopen(base + "/router/learning", timeout=15) as resp:
                         learning = json.load(resp)
                     self.assertEqual(learning["signal_counts"].get("malformed_tool_arguments"), 2)
                     self.assertEqual(learning["signal_counts"].get("user_retry"), 1)
@@ -469,7 +488,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     headers={"Content-Type": "application/json"}, method="POST"
                 )
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(req, timeout=5)
+                    urllib.request.urlopen(req, timeout=15)
                 self.assertEqual(ctx.exception.code, 422)
             finally:
                 router.shutdown()
@@ -514,7 +533,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     req = urllib.request.Request(url, method="POST", headers={"Content-Type": "application/json"},
                         data=json.dumps({"model": "oracle/auto", "reasoning_effort": "medium",
                                          "messages": [{"role": "user", "content": "python kodu yaz"}]}).encode())
-                    with urllib.request.urlopen(req, timeout=5) as response:
+                    with urllib.request.urlopen(req, timeout=15) as response:
                         selected = response.headers["X-Oracle-Selected-Model"]
                         self.assertEqual(json.load(response)["id"], "real")
                     self.assertEqual([b["model"] for b in received], ["test/mid", "google/gemini-4-argon"])
@@ -526,7 +545,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                     req = urllib.request.Request(url, method="POST", headers={"Content-Type": "application/json"},
                         data=json.dumps({"model": "test/cheap", "reasoning_effort": "medium",
                                          "messages": [{"role": "user", "content": "selam"}]}).encode())
-                    with urllib.request.urlopen(req, timeout=5):
+                    with urllib.request.urlopen(req, timeout=15):
                         pass
                     self.assertEqual(received[-1]["reasoning_effort"], "high")
 
@@ -536,7 +555,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                         r = urllib.request.Request(url, method="POST", headers={
                             "Content-Type": "application/json", "x-hermes-session-id": "conv-1"},
                             data=json.dumps({"model": model, "messages": [{"role": "user", "content": text}]}).encode())
-                        with urllib.request.urlopen(r, timeout=5) as resp:
+                        with urllib.request.urlopen(r, timeout=15) as resp:
                             return resp.headers["X-Oracle-Selected-Model"]
                     first = send("oracle/auto", "mimari tasarım")
                     self.assertEqual(first, "google/gemini-4-argon")

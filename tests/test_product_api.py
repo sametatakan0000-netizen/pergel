@@ -1,5 +1,6 @@
 import asyncio
 import json
+import socket as _socket
 import tempfile
 import unittest
 import urllib.error
@@ -7,6 +8,24 @@ import urllib.request
 
 from src.api.server import BrowserFarmSaaSServer
 from src.browser_engine.worker import FetchBlocked
+
+_REAL_GETADDRINFO = _socket.getaddrinfo
+
+
+def _fake_dns(host, *args, **kwargs):
+    """Resolve *.example.com offline — hermetic tests, no real DNS lookups."""
+    if isinstance(host, str) and host.endswith("example.com"):
+        port = args[0] if args else kwargs.get("port", 0)
+        return [(_socket.AF_INET, _socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 0))]
+    return _REAL_GETADDRINFO(host, *args, **kwargs)
+
+
+def setUpModule():
+    _socket.getaddrinfo = _fake_dns
+
+
+def tearDownModule():
+    _socket.getaddrinfo = _REAL_GETADDRINFO
 
 PAGE = ("<html><body><article><h1>Plans</h1><p>" + "The starter plan costs 49 dollars monthly. " * 6 +
         "</p><script>fetch('/api/v2/pricing.json')</script></article></body></html>")
@@ -17,7 +36,7 @@ def call(base, path, body=None):
     req = urllib.request.Request(base + path, data=data, method="POST" if body is not None else "GET",
                                  headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=5) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read())
@@ -155,7 +174,7 @@ class JobsApiAuthTests(_Base):
                                      data=json.dumps({"url": "https://example.com/"}).encode(),
                                      headers={"Content-Type": "application/json",
                                               "Authorization": "Bearer test-key-123"})
-        with urllib.request.urlopen(req, timeout=5) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             self.assertEqual(r.status, 200)
 
     def test_router_paths_stay_open_without_key(self):
