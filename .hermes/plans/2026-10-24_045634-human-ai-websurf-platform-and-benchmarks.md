@@ -1233,3 +1233,8 @@ For each OS + browser: install size, process count at idle, idle PSS/working set
 
 ## A9. Mechanical follow-ups
 - Name check + rename task: search npm/PyPI/Chrome Web Store/GitHub/domain for "vane"; if clear, rename extension + docs first, repo/package later (touches imports, systemd unit descriptions, skill docs).
+
+## A10. Focus update (2026-10-25)
+- Agent-side economics are now stable and cheap: router turn budget $0.07 brake + 120K effective window + cache-aware spend (post-restart: $0.18 / 102 turns / 53 min). Iteration-heavy phases (3 suites, 3b REA) are affordable; no cost blocker remains on this plan.
+- Phase order stands (A6): next actionable without user input = **A5.1** (`docs/rea/README.md` rules + legal-basis) and **Phase 3 suites** (3.1/3.2 fixtures). Phase 2b (multi-OS lab) stays blocked on A8 questions 1–2 (machine access, sudo install).
+- Router-side plan (`.hermes/plans/2026-10-24_064853-router-context-governor-and-inventory.md`) has its own open list: Task 0 SOTA note, Task 7 candidate_spread — small, free, completable between bench runs.

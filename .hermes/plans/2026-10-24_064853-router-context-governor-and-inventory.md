@@ -151,3 +151,10 @@ Soru: Amiral-subagent için 1 mi N aday mı? Cevap deney değil **maliyet-aritme
 - AÇIK Task 3 (tur-başı maliyet freni) — cached_tokens verisi birikince kalibre edilecek.
 - AÇIK Task 7 (`candidate_spread` raporu), Task 0 (SOTA araştırma notu), Task 8 (14 gün sonra MoA kodu kararı).
 - Ölçüm: oturum bağlamı 420K -> ~148K; son 15 dk harcama $16.01 -> $7.70 (düzeltme sırasında, kısmi pencere).
+
+## Güncelleme (2026-10-25 akşamı)
+- **DONE Task 3** (commit `669a767`): tur-başı maliyet freni `ORACLE_TURN_BUDGET_USD`, canlıda **0.07** (0.15 iken Sonnet günde $5.33 yaktı; 24s harcama $6.75). Ölçülen tur maliyeti @130K prompt: Haiku $0.01 / GLM-Flash $0.02 / MiMo-Pro $0.05 / Sonnet $0.27. Ayrıca `ORACLE_CORE_POOL` (Haiku/GLM-Flash/MiMo-Pro/Sonnet) ve alias'ların kaldırılması (`1f16172`).
+- **Etkin pencere canlıda 120K** (`ORACLE_EFFECTIVE_CONTEXT=120000`, 200K idi): Hermes sıkıştırma tetiği ~60K. Task 2 kabul kriteri (`context_length == 200000`) artık 120000 olarak güncellendi.
+- **Önbellek ölçümü artık var** (`cached_tokens`, `04fb95b`) — bu planın "Task 1 verisiyle kalibre et" şartı karşılandı. 15:44 router restart'ı sonrası 53 dk / 102 tur / **$0.18** (MiMo %95 cache isabeti, Sonnet 0 tur): fren + havuz + pencere birlikte çalışıyor.
+- Ek altyapı: `scripts/context_cost_guard.py` (`93e252a`, model çağrısız 24h rapor), testler hermetik (`a374c31`; `*.example.com` DNS stub, 252 test yeşil ×3).
+- **Hâlâ açık:** Task 0 (`docs/research/context_governance_2026-10.md` yok), Task 7 (`scripts/analysis/candidate_spread.py` yok), Task 8 (MoA kodu silme kararı — en erken 2026-11-07).
