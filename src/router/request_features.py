@@ -44,8 +44,8 @@ def keyword_tier(messages: List[Dict[str, Any]]) -> int:
     return 1
 
 
-def estimate_tokens(payload: Dict[str, Any]) -> int:
-    """Conservative (over-)estimate of prompt + reserved output tokens. ~3 chars/token."""
+def estimate_prompt_tokens(payload: Dict[str, Any]) -> int:
+    """Conservative (over-)estimate of INPUT tokens only (no output reserve). ~3 chars/token."""
     chars, images = 0, 0
     for message in payload.get("messages") or []:
         content = message.get("content")
@@ -63,5 +63,13 @@ def estimate_tokens(payload: Dict[str, Any]) -> int:
             chars += len(json.dumps(call, ensure_ascii=False))
     if payload.get("tools"):
         chars += len(json.dumps(payload["tools"], ensure_ascii=False))
-    reserve = payload.get("max_tokens") or payload.get("max_completion_tokens") or OUTPUT_RESERVE_TOKENS
-    return chars // 3 + images * IMAGE_TOKEN_ESTIMATE + int(reserve)
+    return chars // 3 + images * IMAGE_TOKEN_ESTIMATE
+
+
+def output_reserve(payload: Dict[str, Any]) -> int:
+    return int(payload.get("max_tokens") or payload.get("max_completion_tokens") or OUTPUT_RESERVE_TOKENS)
+
+
+def estimate_tokens(payload: Dict[str, Any]) -> int:
+    """Conservative (over-)estimate of prompt + reserved output tokens."""
+    return estimate_prompt_tokens(payload) + output_reserve(payload)

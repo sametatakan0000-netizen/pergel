@@ -16,3 +16,9 @@ def turn_cost_usd(profile, prompt: int, completion: int, cached: int = 0) -> flo
     cache_price = profile.list_cost_cache_read if profile.list_cost_cache_read is not None else pin
     cached = max(0, min(cached or 0, prompt or 0))
     return (((prompt or 0) - cached) * pin + cached * cache_price + (completion or 0) * pout) / 1e6
+
+
+def projected_turn_cost_usd(profile, prompt: int, completion_reserve: int) -> float:
+    """Pre-flight estimate of a turn's cost from the request shape alone (no usage yet).
+    Used by the turn-cost brake to demote candidates that would blow the per-turn budget."""
+    return turn_cost_usd(profile, prompt, completion_reserve, cached=0)

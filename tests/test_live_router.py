@@ -304,3 +304,50 @@ class TestModelPrefixNormalization(unittest.TestCase):
         self.assertEqual(r.normalize_model("oracle-router:vendor/m:free"), "vendor/m:free")
         self.assertEqual(r.normalize_model(None), "oracle/auto")
         self.assertEqual(r.normalize_model("nope:unknown/x"), "unknown/x")  # still KeyError later
+
+
+class TestLeanCorePool(unittest.TestCase):
+    """ORACLE_CORE_POOL: auto-routing stays inside the flexible cheap->sweet set."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "router.db")
+        self.profiles = build_profiles(CATALOG, MODELS_DEV, fetched_at="t")
+        self.router = LiveRouter(self.db, self.profiles, explore_epsilon=0)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+        os.environ.pop("ORACLE_CORE_POOL", None)
+        os.environ.pop("ORACLE_TURN_BUDGET_USD", None)
+
+    def test_core_pool_narrows_auto_routing_only(self):
+        os.environ["ORACLE_CORE_POOL"] = "v/free-text,v/mid"
+        self.assertEqual(self.router.plan(chat("merhaba")), ["v/free-text", "v/mid"])
+        # explicit requests stay outside the allowlist
+        self.assertEqual(self.router.plan(chat("x", model="v/apex")), ["v/apex"])
+
+    def test_stale_allowlist_never_empties_the_pool(self):
+        os.environ["ORACLE_CORE_POOL"] = "vendor/gone"
+        self.assertTrue(self.router.plan(chat("merhaba")))  # falls back to the full curated pool
+
+    def test_turn_cost_brake_demotes_models_over_budget_to_last(self):
+        from dataclasses import replace
+        profiles = dict(self.profiles)
+        profiles["v/free-text"] = replace(profiles["v/free-text"], intelligence_index=40.0)
+        profiles["v/apex"] = replace(profiles["v/apex"], intelligence_index=60.0)
+        router = LiveRouter(self.db, profiles, explore_epsilon=0)
+        router.record_upstream("v/free-text", status=200, latency_ms=5, now=1000.0)
+        os.environ["ORACLE_TURN_BUDGET_USD"] = "0.05"
+        # huge prompt: only the free model fits a $0.05 budget; the rest demote behind it.
+        plan = router.plan(chat("x" * 300000))
+        self.assertEqual(plan[0], "v/free-text")
+        self.assertLess(plan.index("v/free-text"), plan.index("v/apex"))
+
+    def test_brake_disabled_without_env_is_a_noop(self):
+        plan = self.router.plan(chat("x" * 300000))
+        self.assertEqual(plan[0], "v/free-text")  # tier 1 leads regardless of size
+
+    def test_brake_never_drops_candidates(self):
+        os.environ["ORACLE_TURN_BUDGET_USD"] = "0.0000001"
+        plan = self.router.plan(chat("x" * 300000))
+        self.assertGreaterEqual(len(plan), 2)  # expensive models survive as fallbacks

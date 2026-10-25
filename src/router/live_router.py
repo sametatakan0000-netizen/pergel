@@ -26,6 +26,11 @@ Selection policy (documented, deterministic):
      comparable price tier (STICKY_TIER_GRACE) and no cheaper candidate sits within
      QUALITY_TOLERANCE of it (prompt-cache survival); easier turns release the pin instead
      of riding an expensive model for the rest of the session.
+  6. Core pool (ORACLE_CORE_POOL): auto-routing stays inside the user's flexible
+     cheap->sweet set (pool_policy). Explicit model ids bypass the pool.
+  7. Turn-cost brake (ORACLE_TURN_BUDGET_USD): a candidate whose projected cost for THIS
+     request (prompt size x price) exceeds the budget is demoted behind every candidate
+     that fits — applied AFTER the sticky pin, so a pin can never ride past the budget.
 """
 import contextlib
 import copy
@@ -37,9 +42,11 @@ from typing import Any, Dict, List, Optional
 
 from src.router.model_registry import VerifiedProfile, clamp_effort
 from src.router.context_governor import advised_context_length
-from src.router.cost_model import turn_cost_usd
+from src.router.cost_model import projected_turn_cost_usd, turn_cost_usd
 from src.router.outcome_learning import OutcomeLearner, bucket_for
-from src.router.request_features import estimate_tokens, has_image, keyword_tier
+from src.router.pool_policy import core_pool_ids
+from src.router.request_features import (estimate_prompt_tokens, estimate_tokens, has_image,
+                                         keyword_tier, output_reserve)
 
 # Advertised to the client picker: one id. Everything else is an alias kept for
 # compatibility/forcing, not a feature — plan() decides the band on its own.
@@ -307,6 +314,12 @@ class LiveRouter:
     def _pool(self, free_only: bool, needs_vision: bool = False, min_context: int = 0) -> List[VerifiedProfile]:
         pool = [p for p in self.profiles.values()
                 if p.auto_eligible and (not needs_vision or p.supports_vision)]
+        # Lean core pool (ORACLE_CORE_POOL): only the flexible cheap->sweet set is auto-routed.
+        # Explicitly requested models stay reachable via plan_with_context (non-virtual ids).
+        core = core_pool_ids()
+        if core:
+            narrowed = [p for p in pool if p.model_id in core]
+            pool = narrowed or pool  # never empty the pool on a stale allowlist
         if free_only:
             pool = [p for p in pool if p.billed_cost_in == 0 and p.billed_cost_out == 0]
         if min_context:
@@ -362,7 +375,32 @@ class LiveRouter:
             return (by_tier([p for p in models if price_tier(p) >= start_tier])
                     + by_tier([p for p in models if price_tier(p) < start_tier], descending=True))
 
-        return [p.model_id for p in segment(primary) + segment(dominated)]
+        order = [p.model_id for p in segment(primary) + segment(dominated)]
+        return order
+
+    def _apply_turn_cost_brake(self, order: List[str], prompt_tokens: int,
+                               output_tokens: int) -> List[str]:
+        """Turn-cost brake (ORACLE_TURN_BUDGET_USD, default $0.30). When the request's own
+        shape (prompt size, output reserve) already projects a model over budget for THIS
+        turn, that model is demoted behind every candidate that fits — never dropped, so it
+        stays reachable when nothing cheaper can serve the request (vision, context size).
+        Catches the observed leak: 130K-token prompts riding the sticky pin to a $0.27/turn
+        model when a $0.01-0.05/turn model in the same pool serves the same work."""
+        budget = os.environ.get("ORACLE_TURN_BUDGET_USD")
+        if not budget or prompt_tokens <= 0:
+            return order
+        try:
+            limit = float(budget)
+        except ValueError:
+            return order
+        fitting: List[str] = []
+        over: List[str] = []
+        for mid in order:
+            profile = self.profiles.get(mid)
+            cost = (projected_turn_cost_usd(profile, prompt_tokens, output_tokens)
+                    if profile else None)
+            (over if (cost is not None and cost > limit) else fitting).append(mid)
+        return fitting + over
 
     def plan(self, payload: Dict[str, Any], session_id: Optional[str] = None,
              now: Optional[float] = None) -> List[str]:
@@ -411,6 +449,10 @@ class LiveRouter:
                 and not self._overpaying(profile, self.profiles[order[0]], learned)):
             order = [sticky] + [m for m in order if m != sticky]
 
+        # Turn-cost brake LAST: the sticky pin must not ride a model past the budget
+        # (observed leak: 130K-token prompts pinned to a $0.27/turn model).
+        order = self._apply_turn_cost_brake(order, estimate_prompt_tokens(payload),
+                                           output_reserve(payload))
         ordered = [m for m in order if m not in cooling] + [m for m in order if m in cooling]
         return ordered, bucket, start
 
