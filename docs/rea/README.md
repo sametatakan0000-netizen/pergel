@@ -138,6 +138,20 @@ CRX update service (`clients2.google.com/service/update2/crx`) for Widevine/MEI;
 Opera instead ships a standalone `opera_autoupdate` binary; Vivaldi ships
 `update-ffmpeg` for proprietary codecs. Direct-repo signal for the SaaS product.
 
+## Target progress
+
+**Linux Chromium forks — COMPLETE (static + dynamic CDP):** Chrome for Testing,
+Brave, Edge, Opera, Vivaldi → see `<target>.md` + cross-target table above.
+
+**OS/ISO images — in progress:** Ubuntu 26.04.1 LTS Desktop (static ISO +
+SquashFS rootfs done → `ubuntu-26.04.1.md`; KVM boot dynamic pending). Next OS
+targets: a Fedora/Alpine live image (different installer/packaging model) and a
+Windows install ISO (DISM/WIM inspection, no activation/circumvention).
+
+**Pitfall (recorded):** `/tmp` is a 16 G tmpfs here; a 3.4 GB SquashFS extract
+overflowed it (errno 122 disk quota). Large ISO/rootfs artifacts live on real
+disk `/home/pc/rea-work/` — keep REA work dirs there, not `/tmp`.
+
 ## Method per target (summary — full template in the plan, §A5)
 
 1. **Acquire & fingerprint** — version, hash, signature status, package format,
