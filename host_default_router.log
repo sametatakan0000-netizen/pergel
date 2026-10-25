@@ -1,0 +1,27 @@
+== 2026-10-24T07:04:41+03:00 deploy
+Source : /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm (commit 04fb95b)
+App    : /home/pc/.local/share/oracle-router/app
+Data   : /home/pc/.local/share/oracle-router/data
+Units  : /home/pc/.config/systemd/user
+
+
+Health:
+{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-24T04:04:41+00:00", "routable": 392}, "watchdog": {"timestamp": 1792814682.9176598, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
+
+Next: bash /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm/scripts/host/verify_live.sh
+Optional (keep services running while logged out): loginctl enable-linger pc
+== restart
+== units
+active
+active
+active
+== /v1/models
+{"object": "list", "data": [{"id": "oracle/auto", "object": "model", "owned_by": "oracle-router", "context_length": 200000}]}
+== /v1/health
+{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-24T04:04:43+00:00", "routable": 392}, "watchdog": {"timestamp": 1792814686.2476275, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
+== deployed commit
+04fb95b
+
+== hermes default model
+  Model:        {'default': 'custom:oracle-router:oracle/auto', 'provider': 'oracle-router', 'base_url': 'http://127.0.0.1:8090/v1', 'api_mode': 'chat_completions'}
+== done

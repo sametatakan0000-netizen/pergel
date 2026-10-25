@@ -60,18 +60,18 @@ class TestLiveRouter(unittest.TestCase):
         self.assertEqual(self.router.plan(chat("merhaba"))[0], "v/free-text")
         self.assertEqual(self.router.plan(chat("bu ne?", image=True))[0], "v/cheap-vision")
 
-    def test_premium_profile_and_architecture_requests_start_higher(self):
+    def test_architecture_requests_start_higher(self):
         self.assertEqual(self.router.plan(chat("mimari tasarım analizi"))[0], "v/flagship")
-        self.assertEqual(self.router.plan(chat("selam", model="oracle/premium"))[0], "v/apex")
 
     def test_candidates_are_ordered_fallbacks_and_never_unverified(self):
         plan = self.router.plan(chat("merhaba"))
         self.assertEqual(plan[:2], ["v/free-text", "v/cheap-vision"])
         self.assertNotIn("v/no-meta", plan)
 
-    def test_free_profile_only_returns_zero_cost_models(self):
-        self.assertEqual(self.router.plan(chat("x", model="oracle/free")), ["v/free-text"])
-        self.assertEqual(self.router.plan(chat("x", image=True, model="oracle/free")), [])
+    def test_removed_tier_aliases_are_unknown(self):
+        for alias in ("oracle/eco", "oracle/agentic", "oracle/premium", "oracle/free"):
+            with self.assertRaises(KeyError):
+                self.router.plan(chat("x", model=alias))
 
     def test_session_affinity_persists_across_restarts(self):
         self.router.commit_choice("s1", "v/mid")
@@ -267,8 +267,9 @@ class TestLiveRouterNousRegistry(unittest.TestCase):
         self.assertNotIn("x/uncurated", self.router.plan(chat("merhaba")))
         self.assertEqual(self.router.plan(chat("x", model="x/uncurated")), ["x/uncurated"])
 
-    def test_free_profile_uses_portal_zero_price_variants(self):
-        self.assertEqual(self.router.plan(chat("x", model="oracle/free")), ["c/small:free"])
+    def test_removed_free_alias_is_unknown_and_free_variants_are_not_auto_routed(self):
+        with self.assertRaises(KeyError):
+            self.router.plan(chat("x", model="oracle/free"))
 
     def test_requests_that_do_not_fit_skip_small_context_models(self):
         small_request = self.router.plan(chat("merhaba"))
@@ -287,7 +288,6 @@ class TestLiveRouterNousRegistry(unittest.TestCase):
 
     def test_virtual_context_length_is_pool_max_capped_at_effective_window(self):
         self.assertEqual(self.router.virtual_context_length("oracle/auto"), 200000)
-        self.assertEqual(self.router.virtual_context_length("oracle/free"), 32000)
 
 
 if __name__ == "__main__":
@@ -323,8 +323,10 @@ class TestLeanCorePool(unittest.TestCase):
     def test_core_pool_narrows_auto_routing_only(self):
         os.environ["ORACLE_CORE_POOL"] = "v/free-text,v/mid"
         self.assertEqual(self.router.plan(chat("merhaba")), ["v/free-text", "v/mid"])
-        # explicit requests stay outside the allowlist
-        self.assertEqual(self.router.plan(chat("x", model="v/apex")), ["v/apex"])
+        # explicit ids outside the core pool are unknown (no policy bypass)
+        with self.assertRaises(KeyError):
+            self.router.plan(chat("x", model="v/apex"))
+        self.assertEqual(self.router.plan(chat("x", model="v/mid")), ["v/mid"])
 
     def test_stale_allowlist_never_empties_the_pool(self):
         os.environ["ORACLE_CORE_POOL"] = "vendor/gone"

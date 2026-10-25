@@ -71,8 +71,6 @@ try:
     print("auto  'python kodu düzelt'    ->", ask("oracle/auto", "python kodu düzelt", "medium"))
     print("auto  'mimari tasarım planı'  ->", ask("oracle/auto", "mimari tasarım planı", "xhigh"))
     print("auto  image 'bu ne?'          ->", ask("oracle/auto", "bu ne?", image=True))
-    print("premium 'selam'               ->", ask("oracle/premium", "selam", "max"))
-    print("free  'selam'                 ->", ask("oracle/free", "selam"))
     print("session s1: mimari -> devam   ->", ask("oracle/auto", "mimari tasarım", session="s1"), "|", ask("oracle/auto", "devam", session="s1"))
 except urllib.error.HTTPError as e:
     print("HTTP", e.code, e.read().decode()[:200])

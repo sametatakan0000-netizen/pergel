@@ -28,8 +28,6 @@ def build_optimal_hermes_spec() -> Dict[str, Any]:
                 "default_model": "oracle/auto",
                 "models": {
                     "oracle/auto": {},
-                    "oracle/eco": {},
-                    "oracle/free": {},
                 },
             }
         },

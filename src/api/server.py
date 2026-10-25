@@ -22,6 +22,7 @@ from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
+from src.router.pool_policy import core_pool_ids
 from src.router.outcome_learning import OutcomeLearner, StreamAccumulator, analyze_response
 from src.router.cost_model import cached_tokens_from
 from src.router.moa_exec import build_aggregator_payload, member_usage_summary, run_members
@@ -222,11 +223,16 @@ class BrowserFarmSaaSServer:
                     return
 
                 if self.path == "/v1/models/profiles":
-                    profiles = parent.live.profiles
+                    # Inspection only: the auto-routing core pool, not the 390-model registry.
+                    all_profiles = parent.live.profiles
+                    core = core_pool_ids()
+                    profiles = {mid: p for mid, p in all_profiles.items()
+                                if not core or mid in core}
                     self._send_json(200, {
                         "fetched_at": parent.registry_fetched_at,
-                        "total_models": len(profiles),
-                        "routable": sum(p.routable for p in profiles.values()),
+                        "total_models": len(all_profiles),
+                        "routable": sum(p.routable for p in all_profiles.values()),
+                        "exposed": len(profiles),
                         "profiles": {mid: asdict(p) for mid, p in sorted(profiles.items())},
                     })
                     return
@@ -234,9 +240,7 @@ class BrowserFarmSaaSServer:
                 if self.path == "/v1/models":
                     # One entry only: tier profiles are meaningless now that plan() picks the
                     # band itself (Pareto + tolerance + sticky). Raw registry models and the old
-                    # virtual aliases (oracle/eco|agentic|premium|free) stay routable by explicit
-                    # id and inspectable at /v1/models/profiles — advertising them was noise and a
-                    # misclick bypassed routing policy.
+                    # tier aliases were removed; explicit ids are limited to the core pool.
                     # Largest window: plan() skips candidates a request outgrows, so Hermes does
                     # not have to compress down to the smallest model's window.
                     rows: List[Dict[str, Any]] = [

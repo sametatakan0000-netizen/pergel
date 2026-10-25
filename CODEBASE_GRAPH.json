@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 31,
-    "total_classes": 15,
-    "total_functions": 187,
-    "total_loc": 3673
+    "total_files": 52,
+    "total_classes": 23,
+    "total_functions": 274,
+    "total_loc": 4879
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 595,
+      "loc": 604,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -228,12 +228,14 @@
         "src.browser_engine.worker",
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
+        "src.router.cost_model",
         "src.router.live_router",
         "src.router.moa_exec",
         "src.router.moa_plan",
         "src.router.moa_policy",
         "src.router.model_registry",
         "src.router.outcome_learning",
+        "src.router.pool_policy",
         "src.search.query_fanout",
         "threading",
         "time",
@@ -276,10 +278,12 @@
         "asdict",
         "bool",
         "build_aggregator_payload",
+        "cached_tokens_from",
         "choose",
         "clear_sticky",
         "commit_choice",
         "compare_digest",
+        "core_pool_ids",
         "create_job",
         "decode",
         "decompose_query_llm",
@@ -363,6 +367,576 @@
         "write"
       ],
       "change_risk": 10.0
+    },
+    {
+      "module": "src.bench",
+      "path": "src/bench/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.bench.adapters",
+      "path": "src/bench/adapters.py",
+      "loc": 213,
+      "classes": [
+        "FetchResult",
+        "_SingleThreadExecutor",
+        "CdpAdapter",
+        "PlaywrightAdapter"
+      ],
+      "functions": [
+        "kill_process_tree",
+        "free_port",
+        "chromium_argv",
+        "lightpanda_argv",
+        "_on_affine_thread",
+        "_in_thread",
+        "_fetch",
+        "_fetch_impl",
+        "__init__",
+        "_loop",
+        "submit",
+        "_run",
+        "__init__",
+        "start",
+        "_start_impl",
+        "root_pids",
+        "stop",
+        "_stop_impl",
+        "__init__",
+        "start",
+        "_start_impl",
+        "root_pids",
+        "stop",
+        "_stop_impl"
+      ],
+      "imports": [
+        "dataclasses",
+        "os",
+        "playwright.sync_api",
+        "shutil",
+        "signal",
+        "socket",
+        "src.bench.procmem",
+        "subprocess",
+        "tempfile",
+        "threading",
+        "time",
+        "typing",
+        "urllib.request"
+      ],
+      "calls": [
+        "Event",
+        "FetchResult",
+        "Popen",
+        "Queue",
+        "RuntimeError",
+        "Thread",
+        "_SingleThreadExecutor",
+        "__import__",
+        "_argv_fn",
+        "_on_affine_thread",
+        "bind",
+        "close",
+        "closer",
+        "connect_over_cdp",
+        "content",
+        "fn",
+        "free_port",
+        "get",
+        "getattr",
+        "getpgid",
+        "getsockname",
+        "goto",
+        "hasattr",
+        "join",
+        "kill_process_tree",
+        "killpg",
+        "launch",
+        "len",
+        "mkdtemp",
+        "monotonic",
+        "new_context",
+        "new_page",
+        "perf_counter",
+        "pids_with_exe_prefix",
+        "put",
+        "read",
+        "rmtree",
+        "set",
+        "sleep",
+        "socket",
+        "start",
+        "stop",
+        "str",
+        "submit",
+        "sync_playwright",
+        "type",
+        "urlopen",
+        "wait"
+      ],
+      "change_risk": 10.0
+    },
+    {
+      "module": "src.bench.env",
+      "path": "src/bench/env.py",
+      "loc": 30,
+      "classes": [],
+      "functions": [
+        "_read",
+        "capture_env"
+      ],
+      "imports": [
+        "datetime",
+        "os",
+        "platform",
+        "subprocess",
+        "sys"
+      ],
+      "calls": [
+        "_read",
+        "cpu_count",
+        "getloadavg",
+        "int",
+        "isoformat",
+        "next",
+        "now",
+        "open",
+        "read",
+        "release",
+        "run",
+        "split",
+        "splitlines",
+        "startswith",
+        "strip"
+      ],
+      "change_risk": 2.58
+    },
+    {
+      "module": "src.bench.fixture_server",
+      "path": "src/bench/fixture_server.py",
+      "loc": 69,
+      "classes": [
+        "_Handler"
+      ],
+      "functions": [
+        "fixture_server",
+        "log_message",
+        "_send",
+        "do_GET"
+      ],
+      "imports": [
+        "contextlib",
+        "http.server",
+        "json",
+        "threading",
+        "time",
+        "urllib.parse"
+      ],
+      "calls": [
+        "Thread",
+        "ThreadingHTTPServer",
+        "_send",
+        "dumps",
+        "encode",
+        "end_headers",
+        "get",
+        "int",
+        "join",
+        "len",
+        "min",
+        "parse_qs",
+        "range",
+        "send_header",
+        "send_response",
+        "server_close",
+        "shutdown",
+        "sleep",
+        "start",
+        "str",
+        "urlsplit",
+        "write"
+      ],
+      "change_risk": 4.86
+    },
+    {
+      "module": "src.bench.inspect",
+      "path": "src/bench/inspect.py",
+      "loc": 50,
+      "classes": [],
+      "functions": [
+        "format_card",
+        "pick_stack",
+        "collect_live_info"
+      ],
+      "imports": [
+        "typing"
+      ],
+      "calls": [
+        "NotImplementedError",
+        "ValueError",
+        "get",
+        "join",
+        "sorted"
+      ],
+      "change_risk": 1.62
+    },
+    {
+      "module": "src.bench.inspect_live",
+      "path": "src/bench/inspect_live.py",
+      "loc": 96,
+      "classes": [],
+      "functions": [
+        "_listening_ports",
+        "_outbound_hosts",
+        "install_size_kb",
+        "version_string",
+        "startup_ms"
+      ],
+      "imports": [
+        "glob",
+        "os",
+        "socket",
+        "src.bench.adapters",
+        "src.bench.inspect",
+        "subprocess",
+        "time",
+        "typing",
+        "urllib.request"
+      ],
+      "calls": [
+        "Popen",
+        "add",
+        "append",
+        "argv_fn",
+        "free_port",
+        "getsize",
+        "int",
+        "join",
+        "kill_process_tree",
+        "len",
+        "monotonic",
+        "next",
+        "open",
+        "perf_counter",
+        "range",
+        "read",
+        "rsplit",
+        "run",
+        "set",
+        "sleep",
+        "sort",
+        "sorted",
+        "split",
+        "str",
+        "strip",
+        "urlopen",
+        "walk"
+      ],
+      "change_risk": 10.0
+    },
+    {
+      "module": "src.bench.install",
+      "path": "src/bench/install.py",
+      "loc": 51,
+      "classes": [],
+      "functions": [
+        "pick_cft_urls",
+        "sha256_file",
+        "download",
+        "unzip_keep_modes",
+        "record"
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "os",
+        "typing",
+        "urllib.request",
+        "zipfile"
+      ],
+      "calls": [
+        "ZipFile",
+        "chmod",
+        "dirname",
+        "dump",
+        "exists",
+        "expanduser",
+        "extract",
+        "get",
+        "hexdigest",
+        "infolist",
+        "iter",
+        "join",
+        "load",
+        "makedirs",
+        "open",
+        "read",
+        "sha256",
+        "sha256_file",
+        "update",
+        "urlretrieve"
+      ],
+      "change_risk": 5.04
+    },
+    {
+      "module": "src.bench.procmem",
+      "path": "src/bench/procmem.py",
+      "loc": 104,
+      "classes": [
+        "TreeSampler"
+      ],
+      "functions": [
+        "_stat_fields",
+        "_children_map",
+        "tree_pids",
+        "pss_kib",
+        "pids_with_exe_prefix",
+        "__init__",
+        "_tick",
+        "_loop",
+        "start",
+        "stop",
+        "cpu_seconds"
+      ],
+      "imports": [
+        "os",
+        "threading",
+        "typing"
+      ],
+      "calls": [
+        "Event",
+        "Thread",
+        "_children_map",
+        "_roots_fn",
+        "_stat_fields",
+        "_tick",
+        "append",
+        "extend",
+        "get",
+        "int",
+        "is_set",
+        "isdigit",
+        "items",
+        "join",
+        "listdir",
+        "max",
+        "open",
+        "pop",
+        "pss_kib",
+        "read",
+        "readlink",
+        "realpath",
+        "rindex",
+        "set",
+        "setdefault",
+        "sorted",
+        "split",
+        "start",
+        "startswith",
+        "sum",
+        "sysconf",
+        "tree_pids",
+        "update",
+        "values",
+        "wait"
+      ],
+      "change_risk": 9.1
+    },
+    {
+      "module": "src.bench.report",
+      "path": "src/bench/report.py",
+      "loc": 57,
+      "classes": [],
+      "functions": [
+        "aggregate",
+        "_fmt",
+        "_vs",
+        "render_markdown"
+      ],
+      "imports": [
+        "src.bench.stats",
+        "statistics",
+        "typing"
+      ],
+      "calls": [
+        "_fmt",
+        "_vs",
+        "aggregate",
+        "append",
+        "col",
+        "get",
+        "items",
+        "join",
+        "len",
+        "mean",
+        "ratio_claim",
+        "setdefault",
+        "sorted",
+        "summarize"
+      ],
+      "change_risk": 4.51
+    },
+    {
+      "module": "src.bench.run",
+      "path": "src/bench/run.py",
+      "loc": 79,
+      "classes": [],
+      "functions": [
+        "_load_real_targets",
+        "main"
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "os",
+        "src.bench",
+        "src.bench.env",
+        "src.bench.fixture_server",
+        "src.bench.report",
+        "src.bench.runner",
+        "sys",
+        "typing"
+      ],
+      "calls": [
+        "ArgumentParser",
+        "Scenario",
+        "Target",
+        "_load_real_targets",
+        "add_argument",
+        "bool",
+        "capture_env",
+        "dump",
+        "dumps",
+        "exit",
+        "fixture_server",
+        "getloadavg",
+        "join",
+        "len",
+        "main",
+        "makedirs",
+        "open",
+        "parse_args",
+        "print",
+        "register_installed",
+        "render_markdown",
+        "run_cell",
+        "sorted",
+        "split",
+        "write"
+      ],
+      "change_risk": 6.99
+    },
+    {
+      "module": "src.bench.runner",
+      "path": "src/bench/runner.py",
+      "loc": 46,
+      "classes": [
+        "Scenario",
+        "Target"
+      ],
+      "functions": [
+        "run_cell"
+      ],
+      "imports": [
+        "dataclasses",
+        "src.bench.procmem",
+        "statistics",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "TreeSampler",
+        "append",
+        "dataclass",
+        "fetch",
+        "len",
+        "make_adapter",
+        "median",
+        "perf_counter",
+        "range",
+        "start",
+        "stop"
+      ],
+      "change_risk": 2.78
+    },
+    {
+      "module": "src.bench.stats",
+      "path": "src/bench/stats.py",
+      "loc": 39,
+      "classes": [],
+      "functions": [
+        "mad",
+        "bootstrap_ci",
+        "summarize",
+        "ratio_claim"
+      ],
+      "imports": [
+        "random",
+        "statistics",
+        "typing"
+      ],
+      "calls": [
+        "Random",
+        "ValueError",
+        "abs",
+        "bootstrap_ci",
+        "choice",
+        "float",
+        "int",
+        "len",
+        "list",
+        "mad",
+        "max",
+        "median",
+        "min",
+        "range",
+        "sorted",
+        "stat",
+        "summarize"
+      ],
+      "change_risk": 1.89
+    },
+    {
+      "module": "src.bench.targets",
+      "path": "src/bench/targets.py",
+      "loc": 45,
+      "classes": [],
+      "functions": [
+        "load_manifest",
+        "build_target",
+        "register_installed"
+      ],
+      "imports": [
+        "json",
+        "os",
+        "src.bench.adapters",
+        "src.bench.install",
+        "src.bench.runner",
+        "typing"
+      ],
+      "calls": [
+        "CdpAdapter",
+        "PlaywrightAdapter",
+        "Target",
+        "ValueError",
+        "build_target",
+        "chromium_argv",
+        "exists",
+        "expanduser",
+        "get",
+        "items",
+        "lightpanda_argv",
+        "load",
+        "load_manifest",
+        "open",
+        "split"
+      ],
+      "change_risk": 5.36
     },
     {
       "module": "src.browser_engine",
@@ -502,7 +1076,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 198,
+      "loc": 201,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -521,6 +1095,7 @@
         "html",
         "re",
         "src.browser_engine.browser_orchestrator",
+        "time",
         "trafilatura",
         "typing",
         "urllib.parse",
@@ -559,6 +1134,7 @@
         "startswith",
         "strip",
         "sub",
+        "time",
         "unescape",
         "urljoin",
         "urlopen",
@@ -723,7 +1299,7 @@
     {
       "module": "src.infra.hermes_config_builder",
       "path": "src/infra/hermes_config_builder.py",
-      "loc": 146,
+      "loc": 144,
       "classes": [],
       "functions": [
         "build_optimal_hermes_spec",
@@ -733,7 +1309,7 @@
         "typing"
       ],
       "calls": [],
-      "change_risk": 2.02
+      "change_risk": 2.0
     },
     {
       "module": "src.infra.self_healing_watchdog",
@@ -829,6 +1405,158 @@
       "change_risk": 1.14
     },
     {
+      "module": "src.rea",
+      "path": "src/rea/__init__.py",
+      "loc": 0,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.0
+    },
+    {
+      "module": "src.rea.audit",
+      "path": "src/rea/audit.py",
+      "loc": 44,
+      "classes": [],
+      "functions": [
+        "_finding",
+        "is_component_manifest",
+        "audit_manifest"
+      ],
+      "imports": [
+        "typing"
+      ],
+      "calls": [
+        "_finding",
+        "any",
+        "append",
+        "get",
+        "is_component_manifest",
+        "isinstance",
+        "join",
+        "lower",
+        "set",
+        "sorted",
+        "startswith",
+        "str",
+        "strip",
+        "values"
+      ],
+      "change_risk": 3.95
+    },
+    {
+      "module": "src.rea.crx",
+      "path": "src/rea/crx.py",
+      "loc": 28,
+      "classes": [],
+      "functions": [
+        "extract_crx"
+      ],
+      "imports": [
+        "io",
+        "struct",
+        "typing",
+        "zipfile"
+      ],
+      "calls": [
+        "BytesIO",
+        "ValueError",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "read",
+        "split",
+        "startswith",
+        "unpack"
+      ],
+      "change_risk": 3.55
+    },
+    {
+      "module": "src.rea.endpoints",
+      "path": "src/rea/endpoints.py",
+      "loc": 20,
+      "classes": [],
+      "functions": [
+        "extract_endpoints"
+      ],
+      "imports": [
+        "re",
+        "typing"
+      ],
+      "calls": [
+        "add",
+        "any",
+        "append",
+        "compile",
+        "endswith",
+        "findall",
+        "lower",
+        "rstrip",
+        "set",
+        "split",
+        "sub"
+      ],
+      "change_risk": 1.85
+    },
+    {
+      "module": "src.rea.netprobe",
+      "path": "src/rea/netprobe.py",
+      "loc": 75,
+      "classes": [],
+      "functions": [
+        "_hex_to_ip",
+        "parse_proc_net_tcp",
+        "reverse_dns",
+        "probe_idle"
+      ],
+      "imports": [
+        "os",
+        "shutil",
+        "socket",
+        "src.bench.adapters",
+        "src.bench.procmem",
+        "struct",
+        "subprocess",
+        "tempfile",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "Popen",
+        "_hex_to_ip",
+        "add",
+        "chromium_argv",
+        "free_port",
+        "fromhex",
+        "gethostbyaddr",
+        "inet_ntoa",
+        "inet_ntop",
+        "int",
+        "join",
+        "kill_process_tree",
+        "len",
+        "mkdtemp",
+        "monotonic",
+        "open",
+        "pack",
+        "parse_proc_net_tcp",
+        "range",
+        "read",
+        "reverse_dns",
+        "rmtree",
+        "rsplit",
+        "set",
+        "sleep",
+        "sorted",
+        "split",
+        "splitlines",
+        "startswith",
+        "tree_pids"
+      ],
+      "change_risk": 7.34
+    },
+    {
       "module": "src.router",
       "path": "src/router/__init__.py",
       "loc": 0,
@@ -839,9 +1567,53 @@
       "change_risk": 0.0
     },
     {
+      "module": "src.router.context_governor",
+      "path": "src/router/context_governor.py",
+      "loc": 18,
+      "classes": [],
+      "functions": [
+        "effective_window",
+        "advised_context_length"
+      ],
+      "imports": [
+        "os",
+        "typing"
+      ],
+      "calls": [
+        "effective_window",
+        "get",
+        "int",
+        "max",
+        "min"
+      ],
+      "change_risk": 0.62
+    },
+    {
+      "module": "src.router.cost_model",
+      "path": "src/router/cost_model.py",
+      "loc": 24,
+      "classes": [],
+      "functions": [
+        "cached_tokens_from",
+        "turn_cost_usd",
+        "projected_turn_cost_usd"
+      ],
+      "imports": [
+        "typing"
+      ],
+      "calls": [
+        "get",
+        "isinstance",
+        "max",
+        "min",
+        "turn_cost_usd"
+      ],
+      "change_risk": 0.5
+    },
+    {
       "module": "src.router.live_router",
       "path": "src/router/live_router.py",
-      "loc": 410,
+      "loc": 479,
       "classes": [
         "LiveRouter"
       ],
@@ -850,6 +1622,7 @@
         "classify_tier",
         "adjusted_quality",
         "dominates",
+        "unproven_premium",
         "prune_dominated",
         "__init__",
         "_conn",
@@ -868,6 +1641,7 @@
         "_pool",
         "virtual_context_length",
         "_ordered",
+        "_apply_turn_cost_brake",
         "plan",
         "normalize_model",
         "plan_with_context",
@@ -883,8 +1657,11 @@
         "json",
         "os",
         "sqlite3",
+        "src.router.context_governor",
+        "src.router.cost_model",
         "src.router.model_registry",
         "src.router.outcome_learning",
+        "src.router.pool_policy",
         "src.router.request_features",
         "time",
         "typing"
@@ -892,6 +1669,7 @@
       "calls": [
         "KeyError",
         "OutcomeLearner",
+        "_apply_turn_cost_brake",
         "_conn",
         "_ordered",
         "_overpaying",
@@ -899,6 +1677,7 @@
         "abs",
         "abspath",
         "adjusted_quality",
+        "advised_context_length",
         "any",
         "append",
         "band_sorted",
@@ -908,27 +1687,33 @@
         "close",
         "connect",
         "cooling_down",
+        "core_pool_ids",
         "dead_models",
         "deepcopy",
         "dict",
         "dirname",
         "dominates",
+        "estimate_prompt_tokens",
         "estimate_tokens",
         "execute",
         "executescript",
         "fetchall",
         "fetchone",
+        "float",
         "get",
         "has_image",
         "isinstance",
         "keyword_tier",
+        "len",
         "makedirs",
         "max",
         "min",
         "normalize_model",
+        "output_reserve",
         "plan_with_context",
         "pop",
         "price_tier",
+        "projected_turn_cost_usd",
         "prune_dominated",
         "reliability_map",
         "segment",
@@ -940,6 +1725,8 @@
         "start_tier",
         "sticky_model",
         "time",
+        "turn_cost_usd",
+        "unproven_premium",
         "values"
       ],
       "change_risk": 10.0
@@ -1249,15 +2036,37 @@
       "change_risk": 10.0
     },
     {
+      "module": "src.router.pool_policy",
+      "path": "src/router/pool_policy.py",
+      "loc": 31,
+      "classes": [],
+      "functions": [
+        "core_pool_ids"
+      ],
+      "imports": [
+        "os",
+        "typing"
+      ],
+      "calls": [
+        "get",
+        "split",
+        "strip",
+        "tuple"
+      ],
+      "change_risk": 1.19
+    },
+    {
       "module": "src.router.request_features",
       "path": "src/router/request_features.py",
-      "loc": 67,
+      "loc": 75,
       "classes": [],
       "functions": [
         "message_text",
         "has_image",
         "last_user_message",
         "keyword_tier",
+        "estimate_prompt_tokens",
+        "output_reserve",
         "estimate_tokens"
       ],
       "imports": [
@@ -1267,6 +2076,7 @@
       "calls": [
         "any",
         "dumps",
+        "estimate_prompt_tokens",
         "get",
         "int",
         "isinstance",
@@ -1276,9 +2086,10 @@
         "lower",
         "message_text",
         "next",
+        "output_reserve",
         "reversed"
       ],
-      "change_risk": 6.84
+      "change_risk": 6.94
     },
     {
       "module": "src.search",
@@ -1349,6 +2160,19 @@
     "src.api.server.do_GET",
     "src.api.server.do_POST",
     "src.api.server.log_message",
+    "src.bench.adapters.root_pids",
+    "src.bench.fixture_server.do_GET",
+    "src.bench.fixture_server.log_message",
+    "src.bench.inspect.collect_live_info",
+    "src.bench.inspect.format_card",
+    "src.bench.inspect.pick_stack",
+    "src.bench.inspect_live.install_size_kb",
+    "src.bench.inspect_live.startup_ms",
+    "src.bench.inspect_live.version_string",
+    "src.bench.install.download",
+    "src.bench.install.pick_cft_urls",
+    "src.bench.install.unzip_keep_modes",
+    "src.bench.procmem.cpu_seconds",
     "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.cli.catalog_loop",
@@ -1362,6 +2186,10 @@
     "src.mcp_server.router_health",
     "src.mcp_server.search_fanout",
     "src.net_lab.sober_net_diagnostics.analyze_socket_trace_and_recommend_routing",
+    "src.rea.audit.audit_manifest",
+    "src.rea.crx.extract_crx",
+    "src.rea.endpoints.extract_endpoints",
+    "src.rea.netprobe.probe_idle",
     "src.router.live_router.classify_tier",
     "src.router.live_router.key",
     "src.router.live_router.model_stats",

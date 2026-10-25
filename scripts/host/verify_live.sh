@@ -30,10 +30,10 @@ if [[ "${1:-}" != "--spend-tokens" ]]; then
   exit $(( fail > 0 ))
 fi
 
-printf '4) real non-stream completion via oracle/eco (max_tokens 16)\n'
+printf '4) real non-stream completion via oracle/auto (max_tokens 16)\n'
 resp=$(curl -sS --max-time 120 -D /tmp/oracle_headers.txt "$ROUTER/chat/completions" -H 'Content-Type: application/json' \
   -H 'x-hermes-session-id: verify-live' \
-  -d '{"model":"oracle/eco","max_tokens":16,"messages":[{"role":"user","content":"Reply with the single word: ok"}]}')
+  -d '{"model":"oracle/auto","max_tokens":16,"messages":[{"role":"user","content":"Reply with the single word: ok"}]}')
 model=$(grep -i '^x-oracle-selected-model:' /tmp/oracle_headers.txt | tr -d '\r' | cut -d' ' -f2)
 if python3 - "$resp" <<'EOF'
 import json, sys
@@ -44,9 +44,9 @@ sys.exit(0 if r.get("id") and r.get("usage") else 1)
 EOF
 then ok "real completion through router (selected: $model)"; else bad "completion failed: ${resp:0:300}"; fi
 
-printf '5) real streaming tool call via oracle/eco\n'
+printf '5) real streaming tool call via oracle/auto\n'
 stream=$(curl -sS -N --max-time 120 "$ROUTER/chat/completions" -H 'Content-Type: application/json' \
-  -d '{"model":"oracle/eco","stream":true,"max_tokens":64,"tool_choice":"required",
+  -d '{"model":"oracle/auto","stream":true,"max_tokens":64,"tool_choice":"required",
        "tools":[{"type":"function","function":{"name":"ping","description":"Health check","parameters":{"type":"object","properties":{},"required":[]}}}],
        "messages":[{"role":"user","content":"Call the ping tool now."}]}')
 if grep -q '"tool_calls"' <<<"$stream" && grep -q 'data: \[DONE\]' <<<"$stream"; then

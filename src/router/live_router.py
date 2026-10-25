@@ -52,12 +52,10 @@ from src.router.request_features import (estimate_prompt_tokens, estimate_tokens
 # compatibility/forcing, not a feature — plan() decides the band on its own.
 ADVERTISED_MODELS = ("oracle/auto",)
 
+# Single routable id. Tier aliases (eco/agentic/premium/free) were removed 2026-10-25: plan()
+# picks the band itself, and aliases only leaked unrouted-policy paths.
 VIRTUAL_PROFILES = {
     "oracle/auto": None,  # classified per request
-    "oracle/eco": 1,
-    "oracle/agentic": 2,
-    "oracle/premium": 4,
-    "oracle/free": 0,     # special: zero list price only
 }
 
 COOLDOWN_SECONDS = {429: 300, 404: 3600}
@@ -428,7 +426,10 @@ class LiveRouter:
         kw_tier = keyword_tier(messages)
         bucket = bucket_for(payload, kw_tier)
         if requested not in VIRTUAL_PROFILES:
-            if requested not in self.profiles:
+            # Explicit ids must be known to the registry and, when a core pool is configured,
+            # inside it. Removed tier aliases therefore fail closed.
+            core = core_pool_ids()
+            if requested not in self.profiles or (core and requested not in core):
                 raise KeyError(requested)
             return [requested], bucket, kw_tier
 

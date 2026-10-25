@@ -115,6 +115,7 @@ class TestE2ESaaSProduct(unittest.TestCase):
                 # Raw ids and aliases stay routable by explicit name but are never advertised.
                 self.assertNotIn("google/gemini-4-argon", model_ids)
                 self.assertNotIn("oracle/free", model_ids)
+                self.assertNotIn("oracle/eco", model_ids)
 
                 chat_req_body = json.dumps(
                     {
