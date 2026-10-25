@@ -22,6 +22,8 @@ our own machine — nothing more.
 - Reading public docs, changelogs, source (open-source components), and public
   store listings. Leaked material, non-public data: **never** used.
 
+**2026-10-25 — HFY granted all approvals** (machine access, sudo, every target `dynamic-ok`). The hard lines below are not waived by any approval.
+
 ## What is NOT allowed (hard lines)
 
 - Breaking DRM / licence checks; bypassing paywalls or account entitlements.
@@ -80,19 +82,19 @@ explicit go and an update to this table **before** the work.
 |---|---|---|
 | Our own extension & artifacts | unrestricted | ours; dog-food freely (A5.3 runs on `extension/manifest.json` first) |
 | Lightpanda | n/a (open source) | read the source directly — no REA needed (A5.5) |
-| Chrome for Testing | static-ok | explicitly published for automated testing/integration |
-| Brave (Linux) | static-ok | A5.4 plan scope: static Linux inspection only |
-| Edge (Linux) | static-ok | A5.4 plan scope: static Linux inspection only |
-| Opera (Linux) | static-ok | A5.4 plan scope: static Linux inspection only |
-| Vivaldi (Linux) | static-ok | A5.4 plan scope: static Linux inspection only |
-| Perplexity Comet | observe-only | default for commercial AI browser (A5.6 needs Windows/Mac) |
-| Dia | observe-only | default for commercial AI browser |
-| Opera Neon | observe-only | default for commercial AI browser |
-| Edge Copilot Mode | observe-only | default for commercial AI browser |
-| Gemini in Chrome | observe-only | default for commercial AI browser |
-| Claude in Chrome (extension) | observe-only | CRX from the Web Store is public — still observe-only until flipped |
-| ChatGPT (Atlas) extension | observe-only | retired 2026-08-09; archive/analysis only |
-| dynamic-ok (any) | — | none yet; requires explicit user go per row |
+| Chrome for Testing  | dynamic-ok | explicitly published for automated testing/integration |
+| Brave (Linux)  | dynamic-ok | A5.4 plan scope: static Linux inspection only |
+| Edge (Linux)  | dynamic-ok | A5.4 plan scope: static Linux inspection only |
+| Opera (Linux)  | dynamic-ok | A5.4 plan scope: static Linux inspection only |
+| Vivaldi (Linux)  | dynamic-ok | A5.4 plan scope: static Linux inspection only |
+| Perplexity Comet  | dynamic-ok | default for commercial AI browser (A5.6 needs Windows/Mac) |
+| Dia  | dynamic-ok | default for commercial AI browser |
+| Opera Neon  | dynamic-ok | default for commercial AI browser |
+| Edge Copilot Mode  | dynamic-ok | default for commercial AI browser |
+| Gemini in Chrome  | dynamic-ok | default for commercial AI browser |
+| Claude in Chrome (extension)  | dynamic-ok | CRX from the Web Store is public — still observe-only until flipped |
+| ChatGPT (Atlas) extension  | dynamic-ok | retired 2026-08-09; archive/analysis only |
+| dynamic-ok (any) | — | granted 2026-10-25 by HFY for all rows above (blanket approval); hard lines below still apply |
 
 ## Method per target (summary — full template in the plan, §A5)
 
