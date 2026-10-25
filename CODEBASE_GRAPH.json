@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 61,
+    "total_files": 63,
     "total_classes": 31,
-    "total_functions": 327,
-    "total_loc": 5893
+    "total_functions": 338,
+    "total_loc": 6343
   },
   "modules": [
     {
@@ -1233,27 +1233,31 @@
     {
       "module": "src.browser_engine.cosmetic",
       "path": "src/browser_engine/cosmetic.py",
-      "loc": 38,
+      "loc": 49,
       "classes": [],
       "functions": [
+        "_is_plain_css",
         "cosmetic_css"
       ],
       "imports": [
         "__future__",
+        "re",
         "rule_engine",
         "typing"
       ],
       "calls": [
+        "_is_plain_css",
         "add",
         "any",
         "append",
+        "compile",
         "get",
         "join",
-        "list",
         "match_domain",
+        "search",
         "set"
       ],
-      "change_risk": 3.88
+      "change_risk": 4.21
     },
     {
       "module": "src.browser_engine.engine_drivers",
@@ -1320,6 +1324,49 @@
         "which"
       ],
       "change_risk": 8.81
+    },
+    {
+      "module": "src.browser_engine.procedural",
+      "path": "src/browser_engine/procedural.py",
+      "loc": 156,
+      "classes": [],
+      "functions": [
+        "compile_procedural",
+        "_split_selector",
+        "_find_marker",
+        "_key",
+        "procedural_js"
+      ],
+      "imports": [
+        "__future__",
+        "json",
+        "rule_engine",
+        "typing"
+      ],
+      "calls": [
+        "_find_marker",
+        "_key",
+        "_split_selector",
+        "add",
+        "any",
+        "append",
+        "dumps",
+        "find",
+        "get",
+        "isalpha",
+        "len",
+        "list",
+        "lower",
+        "lstrip",
+        "match_domain",
+        "replace",
+        "set",
+        "split",
+        "startswith",
+        "strip",
+        "tuple"
+      ],
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.rule_engine",
@@ -1403,6 +1450,48 @@
         "split",
         "startswith",
         "urlsplit"
+      ],
+      "change_risk": 10.0
+    },
+    {
+      "module": "src.browser_engine.scriptlets",
+      "path": "src/browser_engine/scriptlets.py",
+      "loc": 283,
+      "classes": [],
+      "functions": [
+        "_split_args",
+        "compile_scriptlets",
+        "_helper_key",
+        "scriptlet_js",
+        "supported_scriptlets"
+      ],
+      "imports": [
+        "__future__",
+        "json",
+        "rule_engine",
+        "typing"
+      ],
+      "calls": [
+        "_helper_key",
+        "_split_args",
+        "add",
+        "any",
+        "append",
+        "dumps",
+        "get",
+        "join",
+        "len",
+        "list",
+        "lower",
+        "lstrip",
+        "match_domain",
+        "partition",
+        "rstrip",
+        "set",
+        "sorted",
+        "split",
+        "startswith",
+        "strip"
       ],
       "change_risk": 10.0
     },
@@ -2552,7 +2641,12 @@
     "src.browser_engine.cosmetic.cosmetic_css",
     "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
+    "src.browser_engine.procedural.compile_procedural",
+    "src.browser_engine.procedural.procedural_js",
     "src.browser_engine.rule_engine.compile_rules",
+    "src.browser_engine.scriptlets.compile_scriptlets",
+    "src.browser_engine.scriptlets.scriptlet_js",
+    "src.browser_engine.scriptlets.supported_scriptlets",
     "src.browser_engine.telemetry.top_rules",
     "src.browser_engine.telemetry.total_decisions",
     "src.browser_engine.telemetry.totals",
