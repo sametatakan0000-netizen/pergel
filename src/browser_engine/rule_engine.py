@@ -84,6 +84,9 @@ class RuleEngine:
         self._global: list[dict] = []
         # Build-time-compiled matchers, keyed by id(rule) (dicts are unhashable).
         self._compiled_regex: dict[int, "re.Pattern"] = {}
+        # Longest literal chunk per wildcard rule: a substring pre-check that
+        # rejects most non-matches before the regex runs.
+        self._chunk_by_rule: dict[int, str] = {}
         # Literal-only global filters, matched in one Aho-Corasick pass.
         self._literal: list[tuple[str, dict]] = []
         self._literal_by_pattern: dict[str, list[dict]] = {}
@@ -107,6 +110,9 @@ class RuleEngine:
             self._compiled_regex[id(rule)] = re.compile(regex)
         elif url_filter is not None:
             self._compiled_regex[id(rule)] = re.compile(_url_filter_to_regex(url_filter))
+            chunk = _longest_literal_chunk(url_filter)
+            if chunk:
+                self._chunk_by_rule[id(rule)] = chunk
         self._rules.append(rule)
         domains = list(cond.get("requestDomains") or [])
         if anchor and not domains:
@@ -190,7 +196,20 @@ class RuleEngine:
         if cond.get("urlFilter") is None and cond.get("regexFilter") is None:
             return True
         matcher = self._compiled_regex.get(id(rule))
-        return matcher is not None and matcher.search(url) is not None
+        if matcher is None:
+            return False
+        # Cheap pre-check: a wildcard rule whose longest literal chunk is absent
+        # from the URL can never match, so skip the regex entirely.
+        chunk = self._chunk_by_rule.get(id(rule))
+        if chunk is not None and chunk not in url:
+            return False
+        return matcher.search(url) is not None
+
+
+def _longest_literal_chunk(pattern: str) -> str:
+    """Longest run of non-wildcard characters in a urlFilter (``*``/``^`` split it)."""
+    chunks = re.split(r"[*^|]", pattern.lstrip("|"))
+    return max(chunks, key=len) if chunks else ""
 
 
 def compile_rules(rules: Iterable[dict]) -> RuleEngine:

@@ -53,10 +53,11 @@ def decide_cdp_response(engine: RuleEngine, *, request_id: str, url: str,
     if decision.action == "block":
         return {
             "method": "Fetch.failRequest",
-            "params": {"requestId": request_id, "errorReason": "BlockedByClient"},
+            "params": {"requestId": request_id, "errorReason": "BlockedByClient",
+                       "ruleId": decision.rule_id},
         }
 
-    params: dict = {"requestId": request_id}
+    params: dict = {"requestId": request_id, "ruleId": decision.rule_id}
 
     if decision.action == "redirect" and decision.redirect_url:
         params["url"] = decision.redirect_url
@@ -80,9 +81,10 @@ class CDPBridge:
     only I/O seam; ``on_request_paused`` is pure message construction.
     """
 
-    def __init__(self, engine: RuleEngine, send) -> None:
+    def __init__(self, engine: RuleEngine, send, stats=None) -> None:
         self.engine = engine
         self._send = send
+        self._stats = stats
 
     def on_request_paused(self, params: dict) -> dict:
         """Build and dispatch the response for a Fetch.requestPaused event."""
@@ -94,8 +96,28 @@ class CDPBridge:
             request_headers=_cdp_headers_to_dict(
                 params.get("request", {}).get("headers", {})),
         )
-        self._send(msg)
+        if self._stats is not None:
+            self._stats.record(_action_of(msg), rule_id=_rule_id_of(msg))
+        # ruleId is our telemetry tag, not a real CDP field — strip before send.
+        sendable = {**msg, "params": dict(msg.get("params", {}))}
+        sendable["params"].pop("ruleId", None)
+        self._send(sendable)
         return msg
+
+
+def _action_of(msg: dict) -> str:
+    """Map a dispatched CDP message back to a decision action label."""
+    if msg["method"] == "Fetch.failRequest":
+        return "block"
+    if "url" in msg.get("params", {}):
+        return "redirect"
+    if "headers" in msg.get("params", {}):
+        return "modifyHeaders"
+    return "allow"
+
+
+def _rule_id_of(msg: dict):
+    return msg.get("params", {}).get("ruleId")
 
 
 def _cdp_headers_to_dict(headers: dict) -> dict:

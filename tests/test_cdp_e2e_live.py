@@ -156,6 +156,30 @@ class TestLiveCDPBridge(unittest.TestCase):
         self.assertTrue(all(m["method"] == "Fetch.continueRequest" for m in captured),
                         [m["method"] for m in captured])
 
+    def test_redirect_carries_new_url_to_real_browser(self):
+        engine = compile_rules([
+            {"id": 1, "priority": 1,
+             "action": {"type": "redirect", "redirect": {"url": "https://replacement.invalid/ok.gif"}},
+             "condition": {"requestDomains": ["ads.example"], "resourceTypes": ["image"]}},
+        ])
+        captured = self._run_session(
+            engine, "https://ads.example/x.gif", lambda m: True)
+        redirects = [m for m in captured if m["params"].get("url") == "https://replacement.invalid/ok.gif"]
+        self.assertTrue(redirects, f"no redirect dispatched; got {captured}")
+
+    def test_modify_headers_carries_rewritten_headers_to_real_browser(self):
+        engine = compile_rules([
+            {"id": 1, "priority": 1,
+             "action": {"type": "modifyHeaders", "requestHeaders": [
+                 {"header": "X-Lab", "operation": "set", "value": "1"}]},
+             "condition": {"requestDomains": ["hdr.example"], "resourceTypes": ["image"]}},
+        ])
+        captured = self._run_session(
+            engine, "https://hdr.example/x.gif", lambda m: True)
+        mods = [m for m in captured if any(
+            h["name"] == "X-Lab" and h["value"] == "1" for h in m["params"].get("headers", []))]
+        self.assertTrue(mods, f"no rewritten header dispatched; got {captured}")
+
 
 if __name__ == "__main__":
     unittest.main()
