@@ -1,6 +1,7 @@
 """Kademeli Motor Yükseltmeli (Engine Cascading) Tarayıcı İşçisi ve HAR/XHR API Keşfedici."""
 import html
 import re
+import time
 import urllib.parse
 import urllib.robotparser
 import urllib.request
@@ -79,7 +80,8 @@ def _regex_markdown(raw_html: str) -> str:
 
 
 MAX_BODY_BYTES = 2 * 1024 * 1024
-_ROBOTS_CACHE: Dict[str, Any] = {}
+ROBOTS_TTL_S = 3600
+_ROBOTS_CACHE: Dict[str, Any] = {}  # origin -> (parser, fetched_at)
 
 
 class FetchBlocked(Exception):
@@ -89,16 +91,17 @@ class FetchBlocked(Exception):
 def _allowed_by_robots(url: str, user_agent: str) -> bool:
     parts = urllib.parse.urlsplit(url)
     origin = f"{parts.scheme}://{parts.netloc}"
-    rp = _ROBOTS_CACHE.get(origin)
+    cached = _ROBOTS_CACHE.get(origin)
+    rp = cached[0] if cached and time.time() - cached[1] < ROBOTS_TTL_S else None
     if rp is None:
         rp = urllib.robotparser.RobotFileParser()
         try:
             req = urllib.request.Request(origin + "/robots.txt", headers={"User-Agent": user_agent})
             with urllib.request.urlopen(req, timeout=10) as resp:
                 rp.parse(resp.read(512 * 1024).decode("utf-8", errors="replace").splitlines())
-        except Exception:  # shortcut: unreachable/missing robots.txt = allow all, cache never expires; add TTL when long-running
+        except Exception:  # shortcut: unreachable/missing robots.txt = allow all (cached ROBOTS_TTL_S), fail closed on 5xx if abuse appears
             rp.parse([])
-        _ROBOTS_CACHE[origin] = rp
+        _ROBOTS_CACHE[origin] = (rp, time.time())
     return rp.can_fetch(user_agent, url)
 
 
