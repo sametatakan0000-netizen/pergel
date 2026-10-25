@@ -180,6 +180,51 @@ class TestLiveCDPBridge(unittest.TestCase):
             h["name"] == "X-Lab" and h["value"] == "1" for h in m["params"].get("headers", []))]
         self.assertTrue(mods, f"no rewritten header dispatched; got {captured}")
 
+    def test_cosmetic_css_hides_element_in_real_browser(self):
+        from src.browser_engine.cosmetic import cosmetic_css
+
+        rules = [{"selector": ".sponsored-ad", "domains": [], "exceptions": []}]
+        css = cosmetic_css(rules, host="news.example")
+
+        async def main():
+            async with websockets.connect(self.ws_url, max_size=2**24) as ws:
+                seq = [0]
+
+                async def call(method, params=None, sid=None):
+                    seq[0] += 1
+                    msg = {"id": seq[0], "method": method, "params": params or {}}
+                    if sid:
+                        msg["sessionId"] = sid
+                    await ws.send(json.dumps(msg))
+                    while True:
+                        m = json.loads(await ws.recv())
+                        if m.get("id") == seq[0]:
+                            return m
+
+                await call("Target.createTarget", {"url": "about:blank"})
+                targets = await call("Target.getTargets")
+                page = [t for t in targets["result"]["targetInfos"]
+                        if t["type"] == "page"][-1]
+                sess = await call("Target.attachToTarget",
+                                  {"targetId": page["targetId"], "flatten": True})
+                sid = sess["result"]["sessionId"]
+                await call("Page.enable", sid=sid)
+                html = '<html><body><div class="sponsored-ad">buy stuff</div></body></html>'
+                await call("Page.navigate", {"url": "data:text/html," + html}, sid=sid)
+                await asyncio.sleep(0.5)
+                await call("Runtime.evaluate", {
+                    "expression": "(() => { const s = document.createElement('style');"
+                                  f" s.textContent = {css!r};"
+                                  " document.head.appendChild(s); })()"}, sid=sid)
+                res = await call("Runtime.evaluate", {
+                    "expression": "getComputedStyle(document.querySelector('.sponsored-ad')).display",
+                    "returnByValue": True}, sid=sid)
+                return res["result"]["result"]["value"]
+
+        display = asyncio.run(main())
+        self.assertEqual(display, "none", "cosmetic CSS did not hide the element")
+
 
 if __name__ == "__main__":
     unittest.main()
+

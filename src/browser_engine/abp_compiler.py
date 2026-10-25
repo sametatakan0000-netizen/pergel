@@ -124,3 +124,36 @@ def compile_abp_lines(lines: Iterable[str]) -> AbpResult:
         result.rules.append(rule)
         stats.compiled += 1
     return result
+
+
+def compile_cosmetic(lines: Iterable[str]) -> list:
+    """Parse EasyList element-hiding rules (``##``/``#@#``) into dicts.
+
+    Network filters, comments, and scriptlet/HTML filters are skipped. Each
+    returned dict is ``{selector, domains, exceptions}``; an exception rule
+    (``#@#``) contributes to ``exceptions`` so ``cosmetic_css`` can cancel the
+    matching hide rule on the hosts it names.
+    """
+    rules = []
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith(("!", "[", "#$#", "#?#")):
+            continue
+        marker = None
+        for m in ("#@#", "##"):
+            if m in line:
+                marker = m
+                break
+        if marker is None:
+            continue
+        prefix, selector = line.split(marker, 1)
+        selector = selector.strip()
+        if not selector:
+            continue
+        domains = [d.lstrip("~").lstrip(".").lower()
+                   for d in prefix.split(",") if d.strip()]
+        rule = {"selector": selector, "domains": domains, "exceptions": []}
+        if marker == "#@#":
+            rule["exceptions"] = list(domains) if domains else [""]
+        rules.append(rule)
+    return rules

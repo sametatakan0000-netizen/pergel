@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 60,
+    "total_files": 61,
     "total_classes": 31,
-    "total_functions": 325,
-    "total_loc": 5822
+    "total_functions": 327,
+    "total_loc": 5893
   },
   "modules": [
     {
@@ -1066,7 +1066,7 @@
     {
       "module": "src.browser_engine.abp_compiler",
       "path": "src/browser_engine/abp_compiler.py",
-      "loc": 126,
+      "loc": 159,
       "classes": [
         "AbpStats",
         "AbpResult"
@@ -1074,7 +1074,8 @@
       "functions": [
         "_split_options",
         "_compile_one",
-        "compile_abp_lines"
+        "compile_abp_lines",
+        "compile_cosmetic"
       ],
       "imports": [
         "__future__",
@@ -1091,7 +1092,9 @@
         "field",
         "get",
         "len",
+        "list",
         "lower",
+        "lstrip",
         "rfind",
         "set",
         "sorted",
@@ -1099,7 +1102,7 @@
         "startswith",
         "strip"
       ],
-      "change_risk": 8.58
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.aho_corasick",
@@ -1226,6 +1229,31 @@
         "record"
       ],
       "change_risk": 4.96
+    },
+    {
+      "module": "src.browser_engine.cosmetic",
+      "path": "src/browser_engine/cosmetic.py",
+      "loc": 38,
+      "classes": [],
+      "functions": [
+        "cosmetic_css"
+      ],
+      "imports": [
+        "__future__",
+        "rule_engine",
+        "typing"
+      ],
+      "calls": [
+        "add",
+        "any",
+        "append",
+        "get",
+        "join",
+        "list",
+        "match_domain",
+        "set"
+      ],
+      "change_risk": 3.88
     },
     {
       "module": "src.browser_engine.engine_drivers",
@@ -2519,7 +2547,9 @@
     "src.bench.suites.fidelity.robots_block_never_escalates",
     "src.bench.suites.fidelity.run_fidelity",
     "src.browser_engine.abp_compiler.compile_abp_lines",
+    "src.browser_engine.abp_compiler.compile_cosmetic",
     "src.browser_engine.cdp_bridge.on_request_paused",
+    "src.browser_engine.cosmetic.cosmetic_css",
     "src.browser_engine.engine_drivers.engine_driver",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.browser_engine.rule_engine.compile_rules",
