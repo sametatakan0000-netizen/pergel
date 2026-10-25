@@ -18,6 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from src.api.job_store import JobStore
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.engine_drivers import engine_driver
+from src.browser_engine.cdp_adblock_driver import make_adblock_driver
+from src.browser_engine.adblock_session import load_adblock_bundle
 from src.browser_engine.worker import BrowserWorker
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
@@ -97,6 +99,18 @@ def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
     return None
 
 
+def _resolve_driver(adblock_list_paths):
+    """Pick the fetch driver: adblock-enforcing CDP when filter lists are given.
+
+    ``adblock_list_paths=None`` (default) keeps the plain ``engine_driver``, so
+    every existing caller is unaffected. When paths are provided, the enforced
+    CDP driver blocks ads and hides elements during fetch.
+    """
+    if not adblock_list_paths:
+        return engine_driver
+    return make_adblock_driver(load_adblock_bundle(adblock_list_paths))
+
+
 class BrowserFarmSaaSServer:
     """SaaS uçları + Hermes `provider: custom` için OpenAI-uyumlu `/v1/models` ve `/v1/chat/completions` Proxy."""
 
@@ -111,6 +125,7 @@ class BrowserFarmSaaSServer:
         db_dir: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         nous_proxy_url: str = "http://127.0.0.1:8645/v1",
         driver_fn: Optional[Callable[[str, str, str], str]] = None,
+        adblock_list_paths: Optional[list] = None,
         webhook_sender_fn: Optional[Callable[[str, bytes, Dict[str, str]], int]] = None,
         profiles: Optional[Dict[str, Any]] = None,
         registry_path: Optional[str] = None,
@@ -138,7 +153,7 @@ class BrowserFarmSaaSServer:
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(
-            driver_fn=driver_fn or engine_driver,
+            driver_fn=driver_fn or _resolve_driver(adblock_list_paths),
             orchestrator=BrowserFarmOrchestrator(db_path=os.path.join(self.db_dir, "browser_memory.db")),
         )
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)

@@ -131,3 +131,23 @@ def build_injection(bundle: AdblockBundle, host: str) -> str:
 def build_network_engine(bundle: AdblockBundle) -> RuleEngine:
     """Expose the network rule engine for CDP ``Fetch`` interception."""
     return bundle.network
+
+
+def load_adblock_bundle(paths: Iterable[str]) -> AdblockBundle:
+    """Compile one or more filter-list files (EasyList, uAssets, ...) into a bundle.
+
+    Blank lines and ``!``/``[`` header comments are dropped before routing. This
+    is the product hook: real public filter lists in, one enforceable bundle out.
+    """
+    lines: list[str] = []
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                for raw in f:
+                    s = raw.strip()
+                    if not s or s.startswith("!") or s.startswith("["):
+                        continue
+                    lines.append(s)
+        except OSError:
+            continue
+    return compile_adblock(lines)
