@@ -24,6 +24,27 @@ CHROMIUM_TIMEOUT_S = 30
 _UA_BASE = "HermesBrowserFarm/1.0"
 
 
+def _egress_enforce() -> bool:
+    """Egress enforcement opt-in (netns + proxy). Default OFF so plain use
+    stays simple; production sets ORACLE_EGRESS_ENFORCE=1 to activate."""
+    return os.environ.get("ORACLE_EGRESS_ENFORCE", "").strip().lower() in ("1", "true", "yes")
+
+
+def _chromium_launch_args() -> list:
+    """Chromium args pinning egress to the proxy; [] when enforcement is off.
+
+    When on, the engine is also expected to run inside the netns whose only
+    route is the proxy (see netns.plan_netns) — these flags are defense in
+    depth for Chromium's raw-DNS paths.
+    """
+    if not _egress_enforce():
+        return []
+    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "127.0.0.1")
+    port = int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899"))
+    from src.browser_engine.netns import chromium_proxy_args
+    return chromium_proxy_args(proxy_host=host, proxy_port=port)
+
+
 class EngineUnavailable(RuntimeError):
     """Engine missing or failed -> worker escalates to the next tier."""
 
@@ -82,7 +103,9 @@ class _ChromiumPool:
             except ImportError as exc:  # shortcut: optional dep like trafilatura
                 raise EngineUnavailable("playwright not installed") from exc
             self._pw = sync_playwright().start()
-            self._browser = self._pw.chromium.launch(headless=True)
+            launch_args = _chromium_launch_args()
+            self._browser = (self._pw.chromium.launch(headless=True, args=launch_args)
+                             if launch_args else self._pw.chromium.launch(headless=True))
         page = self._browser.new_page(user_agent=user_agent)
         page.goto(url, timeout=CHROMIUM_TIMEOUT_S * 1000, wait_until="load")
         return page.content()[:MAX_BODY_BYTES]
