@@ -3,7 +3,7 @@
     "total_files": 73,
     "total_classes": 46,
     "total_functions": 429,
-    "total_loc": 8042
+    "total_loc": 8048
   },
   "modules": [
     {
@@ -2077,7 +2077,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 262,
+      "loc": 268,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2138,6 +2138,7 @@
         "read",
         "record_domain_escalation",
         "rstrip",
+        "split",
         "splitlines",
         "startswith",
         "str",

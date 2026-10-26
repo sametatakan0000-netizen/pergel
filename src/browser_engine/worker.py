@@ -41,7 +41,8 @@ _MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; r
 
 
 def html_to_clean_markdown(raw_html: str) -> str:
-    """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta regex yedeğine düşer."""
+    """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta regex yedeğine düşer.
+    Kalite kapısı: trafilatura regex'ten %50'den az kelime dönerse regex kullan (trafilatura aşırı filtrelemiş)."""
     if not raw_html or not raw_html.strip():
         return ""
     if trafilatura is not None:
@@ -54,6 +55,11 @@ def html_to_clean_markdown(raw_html: str) -> str:
             favor_recall=True,
         )
         if extracted and len(extracted.strip()) >= _MIN_EXTRACTED_CHARS:
+            regex_md = _regex_markdown(raw_html)
+            # quality gate: if trafilatura kept < 50% of regex word count,
+            # it dropped too much (sidebar, index pages, reference docs)
+            if regex_md and len(extracted.split()) < len(regex_md.split()) * 0.5:
+                return regex_md.strip()
             return extracted.strip()
     return _regex_markdown(raw_html)
 
