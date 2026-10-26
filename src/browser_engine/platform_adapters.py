@@ -375,6 +375,7 @@ class WaybackAdapter:
     """
 
     name = "wayback"
+    default_getter = staticmethod(_http_get_text)
     _WAYBACK_HOST = "archive.org"
     _WAYBACK_REPLAY = "web.archive.org"
 

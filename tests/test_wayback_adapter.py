@@ -72,3 +72,13 @@ class TestRegistryWayback(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWaybackUsesTextGetter(unittest.TestCase):
+    def test_default_getter_returns_text_not_json(self):
+        # The replay body is HTML, not JSON — the default JSON getter would
+        # return None and silently drop a valid snapshot.
+        adapter = WaybackAdapter()
+        self.assertTrue(hasattr(adapter, "default_getter"))
+        self.assertIs(adapter.default_getter, __import__(
+            "src.browser_engine.platform_adapters", fromlist=["_http_get_text"])._http_get_text)
