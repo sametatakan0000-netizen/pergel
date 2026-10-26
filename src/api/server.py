@@ -168,7 +168,21 @@ def _resolve_driver(adblock_list_paths):
     paths = [p for p in paths if os.path.isfile(p)]
     if not paths:
         return engine_driver
-    return _with_fallback(make_adblock_driver(load_adblock_bundle(paths)))
+    return _with_fallback(make_adblock_driver(
+        load_adblock_bundle(paths), extensions=_maybe_extension_host()))
+
+
+def _maybe_extension_host():
+    """Load the MV3 extension host if ``ORACLE_EXTENSIONS_DIR`` is set.
+
+    Returns ``None`` (pure adblock path) when unset or empty — fail-open.
+    """
+    ext_dir = os.environ.get("ORACLE_EXTENSIONS_DIR", "").strip()
+    if not ext_dir:
+        return None
+    from src.browser_engine.extension_host import load_extensions_dir
+    host = load_extensions_dir(ext_dir)
+    return host if host.list_extensions() else None
 
 
 class BrowserFarmSaaSServer:

@@ -17,8 +17,11 @@ engine, so enforcement reuses the proven path rather than a parallel one.
 """
 from __future__ import annotations
 
+import json
+import os
 from typing import Dict, Iterable, List, Optional
 
+from .mv3_surface import content_script_sources, load_manifest, manifest_dnr_rules
 from .rule_engine import Decision, RuleEngine, compile_rules
 
 __all__ = ["ExtensionError", "Extension", "ExtensionHost"]
@@ -121,3 +124,52 @@ def _rank(decision: Decision) -> int:
     """Lower rank wins, mirroring the rule engine's action priority."""
     return {"block": 0, "redirect": 1, "modifyHeaders": 2, "allow": 3}.get(
         decision.action, 3)
+
+
+def load_extensions_dir(path: str) -> "ExtensionHost":
+    """Build an :class:`ExtensionHost` from a directory of MV3 extension folders.
+
+    Each subdirectory holding a ``manifest.json`` becomes one :class:`Extension`.
+    Its DNR rule resources (declared in ``declarative_net_request.rule_resources``,
+    each a JSON file of MV3 DNR rules) are normalized via
+    :func:`mv3_surface.manifest_dnr_rules` and compiled per-extension, so a
+    broken extension stays inert instead of failing the whole host.
+
+    A missing or empty directory yields an empty host — production stays
+    fail-open.
+    """
+    host = ExtensionHost()
+    if not os.path.isdir(path):
+        return host
+    for entry in sorted(os.listdir(path)):
+        ext_dir = os.path.join(path, entry)
+        manifest_path = os.path.join(ext_dir, "manifest.json")
+        if not os.path.isfile(manifest_path):
+            continue
+        try:
+            with open(manifest_path, encoding="utf-8") as fh:
+                manifest = load_manifest(json.load(fh))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue  # inert: a malformed extension never loads
+        rules = _manifest_rules(ext_dir, manifest.raw)
+        host.attach(Extension(manifest.name or entry,
+                              dnr_rules=rules,
+                              content_scripts=content_script_sources(manifest)))
+    return host
+
+
+def _manifest_rules(ext_dir: str, raw: dict) -> List[dict]:
+    """Collect and normalize the DNR rules from a manifest's rule resources."""
+    resources = ((raw.get("declarative_net_request") or {})
+                 .get("rule_resources") or [])
+    rules: List[dict] = []
+    for res in resources:
+        if not isinstance(res, dict) or not res.get("enabled", True):
+            continue
+        rule_path = os.path.join(ext_dir, res.get("path", ""))
+        try:
+            with open(rule_path, encoding="utf-8") as fh:
+                rules.extend(manifest_dnr_rules(json.load(fh)))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue  # inert: one bad ruleset never breaks the host
+    return rules
