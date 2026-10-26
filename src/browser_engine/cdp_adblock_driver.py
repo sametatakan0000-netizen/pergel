@@ -117,6 +117,23 @@ class AdblockBrowserSession:
         raise RuntimeError("chromium devtools did not come up")
 
     # --- CDP plumbing ----------------------------------------------------
+    @staticmethod
+    def _resume_message(reply: dict, seq: int, event_sid=None,
+                        session_sid=None) -> dict:
+        """Build the CDP command that resumes or fails an intercepted request.
+
+        ``Fetch.continueRequest``/``Fetch.failRequest`` are COMMANDS, so the
+        message must carry a unique integer ``id`` (without it Chromium replies
+        ``-32600 Message must have integer 'id' property`` and the paused
+        request never resumes — navigation hangs). It must run under the SAME
+        session the pause arrived on.
+        """
+        out = {"id": seq, "method": reply["method"], "params": reply["params"]}
+        sid = event_sid or session_sid
+        if sid:
+            out["sessionId"] = sid
+        return out
+
     async def _call(self, method, params=None):
         self._seq += 1
         mid = self._seq
@@ -137,9 +154,10 @@ class AdblockBrowserSession:
                     continue
                 if m.get("method") == "Fetch.requestPaused":
                     reply = self._bridge.on_request_paused(m["params"])
-                    await self._ws.send(json.dumps({
-                        "id": f"resume-{self._seq}", "method": reply["method"],
-                        "params": reply["params"], "sessionId": self._sid}))
+                    self._seq += 1
+                    await self._ws.send(json.dumps(self._resume_message(
+                        reply, self._seq, event_sid=m.get("sessionId"),
+                        session_sid=self._sid)))
                 elif m.get("method") in ("Page.loadEventFired",
                                          "Page.domContentEventFired"):
                     self._load_evt.set()
