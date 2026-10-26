@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from .rule_engine import RuleEngine
+from .rule_engine import Decision, RuleEngine
 
 # CDP Fetch resource types (PascalCase) -> DNR resourceTypes (snake/lower).
 _CDP_TO_DNR_TYPE = {
@@ -36,6 +36,31 @@ _CDP_TO_DNR_TYPE = {
 
 def _dnr_type(cdp_resource_type: Optional[str]) -> str:
     return _CDP_TO_DNR_TYPE.get(cdp_resource_type or "", "other")
+
+
+class CompositeEngine:
+    """Aggregates several rule sources (ad-block bundle, extension host, ...).
+
+    Each source only needs a ``check(url, resource_type) -> Decision`` — the
+    same shape as :class:`RuleEngine` — so an ``ExtensionHost`` is drop-in.
+    Lowest action rank wins, mirroring the rule engine's priority.
+    """
+
+    def __init__(self, *sources) -> None:
+        self.sources = [s for s in sources if s is not None]
+
+    def check(self, url: str, resource_type: str = "other"):
+        best = None
+        best_rank = _ACTION_RANK.get("allow", 3)
+        for src in self.sources:
+            d = src.check(url, resource_type)
+            r = _ACTION_RANK.get(d.action, 3)
+            if best is None or r < best_rank:
+                best, best_rank = d, r
+        return best if best is not None else Decision("allow")
+
+
+_ACTION_RANK = {"block": 0, "redirect": 1, "modifyHeaders": 2, "allow": 3}
 
 
 def decide_cdp_response(engine: RuleEngine, *, request_id: str, url: str,
@@ -103,8 +128,11 @@ class CDPBridge:
     only I/O seam; ``on_request_paused`` is pure message construction.
     """
 
-    def __init__(self, engine: RuleEngine, send, stats=None, ssrf_guard=None) -> None:
-        self.engine = engine
+    def __init__(self, engine, send, stats=None, ssrf_guard=None) -> None:
+        # Accept a single rule source or several (ad-block bundle + extension
+        # host); normalize to one object with a ``check`` method.
+        self.engine = CompositeEngine(*engine) if isinstance(engine, tuple) \
+            else engine
         self._send = send
         self._stats = stats
         self._ssrf_guard = ssrf_guard

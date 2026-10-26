@@ -97,6 +97,10 @@ class ExtensionHost:
     def check(self, url: str, resource_type: str = "other") -> Decision:
         """Decide using every enabled extension's rules; default ``allow``.
 
+        Signature mirrors ``RuleEngine.check`` so the host is drop-in
+        interchangeable with a rule engine on the CDP enforcement path
+        (``decide_cdp_response`` calls exactly this).
+
         An extension whose engine fails to build contributes nothing (it is
         inert) rather than breaking the decision for the rest.
         """

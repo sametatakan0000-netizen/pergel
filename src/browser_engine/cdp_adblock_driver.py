@@ -23,6 +23,7 @@ import urllib.request
 from typing import Optional
 from urllib.parse import urlparse
 
+from .extension_host import ExtensionHost  # noqa: F401 (type only)
 from .adblock_session import AdblockBundle, build_injection
 from .cdp_bridge import CDPBridge
 
@@ -51,7 +52,8 @@ def _chromium() -> Optional[str]:
 class AdblockBrowserSession:
     """One enforced Chromium session; async context manager."""
 
-    def __init__(self, bundle: AdblockBundle, browser_path: Optional[str] = None):
+    def __init__(self, bundle: AdblockBundle, browser_path: Optional[str] = None,
+                 extensions: Optional["ExtensionHost"] = None):
         self.bundle = bundle
         self._browser_path = browser_path or _chromium()
         self._proc = None
@@ -61,7 +63,11 @@ class AdblockBrowserSession:
         self._pending: dict[int, asyncio.Future] = {}
         self._pump: Optional[asyncio.Task] = None
         self._load_evt = asyncio.Event() if websockets else None
-        self._bridge = CDPBridge(bundle.network, send=lambda m: None)
+        # Extension rules join the ad-block network rules at enforcement time
+        # via CompositeEngine, so both decide on every request.
+        source = (bundle.network, extensions) if extensions is not None \
+            else bundle.network
+        self._bridge = CDPBridge(source, send=lambda m: None)
 
     # --- lifecycle -------------------------------------------------------
     async def __aenter__(self) -> "AdblockBrowserSession":
