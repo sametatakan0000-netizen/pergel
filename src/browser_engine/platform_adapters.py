@@ -16,7 +16,13 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
-ALLOWED_API_HOSTS = frozenset({"registry.npmjs.org", "api.github.com"})
+ALLOWED_API_HOSTS = frozenset({
+    "registry.npmjs.org",
+    "api.github.com",
+    "www.youtube.com",
+    "vimeo.com",
+    "graph.facebook.com",
+})
 _MAX_BYTES = 2 * 1024 * 1024
 
 
@@ -134,6 +140,55 @@ class GithubAdapter:
         )
 
 
+class OEmbedAdapter:
+    """Known-provider oEmbed endpoints only (no arbitrary-site discovery).
+
+    Arbitrary hosts are never requested: the target page itself is not fetched,
+    only the provider's official oEmbed JSON endpoint on an allow-listed host.
+    """
+
+    name = "oembed"
+    _YT = re.compile(r"^https://(?:www\.|m\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]{6,}")
+    _VIMEO = re.compile(r"^https://vimeo\.com/\d+/?$")
+    _IG = re.compile(r"^https://(?:www\.)?instagram\.com/(?:p|reel|tv)/[\w-]+/?")
+
+    def _endpoint(self, url: str) -> Optional[str]:
+        q = urllib.parse.quote(url, safe="")
+        if self._YT.match(url):
+            return f"https://www.youtube.com/oembed?url={q}&format=json"
+        if self._VIMEO.match(url):
+            return f"https://vimeo.com/api/oembed.json?url={q}"
+        if self._IG.match(url):
+            return f"https://graph.facebook.com/v26.0/instagram_oembed?url={q}"
+        return None
+
+    def can_handle(self, url: str) -> bool:
+        return self._endpoint(url) is not None
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        endpoint = self._endpoint(url)
+        if endpoint is None:
+            return None
+        data = get(endpoint)
+        if not isinstance(data, dict) or not (data.get("title") or data.get("author_name")):
+            return None
+        lines = []
+        if data.get("title"):
+            lines.append(f"# {data['title']}")
+        if data.get("author_name"):
+            lines.append(f"Author: {data['author_name']}")
+        if data.get("provider_name"):
+            lines.append(f"Provider: {data['provider_name']}")
+        if data.get("type"):
+            lines.append(f"Type: {data['type']}")
+        return AdapterResult(
+            adapter=self.name,
+            url=url,
+            markdown="\n".join(lines).strip() + "\n",
+            metadata={"oembed_url": endpoint, "type": data.get("type")},
+        )
+
+
 class AdapterRegistry:
     def __init__(self, adapters: List) -> None:
         self.adapters = list(adapters)
@@ -152,4 +207,4 @@ class AdapterRegistry:
 
 
 def default_registry() -> AdapterRegistry:
-    return AdapterRegistry([NpmAdapter(), GithubAdapter()])
+    return AdapterRegistry([NpmAdapter(), GithubAdapter(), OEmbedAdapter()])
