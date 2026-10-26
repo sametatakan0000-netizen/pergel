@@ -82,7 +82,7 @@ class TestRegistryRssLast(unittest.TestCase):
         names = [a.name for a in default_registry().adapters]
         self.assertEqual(
             names,
-            ["npm", "github", "youtube-transcript", "oembed", "rss", "wayback"])
+            ["npm", "github", "youtube-transcript", "oembed", "rss", "reddit-oauth", "wayback"])
 
     def test_bare_site_url_routes_to_rss(self):
         reg = default_registry()

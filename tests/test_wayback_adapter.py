@@ -64,10 +64,34 @@ class TestRegistryWayback(unittest.TestCase):
         self.assertIn("wayback", names)
         self.assertEqual(names[-1], "wayback")
 
-    def test_reddit_url_routes_to_wayback(self):
+    def test_reddit_url_falls_through_to_wayback_without_creds(self):
+        # reddit-oauth is tried first but returns None when no user creds are
+        # configured, so a Reddit URL is ultimately handled by the wayback adapter.
+        from unittest import mock
+
         reg = default_registry()
-        a = reg.match("https://www.reddit.com/r/python/comments/abc/")
-        self.assertEqual(a.name, "wayback")
+        url = "https://www.reddit.com/r/python/comments/abc/"
+        matched = reg.match(url)
+        self.assertEqual(matched.name, "reddit-oauth")
+
+        # Fake HTTP returning a wayback availability payload so the wayback
+        # adapter has something to parse.
+        def fake_get(u):
+            if "archive.org/wayback/available" in u:
+                return {"archived_snapshots": {"closest": {
+                    "available": True,
+                    "url": "http://web.archive.org/web/20240101000000/" + url,
+                    "timestamp": "20240101000000", "status": "200"}}}
+            return "<html><body><p>archived reddit page</p></body></html>"
+
+        with mock.patch("src.browser_engine.platform_adapters._reddit_oauth_creds", return_value=None):
+            for a in reg.adapters:
+                if a.can_handle(url):
+                    res = a.fetch(url, fake_get)
+                    if res is not None:
+                        self.assertEqual(res.adapter, "wayback")
+                        return
+        self.fail("no adapter produced a result for the reddit url")
 
 
 if __name__ == "__main__":

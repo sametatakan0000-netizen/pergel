@@ -436,6 +436,164 @@ class WaybackAdapter:
         )
 
 
+def _reddit_oauth_creds() -> Optional[Dict[str, str]]:
+    """Read Reddit OAuth credentials from env (never logged, never committed).
+
+    REDDIT_CLIENT_ID/SECRET + REDDIT_USERNAME/PASSWORD for script-app password
+    grant, or REDDIT_CLIENT_ID/SECRET alone for app-only client_credentials.
+    Returns None if no credentials are configured.
+    """
+    import os
+
+    cid = os.environ.get("REDDIT_CLIENT_ID", "").strip()
+    csec = os.environ.get("REDDIT_CLIENT_SECRET", "").strip()
+    if not cid or not csec:
+        return None
+    return {
+        "client_id": cid,
+        "client_secret": csec,
+        "username": os.environ.get("REDDIT_USERNAME", "").strip(),
+        "password": os.environ.get("REDDIT_PASSWORD", "").strip(),
+    }
+
+
+class RedditOAuthAdapter:
+    """Reddit via official OAuth2 (bearer) — only when the user supplies their
+    own credentials. Reddit's Nov 2025 Responsible Builder Policy means new app
+    registrations require manual approval; existing (grandfathered) creds work.
+
+    Without credentials this adapter returns None and the URL falls through to
+    the Wayback adapter. Secrets are never logged or put in AdapterResult.
+    """
+
+    name = "reddit-oauth"
+    _TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
+    _API_BASE = "https://oauth.reddit.com"
+
+    def __init__(self) -> None:
+        self._token: Optional[str] = None
+        self._token_expiry: float = 0.0
+
+    def can_handle(self, url: str) -> bool:
+        return "reddit.com/" in url.lower()
+
+    def _exchange_token(self, creds: Dict[str, str]) -> Optional[str]:
+        import base64
+        import time
+
+        if creds.get("username") and creds.get("password"):
+            data = urllib.parse.urlencode({
+                "grant_type": "password",
+                "username": creds["username"],
+                "password": creds["password"],
+            }).encode()
+        else:
+            data = urllib.parse.urlencode({"grant_type": "client_credentials"}).encode()
+
+        auth = base64.b64encode(
+            f'{creds["client_id"]}:{creds["client_secret"]}'.encode()).decode()
+        req = urllib.request.Request(
+            self._TOKEN_URL, data=data,
+            headers={
+                "Authorization": f"Basic {auth}",
+                "User-Agent": "ai-browser-farm-adapter/1",
+            })
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                payload = json.loads(resp.read(65536).decode("utf-8", "replace"))
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+            return None
+        token = payload.get("access_token")
+        if not token:
+            return None
+        expires_in = float(payload.get("expires_in", 3600) or 3600)
+        self._token = token
+        self._token_expiry = time.time() + max(60.0, expires_in - 120.0)
+        return token
+
+    def _get_token(self, creds: Optional[Dict[str, str]] = None) -> Optional[str]:
+        import time
+
+        if self._token and time.time() < self._token_expiry:
+            return self._token
+        creds = creds if creds is not None else _reddit_oauth_creds()
+        if creds is None:
+            return None
+        return self._exchange_token(creds)
+
+    def _api_get(self, api_url: str, token: str):
+        req = urllib.request.Request(
+            api_url, headers={"Authorization": f"bearer {token}",
+                              "User-Agent": "ai-browser-farm-adapter/1"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = resp.read(_MAX_BYTES + 1)[:_MAX_BYTES]
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return None
+        try:
+            return json.loads(body.decode("utf-8", "replace"))
+        except ValueError:
+            return None
+
+    def _api_path(self, url: str) -> str:
+        m = re.search(r"reddit\.com/(?:r/([^/]+)|user/([^/]+)|u/([^/]+))(?:/(\w+))?", url)
+        if not m:
+            return "/"
+        sub, user, u2, listing = m.group(1), m.group(2), m.group(3), m.group(4)
+        if sub:
+            return f"/r/{sub}/{listing or 'hot'}.json"
+        who = user or u2
+        return f"/user/{who}/{listing or 'about'}.json"
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        creds = _reddit_oauth_creds()
+        if creds is None:
+            return None
+        token = self._get_token(creds)
+        if not token:
+            return None
+
+        api = self._API_BASE + self._api_path(url)
+        data = self._api_get(api, token)
+        if data is None:
+            return None
+
+        lines = [f"# Reddit (official API): {url}"]
+        items = self._extract_items(data)
+        if not items:
+            return None
+        for it in items[:20]:
+            if it.get("title"):
+                lines.append(f"- {it['title']}")
+            if it.get("body"):
+                lines.append(f"  {it['body']}")
+        return AdapterResult(
+            adapter=self.name, url=url,
+            markdown="\n".join(lines) + "\n",
+            metadata={"items": len(items), "source": api},
+        )
+
+    @staticmethod
+    def _extract_items(data) -> List[Dict[str, str]]:
+        out: List[Dict[str, str]] = []
+        if isinstance(data, dict):
+            children = (data.get("data") or {}).get("children")
+            if isinstance(children, list):
+                for c in children:
+                    d = (c or {}).get("data") or {}
+                    out.append({
+                        "title": d.get("title", ""),
+                        "body": d.get("selftext", "") or d.get("body", ""),
+                    })
+                return out
+            # single-object (e.g. /about.json)
+            if data.get("title") or data.get("data"):
+                d = data.get("data") if isinstance(data.get("data"), dict) else data
+                out.append({"title": d.get("title", d.get("display_name", "")),
+                            "body": d.get("public_description", "") or d.get("selftext", "")})
+        return out
+
+
 class AdapterRegistry:
     def __init__(self, adapters: List) -> None:
         self.adapters = list(adapters)
@@ -455,4 +613,5 @@ class AdapterRegistry:
 
 def default_registry() -> AdapterRegistry:
     return AdapterRegistry([NpmAdapter(), GithubAdapter(), YoutubeTranscriptAdapter(),
-                            OEmbedAdapter(), RssSitemapAdapter(), WaybackAdapter()])
+                            OEmbedAdapter(), RssSitemapAdapter(), RedditOAuthAdapter(),
+                            WaybackAdapter()])
