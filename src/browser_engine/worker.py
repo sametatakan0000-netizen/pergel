@@ -40,6 +40,53 @@ except ImportError:  # shortcut: regex fallback drops only nav/header/footer/asi
 
 _MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; regex path keeps them
 
+MIN_ACCEPT_CHARS = 10  # minimum markdown to accept a page as done (else escalate)
+
+# JS-app shell signals: the page's real content is client-rendered, so a thin
+# static extraction is a shell, not a finished page. Presence + thin extraction
+# forces escalation to a JS-capable engine instead of accepting the shell.
+_JS_APP_MARKERS = (
+    'data-reactroot', "__NEXT_DATA__", 'id="root"', "id='root'",
+    'ng-app', 'ng-controller', 'data-v-', 'id="__nuxt"',
+    "ReactDOM.render", "createRoot", "window.__INITIAL_STATE__",
+    "Vue(", "angular.module", "data-reactid",
+)
+
+
+def looks_like_js_app_shell(raw_html: str, extracted_md: str) -> bool:
+    """True when the raw HTML is a client-rendered app whose extracted text is thin.
+
+    A thin-but-nonempty extraction (chrome: promo paragraphs, category lists)
+    must not be accepted as a finished page when the real content is JS-only.
+    Thin is relative to the HTML's payload: SPA shells ship large script/markup
+    bundles with little extractable text (GitLab: 433KB -> 38 words), while real
+    content pages carry text proportional to their HTML (Wikipedia: 236KB -> 41KB).
+    """
+    if not raw_html:
+        return False
+    # Strip script/style BODIES before marker scanning: browser engines
+    # instrument pages with their own injected bundles (cookie-banner
+    # selectors, adblock lists) that mention framework attribute strings
+    # like `ng-app` in CSS selector source, not as real DOM markers.
+    body = re.sub(r"<script[^>]*>.*?</script>", "", raw_html,
+                  flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r"<script[^>]*/>", "", body, flags=re.IGNORECASE)
+    body = re.sub(r"<style[^>]*>.*?</style>", "", body,
+                  flags=re.DOTALL | re.IGNORECASE)
+    body = body.lower()
+    if not any(m.lower() in body for m in _JS_APP_MARKERS):
+        return False
+    md_len = len(extracted_md.strip())
+    # Absolute thin: almost no extractable text at all.
+    if md_len < MIN_ACCEPT_CHARS:
+        return True
+    # Relative thin: a large client-rendered payload with little text to show for
+    # it. Only large HTML qualifies -- real SPA shells ship heavy inline JS
+    # bundles (GitLab 433KB -> 38 words; the 25KB test shell -> 278 chars), while
+    # small legitimate pages that merely carry a framework marker are compact
+    # (adblock fixture: 269 raw -> 131 chars, 49% density) and must NOT escalate.
+    return len(raw_html) >= 20000 and md_len < max(40, len(raw_html) * 0.02)
+
 
 def html_to_clean_markdown(raw_html: str) -> str:
     """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta regex yedeğine düşer.
@@ -268,7 +315,8 @@ class BrowserWorker:
 
             md = html_to_clean_markdown(raw_html)
             discovered_apis = discover_har_api_endpoints(raw_html, base_url=url)
-            if len(md.strip()) >= 10:
+            is_shell = looks_like_js_app_shell(raw_html, md)
+            if len(md.strip()) >= MIN_ACCEPT_CHARS and not is_shell:
                 self.orchestrator.record_domain_escalation(
                     url=url,
                     attempted_engines=attempts,

@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 73,
     "total_classes": 46,
-    "total_functions": 430,
-    "total_loc": 8090
+    "total_functions": 431,
+    "total_loc": 8138
   },
   "modules": [
     {
@@ -2078,7 +2078,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 296,
+      "loc": 344,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2086,6 +2086,7 @@
       "functions": [
         "_strip_non_script_tags",
         "discover_har_api_endpoints",
+        "looks_like_js_app_shell",
         "html_to_clean_markdown",
         "_regex_markdown",
         "is_user_directed",
@@ -2138,7 +2139,9 @@
         "is_user_directed",
         "join",
         "len",
+        "looks_like_js_app_shell",
         "lower",
+        "max",
         "parse",
         "read",
         "record_domain_escalation",
