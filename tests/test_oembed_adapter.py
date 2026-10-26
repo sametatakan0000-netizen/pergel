@@ -81,7 +81,7 @@ class TestOEmbedKnownProviders(unittest.TestCase):
 class TestRegistryOrder(unittest.TestCase):
     def test_registry_has_npm_github_transcript_oembed(self):
         names = [a.name for a in default_registry().adapters]
-        self.assertEqual(names, ["npm", "github", "youtube-transcript", "oembed"])
+        self.assertEqual(names, ["npm", "github", "youtube-transcript", "oembed", "rss"])
 
     def test_each_url_routes_to_its_adapter(self):
         reg = default_registry()

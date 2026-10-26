@@ -60,6 +60,51 @@ def _http_get_json(api_url: str):
         return None
 
 
+def _safe_target_url(url: str) -> Optional[str]:
+    """SSRF guard for target-site fetches (RSS/sitemap): HTTPS only, and never a
+    private/loopback/link-local host. Unlike the API allow-list, the host here is
+    the target site itself (its own feed endpoints), so we block internal ranges
+    instead of restricting to a fixed list."""
+    import ipaddress
+    import socket
+
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return None
+    if parts.scheme != "https" or not parts.hostname:
+        return None
+    try:
+        infos = socket.getaddrinfo(parts.hostname, None)
+    except (socket.gaierror, OSError, ValueError):
+        return None
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast):
+            return None
+    return url
+
+
+def _http_get_text(url: str) -> Optional[str]:
+    safe = _safe_target_url(url)
+    if safe is None:
+        return None
+    req = urllib.request.Request(
+        safe,
+        headers={"Accept": "application/xml, text/xml, */*", "User-Agent": "ai-browser-farm-adapter/1"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = resp.read(_MAX_BYTES + 1)[:_MAX_BYTES]
+        return body.decode("utf-8", "replace")
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return None
+
+
 class NpmAdapter:
     name = "npm"
     _PKG = re.compile(r"^https://www\.npmjs\.com/package/((?:@[^/]+/)?[^/?#]+)/?$")
@@ -249,6 +294,76 @@ class OEmbedAdapter:
         )
 
 
+class RssSitemapAdapter:
+    """Last-resort structured fetch: a site's own RSS/Atom feed or sitemap.
+
+    Unlike API adapters, the host here is the target site itself, so SSRF is
+    enforced by _safe_target_url (HTTPS + no private/reserved IPs) rather than a
+    fixed allow-list. Feed endpoints are probed in order; sitemap is fallback.
+    """
+
+    name = "rss"
+    _SITE = re.compile(r"^https?://[^/]+/?$")
+    _FEED_PATHS = ("feed", "rss.xml", "atom.xml", "feed.xml", "index.xml")
+    _SITEMAP_PATHS = ("sitemap.xml",)
+
+    def can_handle(self, url: str) -> bool:
+        return bool(self._SITE.match(url))
+
+    def _probe(self, base: str, paths, get: Callable[[str], object], tag: str):
+        for path in paths:
+            text = get(f"{base}{path}")
+            if isinstance(text, str) and text.strip():
+                return self._render(text, f"{base}{path}", tag)
+        return None
+
+    def _render(self, xml: str, source_url: str, tag: str) -> Optional[AdapterResult]:
+        import xml.etree.ElementTree as ET
+
+        try:
+            root = ET.fromstring(xml.strip())
+        except ET.ParseError:
+            return None
+        ns = {"atom": "http://www.w3.org/2005/Atom",
+              "sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        items = root.findall(".//item") or root.findall("atom:entry", ns)
+        if items:
+            lines = [f"# Feed: {source_url}"]
+            count = 0
+            for it in items[:20]:
+                title = (it.findtext("title") or it.findtext("atom:title", namespaces=ns) or "").strip()
+                desc = (it.findtext("description") or it.findtext("atom:summary", namespaces=ns) or "").strip()
+                if not title:
+                    continue
+                count += 1
+                lines.append(f"- {title}")
+                if desc:
+                    lines.append(f"  {desc}")
+            if count:
+                return AdapterResult(adapter=tag, url=source_url,
+                                     markdown="\n".join(lines) + "\n",
+                                     metadata={"items": count, "source": source_url})
+            return None
+        urls = root.findall(".//sm:url/sm:loc", ns) or root.findall(".//url/loc")
+        if urls:
+            lines = [f"# Sitemap: {source_url}"]
+            locs = [(u.text or "").strip() for u in urls[:50] if (u.text or "").strip()]
+            if not locs:
+                return None
+            lines.extend(f"- {loc}" for loc in locs)
+            return AdapterResult(adapter=tag, url=source_url,
+                                 markdown="\n".join(lines) + "\n",
+                                 metadata={"urls": len(locs), "source": source_url})
+        return None
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        base = url if url.endswith("/") else url + "/"
+        res = self._probe(base, self._FEED_PATHS, get, "rss")
+        if res is not None:
+            return res
+        return self._probe(base, self._SITEMAP_PATHS, get, "sitemap")
+
+
 class AdapterRegistry:
     def __init__(self, adapters: List) -> None:
         self.adapters = list(adapters)
@@ -267,4 +382,5 @@ class AdapterRegistry:
 
 
 def default_registry() -> AdapterRegistry:
-    return AdapterRegistry([NpmAdapter(), GithubAdapter(), YoutubeTranscriptAdapter(), OEmbedAdapter()])
+    return AdapterRegistry([NpmAdapter(), GithubAdapter(), YoutubeTranscriptAdapter(),
+                            OEmbedAdapter(), RssSitemapAdapter()])
