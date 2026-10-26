@@ -197,7 +197,7 @@ def _chromium_html(url: str, session_name: str) -> str:
 def engine_driver(engine: str, url: str, session_name: str) -> str:
     """`BrowserWorker.driver_fn` contract: raw HTML string, exception on failure."""
     if not _allowed_by_robots(url, "HermesBrowserFarm"):
-        raise FetchBlocked(f"robots.txt disallows {url}")
+        raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     if engine == "lightpanda":
         return _lightpanda_html(url, session_name)
     if engine == "chromium-browser-use":

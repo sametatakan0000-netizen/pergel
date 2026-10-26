@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 73,
     "total_classes": 46,
-    "total_functions": 426,
-    "total_loc": 7954
+    "total_functions": 428,
+    "total_loc": 8022
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 695,
+      "loc": 722,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -2077,7 +2077,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 202,
+      "loc": 243,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2089,6 +2089,8 @@
         "_regex_markdown",
         "_allowed_by_robots",
         "_default_url_driver",
+        "_classify_refusal",
+        "__init__",
         "__init__",
         "execute_task"
       ],
@@ -2108,7 +2110,9 @@
         "FetchBlocked",
         "Request",
         "RobotFileParser",
+        "__init__",
         "_allowed_by_robots",
+        "_classify_refusal",
         "_regex_markdown",
         "_strip_non_script_tags",
         "append",
@@ -2133,8 +2137,10 @@
         "rstrip",
         "splitlines",
         "startswith",
+        "str",
         "strip",
         "sub",
+        "super",
         "time",
         "unescape",
         "urljoin",

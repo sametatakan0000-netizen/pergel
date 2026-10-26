@@ -86,7 +86,14 @@ _ROBOTS_CACHE: Dict[str, Any] = {}  # origin -> (parser, fetched_at)
 
 
 class FetchBlocked(Exception):
-    """Policy block (robots.txt / non-HTML). Escalating to a heavier engine must NOT bypass it."""
+    """Policy block (robots.txt / non-HTML / site refusal). Escalating to a heavier
+    engine must NOT bypass it. Carries a stable machine-readable code so the API
+    can surface *why* the fetch was refused instead of a vague failure."""
+
+    def __init__(self, message: str, code: str = "blocked_by_site") -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
 
 
 def _allowed_by_robots(url: str, user_agent: str) -> bool:
@@ -110,13 +117,45 @@ def _default_url_driver(engine: str, url: str, session_name: str) -> str:
     """Plain-HTTP fetch fallback (camofox tier and engines without binaries). Honors robots.txt."""
     ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
     if not _allowed_by_robots(url, "HermesBrowserFarm"):
-        raise FetchBlocked(f"robots.txt disallows {url}")
+        raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "text/html,*/*;q=0.5"})
-    with urllib.request.urlopen(req, timeout=15) as resp:  # HTTPError (403/5xx) propagates -> worker escalates
+    try:
+        resp = urllib.request.urlopen(req, timeout=15)
+    except urllib.error.HTTPError as exc:
+        code, message = _classify_refusal(exc.code, exc.headers.get("Retry-After"), "")
+        raise FetchBlocked(message or f"HTTP {exc.code}", code=code or "blocked_by_site")
+    ctype = ""
+    with resp:
         ctype = resp.headers.get("Content-Type", "")
-        if "html" not in ctype.lower() and "xml" not in ctype.lower():
-            raise FetchBlocked(f"non-HTML content type: {ctype}")
-        return resp.read(MAX_BODY_BYTES).decode("utf-8", errors="replace")
+        body = resp.read(MAX_BODY_BYTES)
+    if "html" not in ctype.lower() and "xml" not in ctype.lower():
+        raise FetchBlocked(f"non-HTML content type: {ctype}", code="non_html_content")
+    text = body.decode("utf-8", errors="replace")
+    code, message = _classify_refusal(200, None, text)
+    if code:
+        raise FetchBlocked(message, code=code)
+    return text
+
+
+def _classify_refusal(status: int, retry_after, text: str):
+    """Map an HTTP status / page body to a stable access-block code.
+
+    Returns (code, message); code is "" when the response is not a refusal.
+    Marker-based detection is deliberately narrow (captcha / paywall) — we
+    surface the refusal, we never attempt to bypass it.
+    """
+    if status == 403:
+        return "blocked_by_site", "the target site refused this request (HTTP 403)"
+    if status == 429:
+        return "rate_limited_by_site", f"the target site rate-limited this request (HTTP 429, retry_after={retry_after})"
+    if status in (401, 402):
+        return "paywall_or_login_required", f"the target requires login or payment (HTTP {status})"
+    body = (text or "").lower()
+    if "g-recaptcha" in body or "hcaptcha" in body or "cf-turnstile" in body:
+        return "captcha_required", "the page requires a CAPTCHA challenge"
+    if "subscribe to continue" in body or "log in to access" in body or "create an account to read" in body:
+        return "paywall_or_login_required", "the page requires login or subscription to read"
+    return "", ""
 
 
 class BrowserWorker:
@@ -158,7 +197,7 @@ class BrowserWorker:
             attempts.append(engine)
             try:
                 raw_html = self.driver_fn(engine, url, spec["session_name"])
-            except FetchBlocked:
+            except FetchBlocked as blocked:
                 return {
                     "job_id": job_id,
                     "session_name": spec["session_name"],
@@ -166,6 +205,8 @@ class BrowserWorker:
                     "attempted_engines": attempts,
                     "oracle_passed": False,
                     "blocked": True,
+                    "blocked_code": blocked.code,
+                    "blocked_message": str(blocked),
                     "markdown": "",
                     "discovered_apis": [],
                 }

@@ -63,14 +63,15 @@ class TestBrowseJob(_Base):
         self.assertEqual(job["attempted_engines"], ["lightpanda"])
         self.assertIn("https://shop.example.com/api/v2/pricing.json", job["discovered_apis"])
 
-    def test_blocked_job_is_failed_and_flagged(self):
+    def test_blocked_job_is_refused_with_structured_code(self):
         def drv(e, u, s):
-            raise FetchBlocked("robots")
+            raise FetchBlocked("robots", code="robots_disallowed")
         base = self.start(driver=drv)
-        st, job = call(base, "/v1/jobs/browse", {"url": "https://x.example.com"})
-        self.assertEqual(st, 200)
-        self.assertEqual(job["status"], "failed")
-        self.assertTrue(job["blocked"])
+        st, body = call(base, "/v1/jobs/browse", {"url": "https://x.example.com"})
+        self.assertEqual(st, 403)
+        self.assertIsInstance(body.get("error"), dict, body)
+        self.assertEqual(body["error"]["code"], "robots_disallowed")
+        self.assertEqual(body["error"]["domain"], "x.example.com")
 
     def test_rejects_bad_scheme_and_missing_url(self):
         base = self.start()
@@ -112,10 +113,10 @@ class TestSsrfFetchTimeGuard(_Base):
         driver = mock.Mock(return_value=PAGE)
         base = self.start(driver=driver)
         with mock.patch("socket.getaddrinfo", rebind):
-            st, job = call(base, "/v1/jobs/browse", {"url": "https://shop.example.com/p"})
-        self.assertEqual(st, 200)
-        self.assertEqual(job["status"], "failed")
-        self.assertTrue(job["blocked"])
+            st, body = call(base, "/v1/jobs/browse", {"url": "https://shop.example.com/p"})
+        self.assertEqual(st, 400)
+        self.assertIsInstance(body.get("error"), dict, body)
+        self.assertEqual(body["error"]["code"], "target_private_address")
         driver.assert_not_called()
 
 

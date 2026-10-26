@@ -37,6 +37,17 @@ from src.search.query_fanout import decompose_query_llm, execute_fanout_and_grou
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}
 
+# Access-block contract: every refusal surfaces a stable code, the target domain
+# and a human message. Never silently bypassed, never a vague failure.
+ACCESS_BLOCK_HTTP_STATUS = {
+    "robots_disallowed": 403,
+    "blocked_by_site": 403,
+    "captcha_required": 403,
+    "paywall_or_login_required": 402,
+    "rate_limited_by_site": 429,
+    "target_private_address": 400,
+}
+
 # ---- per-client rate limiting (SaaS surfaces only; router paths stay unthrottled) ----
 _RATE_BUCKETS: Dict[str, list] = {}
 _RATE_LOCK = threading.Lock()
@@ -117,7 +128,7 @@ def _guarded_driver(driver_fn: Callable[[str, str, str], str], allow_private: bo
     def wrapped(engine: str, url: str, session_name: str) -> str:
         err = _validate_target(url, allow_private)
         if err:
-            raise FetchBlocked(f"ssrf guard: {err}")
+            raise FetchBlocked(f"ssrf guard: {err}", code="target_private_address")
         return driver_fn(engine, url, session_name)
     return wrapped
 
@@ -394,6 +405,22 @@ class BrowserFarmSaaSServer:
                     completed_job["discovered_apis"] = exec_res["discovered_apis"]
                     completed_job["attempted_engines"] = exec_res["attempted_engines"]
                     completed_job["blocked"] = bool(exec_res.get("blocked"))
+                    blocked_code = exec_res.get("blocked_code")
+                    if blocked_code:
+                        # Access refusal: never a vague failure, never silently
+                        # bypassed. Surface the stable code + domain + message.
+                        from urllib.parse import urlsplit
+                        self._send_json(
+                            ACCESS_BLOCK_HTTP_STATUS.get(blocked_code, 403),
+                            {"error": {
+                                "code": blocked_code,
+                                "message": exec_res.get("blocked_message")
+                                           or "request blocked by access policy",
+                                "domain": urlsplit(url).netloc,
+                                "request_id": job["job_id"],
+                            }},
+                        )
+                        return
                     if webhook_url:
                         wh_res = parent.webhook_dispatcher.dispatch(
                             webhook_url, completed_job
