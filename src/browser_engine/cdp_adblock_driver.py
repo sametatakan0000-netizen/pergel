@@ -204,7 +204,8 @@ class AdblockBrowserSession:
         return data.get("html", "")
 
 
-def make_adblock_driver(bundle: AdblockBundle, browser_path: Optional[str] = None):
+def make_adblock_driver(bundle: AdblockBundle, browser_path: Optional[str] = None,
+                        extensions: Optional["ExtensionHost"] = None):
     """Sync ``driver_fn(engine, url, session_name) -> raw_html`` for ``BrowserWorker``.
 
     Fetches the URL through one enforced Chromium session and returns the
@@ -214,7 +215,8 @@ def make_adblock_driver(bundle: AdblockBundle, browser_path: Optional[str] = Non
 
     def driver(engine: str, url: str, session_name: str) -> str:
         async def go():
-            async with AdblockBrowserSession(bundle, browser_path) as sess:
+            async with AdblockBrowserSession(bundle, browser_path,
+                                             extensions=extensions) as sess:
                 return await sess.fetch(url, host=None, timeout=30.0)
 
         body = asyncio.run(go())
