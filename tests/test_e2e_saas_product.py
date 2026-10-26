@@ -32,6 +32,10 @@ def setUpModule():
     global _saved_adblock_env
     _saved_adblock_env = os.environ.get("ORACLE_ADBLOCK_LISTS")
     os.environ["ORACLE_ADBLOCK_LISTS"] = "off"
+    # Auth must be off here: a BROWSE_API_KEY leaking in from the caller's env
+    # would 401 these requests (the suite sends no Authorization header).
+    global _saved_browse_api_key
+    _saved_browse_api_key = os.environ.pop("BROWSE_API_KEY", None)
 
 
 def tearDownModule():
@@ -40,6 +44,8 @@ def tearDownModule():
         os.environ.pop("ORACLE_ADBLOCK_LISTS", None)
     else:
         os.environ["ORACLE_ADBLOCK_LISTS"] = _saved_adblock_env
+    if _saved_browse_api_key is not None:
+        os.environ["BROWSE_API_KEY"] = _saved_browse_api_key
 
 
 def _or_model(mid, cost_in, vision=False, efforts=("low", "medium", "high"), ctx=200000, aa=None):

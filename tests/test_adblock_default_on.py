@@ -21,6 +21,9 @@ class TestDefaultOn(unittest.TestCase):
         self._env = mock.patch.dict(os.environ, {}, clear=False)
         self._env.start()
         os.environ.pop("ORACLE_ADBLOCK_LISTS", None)
+        # A loaded extension host must not leak in from the caller's env; this
+        # suite is about list detection alone.
+        os.environ.pop("ORACLE_EXTENSIONS_DIR", None)
         self.tmp = tempfile.mkdtemp()
         self.lists = os.path.join(self.tmp, "filterlists")
         os.makedirs(self.lists)
