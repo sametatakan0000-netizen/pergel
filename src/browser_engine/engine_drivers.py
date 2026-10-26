@@ -39,10 +39,20 @@ def _chromium_launch_args() -> list:
     """
     if not _egress_enforce():
         return []
-    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "127.0.0.1")
+    _ensure_egress_guard()
+    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "10.255.255.1")
     port = int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899"))
     from src.browser_engine.netns import chromium_proxy_args
     return chromium_proxy_args(proxy_host=host, proxy_port=port)
+
+
+def _ensure_egress_guard() -> None:
+    """Start the live egress proxy once per process (serving-path wiring)."""
+    from src.browser_engine import egress_guard
+    if egress_guard._current_guard is None:
+        egress_guard.start_egress_guard(
+            use_netns=os.environ.get("ORACLE_EGRESS_NETNS", "1") == "1",
+            proxy_port=int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899")))
 
 
 class EngineUnavailable(RuntimeError):
