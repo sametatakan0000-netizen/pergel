@@ -20,6 +20,7 @@ import unittest.mock
 import urllib.request
 
 from src.api.server import BrowserFarmSaaSServer
+from tests.test_cdp_e2e_live import _find_chromium
 
 # The body needs >10 chars of extractable text or the worker's engine ladder
 # treats the fetch as empty and the job fails before assertions can run.
@@ -63,6 +64,13 @@ class _H(http.server.BaseHTTPRequestHandler):
 
 class HttpChainExtensionProofTests(unittest.TestCase):
     def test_extension_blocks_script_via_real_http_endpoint(self):
+        try:
+            import websockets  # noqa: F401
+        except ImportError:
+            self.skipTest('websockets not installed')
+        if _find_chromium() is None:
+            self.skipTest('no chromium binary')
+
         httpd = http.server.HTTPServer(("127.0.0.1", 0), _H)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         page_url = f"http://127.0.0.1:{httpd.server_address[1]}/"

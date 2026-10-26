@@ -1,9 +1,9 @@
 {
   "summary": {
     "total_files": 73,
-    "total_classes": 45,
-    "total_functions": 420,
-    "total_loc": 7828
+    "total_classes": 46,
+    "total_functions": 426,
+    "total_loc": 7954
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 679,
+      "loc": 695,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -196,6 +196,7 @@
         "_guarded_driver",
         "_with_fallback",
         "_resolve_driver",
+        "_maybe_extension_host",
         "wrapped",
         "wrapped",
         "__init__",
@@ -234,6 +235,7 @@
         "src.browser_engine.browser_orchestrator",
         "src.browser_engine.cdp_adblock_driver",
         "src.browser_engine.engine_drivers",
+        "src.browser_engine.extension_host",
         "src.browser_engine.worker",
         "src.infra.self_healing_watchdog",
         "src.infra.webhook_dispatcher",
@@ -277,6 +279,7 @@
         "_forward_chat",
         "_guarded_driver",
         "_jobs_authorized",
+        "_maybe_extension_host",
         "_read_json",
         "_relay_stream",
         "_resolve_driver",
@@ -335,8 +338,10 @@
         "learn",
         "len",
         "list",
+        "list_extensions",
         "listdir",
         "load_adblock_bundle",
+        "load_extensions_dir",
         "load_snapshot",
         "loads",
         "lower",
@@ -1271,7 +1276,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 218,
+      "loc": 244,
       "classes": [
         "AdblockBrowserSession"
       ],
@@ -1282,6 +1287,7 @@
         "__aenter__",
         "__aexit__",
         "_wait_ws",
+        "_resume_message",
         "_call",
         "_run_pump",
         "fetch",
@@ -1295,6 +1301,7 @@
         "adblock_session",
         "asyncio",
         "cdp_bridge",
+        "extension_host",
         "glob",
         "json",
         "os",
@@ -1316,6 +1323,7 @@
         "_call",
         "_chromium",
         "_render",
+        "_resume_message",
         "_run_pump",
         "_wait_ws",
         "access",
@@ -1361,8 +1369,9 @@
     {
       "module": "src.browser_engine.cdp_bridge",
       "path": "src/browser_engine/cdp_bridge.py",
-      "loc": 149,
+      "loc": 177,
       "classes": [
+        "CompositeEngine",
         "CDPBridge"
       ],
       "functions": [
@@ -1374,6 +1383,8 @@
         "_rule_id_of",
         "_cdp_headers_to_dict",
         "__init__",
+        "check",
+        "__init__",
         "on_request_paused"
       ],
       "imports": [
@@ -1382,6 +1393,8 @@
         "typing"
       ],
       "calls": [
+        "CompositeEngine",
+        "Decision",
         "_action_of",
         "_blocked",
         "_cdp_headers_to_dict",
@@ -1394,12 +1407,13 @@
         "decide_cdp_response",
         "dict",
         "get",
+        "isinstance",
         "items",
         "pop",
         "record",
         "ssrf_guard"
       ],
-      "change_risk": 6.46
+      "change_risk": 7.61
     },
     {
       "module": "src.browser_engine.cosmetic",
@@ -1704,7 +1718,7 @@
     {
       "module": "src.browser_engine.extension_host",
       "path": "src/browser_engine/extension_host.py",
-      "loc": 119,
+      "loc": 175,
       "classes": [
         "ExtensionError",
         "Extension",
@@ -1713,6 +1727,8 @@
       ],
       "functions": [
         "_rank",
+        "load_extensions_dir",
+        "_manifest_rules",
         "__init__",
         "engine",
         "__init__",
@@ -1726,25 +1742,43 @@
       ],
       "imports": [
         "__future__",
+        "json",
+        "mv3_surface",
+        "os",
         "rule_engine",
         "typing"
       ],
       "calls": [
         "Decision",
+        "Extension",
         "ExtensionError",
+        "ExtensionHost",
         "_Capsule",
+        "_manifest_rules",
         "_rank",
+        "attach",
         "bool",
         "check",
         "compile_rules",
+        "content_script_sources",
         "engine",
+        "extend",
         "get",
+        "isdir",
+        "isfile",
+        "isinstance",
+        "join",
         "list",
+        "listdir",
+        "load",
+        "load_manifest",
+        "manifest_dnr_rules",
+        "open",
         "pop",
         "sorted",
         "values"
       ],
-      "change_risk": 5.29
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.mv3_surface",
@@ -3159,12 +3193,9 @@
     "src.browser_engine.egress_guard.handler",
     "src.browser_engine.egress_guard.port",
     "src.browser_engine.engine_drivers.shutdown_pools",
-    "src.browser_engine.extension_host.attach",
     "src.browser_engine.extension_host.detach",
-    "src.browser_engine.extension_host.list_extensions",
     "src.browser_engine.extension_host.set_enabled",
     "src.browser_engine.mv3_surface.build_extension_engine",
-    "src.browser_engine.mv3_surface.content_script_sources",
     "src.browser_engine.mv3_surface.uses_dnr",
     "src.browser_engine.native_capabilities.build_focus_engine",
     "src.browser_engine.native_capabilities.capture_screenshot",

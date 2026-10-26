@@ -42,6 +42,13 @@ class _H(http.server.BaseHTTPRequestHandler):
 
 class LoadExtensionsDirPageProofTests(unittest.TestCase):
     def test_production_loader_blocks_matching_script_on_page(self):
+        try:
+            import websockets  # noqa: F401
+        except ImportError:
+            self.skipTest('websockets not installed')
+        if _find_chromium() is None:
+            self.skipTest('no chromium binary')
+
         httpd = http.server.HTTPServer(("127.0.0.1", 0), _H)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         url = f"http://127.0.0.1:{httpd.server_address[1]}/"
