@@ -32,11 +32,16 @@ The isolated rule layers are now one enforceable fetch path, not standalone modu
 
 ## Platform adapters (structured-API-first fetch, 2026-10-26)
 Before falling back to the engine ladder, `execute_task` now tries platform adapters that pull from official/structured APIs — cheaper, cleaner, and immune to bot-walls (`src/browser_engine/platform_adapters.py`, `a9bc973`):
-- `AdapterRegistry` + `NpmAdapter`/`GithubAdapter`, each `can_handle(url)` + `fetch(url, get) -> AdapterResult|None`. `None` = fall through to the generic ladder.
-- Injectable JSON getter (unit tests pass a fake); default `_http_get_json` is SSRF-safe: https-only, allow-listed API hosts (`registry.npmjs.org`, `api.github.com`), 10s timeout, 2MB cap. No credentials read/logged.
-- Worker short-circuit: on adapter match the result carries `adapter`, `adapter_metadata`, `final_engine=platform-adapter:<name>` and the engine ladder never runs. Verified live: `npmjs.com/package/left-pad` -> 982 chars, `github.com/python/cpython` -> 8999 chars, `example.com` -> None (falls through).
-- Tests: `test_platform_adapters.py` + `test_worker_platform_adapters.py` (15 tests). Full non-live suite: **493 passed** (verified run 2026-10-26).
-- Next in this layer (not yet built): YouTube transcript adapter (youtube-transcript-api / yt-dlp), oEmbed for generic video/article pages, RSS/sitemap for news.
+- **Layer complete (2026-10-27).** `src/browser_engine/platform_adapters.py`, registry order `npm, github, youtube-transcript, oembed, rss, reddit-oauth, wayback`:
+  - `AdapterRegistry.run` tries **every** matching adapter until one returns a result (a `None`, e.g. no creds, falls through to the next); SSRF-safe default getters (`_http_get_json` / `_http_get_text` per adapter), 10s timeout, 2MB cap, https-only allow-listed API hosts.
+  - **npm / github** (`a9bc973`): official registry/API. Live: `left-pad` 982 chars, `cpython` 8999 chars.
+  - **youtube-transcript** (`d20f356`): transcript API. Live: `dQw4w9WgXcQ` 2090 chars, `jNQXAC9IVRw` 218 chars.
+  - **oembed** (`a376c59`): generic video/article oEmbed.
+  - **rss** (`804e078`, `af55420`): RSS/Atom + sitemap fallback with target-host SSRF guard; uses XML getter. Live: `news.ycombinator.com` 2420 chars, `blog.github.com` 4969 chars.
+  - **wayback** (`2031fbd`, `1d692b6`): Internet Archive Availability API + raw replay (text getter — replay body is HTML). Archived fallback for Reddit/LinkedIn. Live: `reddit.com/r/Python/` passes via `wayback`.
+  - **reddit-oauth** (`ac4aeb5`): official Reddit OAuth2 (bearer), credential-gated; without creds returns None -> falls through to wayback. Secrets never logged/committed.
+  - Tests: `test_platform_adapters.py` + per-adapter test files. Full non-live suite: **595 passed** (verified 2026-10-27).
+  - Next in this layer (not yet built): `storage_state` user-session tier (step 3 of the stealth/bot ladder) and the paid-unblocker last resort (step 4, requires explicit user opt-in). Both are ToS-sensitive; currently unimplemented.
 
 ## Known flaky (pre-existing, 2026-10-26)
 - `tests/test_cosmetic_timing.py::TestCosmeticDocumentStart::test_late_injection_is_observable` fails intermittently (~2/5 runs) in a visibility probe ("probe never saw the ad even with late injection"). **Pre-dates** the platform-adapter work (reproduced with worker changes stashed: 4/5 pass without, 3/5 with — same instability either way). Not caused by `a9bc973`. Needs a timing/latency fix in the cosmetic injection visibility check.
