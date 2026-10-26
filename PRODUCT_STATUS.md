@@ -30,6 +30,17 @@ The isolated rule layers are now one enforceable fetch path, not standalone modu
 - `src/browser_engine/cdp_adblock_driver.py` — `AdblockBrowserSession` runs a real headless Chromium over CDP (WebSocket, `Fetch` interception + `Page.addScriptToEvaluateOnNewDocument`) and enforces all four layers on fetch+browse. `make_adblock_driver(bundle)` adapts it to the blocking `driver_fn(engine, url, session) -> raw_html` contract.
 - Wired into the product: `BrowserWorker.html_to_clean_markdown` runs ad-free markdown through the adblock driver (proved end-to-end). **Default-on** (2026-10-25): `_resolve_driver` enforces whenever the durable filter lists (`~/.local/share/browser_farm/filterlists/*.txt`) exist. `ORACLE_ADBLOCK_LISTS` selects `os.pathsep`-joined custom paths or `off`; missing lists fall back to `engine_driver` so the product never breaks; `_with_fallback` fails open on availability (Chromium/CDP failure) while policy blocks still never escalate. Tests: `test_adblock_session`, `test_adblock_live`, `test_cdp_adblock_driver_live`, `test_worker_adblock_integration`, `test_adblock_real_lists`, `test_adblock_default_on` (412/412 pass).
 
+## Platform adapters (structured-API-first fetch, 2026-10-26)
+Before falling back to the engine ladder, `execute_task` now tries platform adapters that pull from official/structured APIs — cheaper, cleaner, and immune to bot-walls (`src/browser_engine/platform_adapters.py`, `a9bc973`):
+- `AdapterRegistry` + `NpmAdapter`/`GithubAdapter`, each `can_handle(url)` + `fetch(url, get) -> AdapterResult|None`. `None` = fall through to the generic ladder.
+- Injectable JSON getter (unit tests pass a fake); default `_http_get_json` is SSRF-safe: https-only, allow-listed API hosts (`registry.npmjs.org`, `api.github.com`), 10s timeout, 2MB cap. No credentials read/logged.
+- Worker short-circuit: on adapter match the result carries `adapter`, `adapter_metadata`, `final_engine=platform-adapter:<name>` and the engine ladder never runs. Verified live: `npmjs.com/package/left-pad` -> 982 chars, `github.com/python/cpython` -> 8999 chars, `example.com` -> None (falls through).
+- Tests: `test_platform_adapters.py` + `test_worker_platform_adapters.py` (15 tests). Full non-live suite: **493 passed** (verified run 2026-10-26).
+- Next in this layer (not yet built): YouTube transcript adapter (youtube-transcript-api / yt-dlp), oEmbed for generic video/article pages, RSS/sitemap for news.
+
+## Known flaky (pre-existing, 2026-10-26)
+- `tests/test_cosmetic_timing.py::TestCosmeticDocumentStart::test_late_injection_is_observable` fails intermittently (~2/5 runs) in a visibility probe ("probe never saw the ad even with late injection"). **Pre-dates** the platform-adapter work (reproduced with worker changes stashed: 4/5 pass without, 3/5 with — same instability either way). Not caused by `a9bc973`. Needs a timing/latency fix in the cosmetic injection visibility check.
+
 ## Still pending / awaits user (blocked on HFY input)
 1. `hermes login` to reconnect the Nous Portal connector (sticky fallback is covering meanwhile).
 2. Three cross-vendor evaluations for that connector's review (0/3 done).

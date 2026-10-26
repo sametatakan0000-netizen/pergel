@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 73,
-    "total_classes": 46,
-    "total_functions": 431,
-    "total_loc": 8138
+    "total_files": 74,
+    "total_classes": 50,
+    "total_functions": 442,
+    "total_loc": 8319
   },
   "modules": [
     {
@@ -1876,6 +1876,71 @@
       "change_risk": 0.98
     },
     {
+      "module": "src.browser_engine.platform_adapters",
+      "path": "src/browser_engine/platform_adapters.py",
+      "loc": 155,
+      "classes": [
+        "AdapterResult",
+        "NpmAdapter",
+        "GithubAdapter",
+        "AdapterRegistry"
+      ],
+      "functions": [
+        "_safe_api_url",
+        "_http_get_json",
+        "default_registry",
+        "can_handle",
+        "fetch",
+        "can_handle",
+        "fetch",
+        "__init__",
+        "match",
+        "run"
+      ],
+      "imports": [
+        "__future__",
+        "base64",
+        "dataclasses",
+        "json",
+        "re",
+        "typing",
+        "urllib.error",
+        "urllib.parse",
+        "urllib.request"
+      ],
+      "calls": [
+        "AdapterRegistry",
+        "AdapterResult",
+        "GithubAdapter",
+        "NpmAdapter",
+        "Request",
+        "_safe_api_url",
+        "append",
+        "b64decode",
+        "bool",
+        "can_handle",
+        "compile",
+        "decode",
+        "fetch",
+        "frozenset",
+        "get",
+        "group",
+        "isinstance",
+        "join",
+        "list",
+        "loads",
+        "lower",
+        "match",
+        "read",
+        "replace",
+        "str",
+        "strip",
+        "urlopen",
+        "urlsplit"
+      ],
+      "change_risk": 10.0
+    },
+    {
       "module": "src.browser_engine.procedural",
       "path": "src/browser_engine/procedural.py",
       "loc": 156,
@@ -2078,7 +2143,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 344,
+      "loc": 370,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2094,6 +2159,7 @@
         "_default_url_raw",
         "_default_url_driver",
         "_classify_refusal",
+        "_adapter_result_to_task_result",
         "__init__",
         "__init__",
         "execute_task"
@@ -2103,6 +2169,7 @@
         "html",
         "re",
         "src.browser_engine.browser_orchestrator",
+        "src.browser_engine.platform_adapters",
         "time",
         "trafilatura",
         "typing",
@@ -2117,6 +2184,7 @@
         "Request",
         "RobotFileParser",
         "__init__",
+        "_adapter_result_to_task_result",
         "_allowed_by_robots",
         "_classify_refusal",
         "_default_url_raw",
@@ -2128,6 +2196,7 @@
         "can_fetch",
         "compile",
         "decode",
+        "default_registry",
         "discover_har_api_endpoints",
         "driver_fn",
         "extract",
@@ -2146,6 +2215,7 @@
         "read",
         "record_domain_escalation",
         "rstrip",
+        "run",
         "set",
         "split",
         "splitlines",
