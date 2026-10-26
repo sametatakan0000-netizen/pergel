@@ -41,6 +41,19 @@ class TestOEmbedKnownProviders(unittest.TestCase):
         self.assertIn("Chan", res.markdown)
         self.assertEqual(get.calls, [ob])  # only the oEmbed endpoint
 
+    def test_instagram_response_without_title_still_accepted(self):
+        # Meta's live IG oEmbed returns provider_name/html but no title/author_name.
+        url = "https://www.instagram.com/p/fA9uwTtkSN/"
+        ob = ("https://graph.facebook.com/v26.0/instagram_oembed?url="
+              + quote(url, safe=""))
+        get = FakeGet({ob: {"version": "1.0", "provider_name": "Instagram",
+                            "provider_url": "https://www.instagram.com/",
+                            "type": "rich", "width": 658,
+                            "html": "<blockquote class=\"instagram-media\"></blockquote>"}})
+        res = OEmbedAdapter().fetch(url, get)
+        self.assertIsNotNone(res)
+        self.assertIn("Instagram", res.markdown)
+
     def test_instagram_post_uses_tokenless_graph_oembed(self):
         url = "https://www.instagram.com/p/fA9uwTtkSN/"
         ob = ("https://graph.facebook.com/v26.0/instagram_oembed?url="

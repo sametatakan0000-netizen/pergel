@@ -170,7 +170,10 @@ class OEmbedAdapter:
         if endpoint is None:
             return None
         data = get(endpoint)
-        if not isinstance(data, dict) or not (data.get("title") or data.get("author_name")):
+        if not isinstance(data, dict):
+            return None
+        if not (data.get("title") or data.get("author_name")
+                or data.get("provider_name") or data.get("html")):
             return None
         lines = []
         if data.get("title"):
