@@ -151,9 +151,22 @@ def _classify_refusal(status: int, retry_after, text: str):
     if status in (401, 402):
         return "paywall_or_login_required", f"the target requires login or payment (HTTP {status})"
     body = (text or "").lower()
-    if "g-recaptcha" in body or "hcaptcha" in body or "cf-turnstile" in body:
+    # Only a real challenge WIDGET counts: an element/script that loads the
+    # provider, not a mention of the word in prose or code comments.
+    captcha_widgets = (
+        'class="g-recaptcha"', "class='g-recaptcha'",
+        'class="h-captcha"', "class='h-captcha'",
+        "cf-challenge", "challenges.cloudflare.com/turnstile",
+        "www.google.com/recaptcha/api.js", "js.hcaptcha.com/1/api.js",
+    )
+    if any(w in body for w in captcha_widgets):
         return "captcha_required", "the page requires a CAPTCHA challenge"
-    if "subscribe to continue" in body or "log in to access" in body or "create an account to read" in body:
+    # Paywall only when a blocking overlay/wall is present, not the phrase alone.
+    paywall_walls = (
+        'class="paywall"', "class='paywall'", "id=\"paywall\"",
+        "paywall-overlay", "subscription-wall", "login-wall",
+    )
+    if any(w in body for w in paywall_walls):
         return "paywall_or_login_required", "the page requires login or subscription to read"
     return "", ""
 

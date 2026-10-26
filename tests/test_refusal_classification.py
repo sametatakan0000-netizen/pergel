@@ -22,10 +22,17 @@ class _RefusalHandler(http.server.BaseHTTPRequestHandler):
         "/401": (401, "text/html", "<html><body>Unauthorized</body></html>"),
         "/captcha": (200, "text/html", "<html><body>Are you a robot? "
                                       "<div class='g-recaptcha'></div></body></html>"),
-        "/paywall": (200, "text/html", "<html><body>Subscribe to continue reading. "
-                                       "Log in to access this article.</body></html>"),
+        "/paywall": (200, "text/html", "<html><body><div class='paywall-overlay'>Subscribe to continue reading. "
+                                       "Log in to access this article.</div></body></html>"),
         "/ok": (200, "text/html", "<html><body><p>plenty of visible text for extraction</p>"
                                   "</body></html>"),
+        # Mentions the words but has NO actual challenge widget / paywall
+        # overlay. This is article CONTENT, not a refusal. Must NOT be blocked.
+        "/mentions": (200, "text/html",
+                      "<html><body><p>A captcha (reCAPTCHA, hCaptcha) is a challenge</p>"
+                      "<p>To continue reading this article, please subscribe to our</p>"
+                      "<p>newspaper. Log in to access the archive. The g-recaptcha term</p>"
+                      "<p>appears here only as discussed text in the body.</p></body></html>"),
     }
 
     def do_GET(self):
@@ -87,6 +94,11 @@ class RefusalClassificationTests(unittest.TestCase):
 
     def test_paywall_body_is_paywall_or_login_required(self):
         self._assert_block("/paywall", "paywall_or_login_required")
+
+    def test_article_that_mentions_captcha_is_not_blocked(self):
+        # False-positive guard: discussing captchas/paywalls is not a refusal.
+        body = self._drive("/mentions")
+        self.assertIn("discussed text", body)
 
     def test_normal_page_is_not_blocked(self):
         body = self._drive("/ok")

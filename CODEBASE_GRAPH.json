@@ -3,7 +3,7 @@
     "total_files": 73,
     "total_classes": 46,
     "total_functions": 428,
-    "total_loc": 8022
+    "total_loc": 8035
   },
   "modules": [
     {
@@ -2077,7 +2077,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 243,
+      "loc": 256,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2115,6 +2115,7 @@
         "_classify_refusal",
         "_regex_markdown",
         "_strip_non_script_tags",
+        "any",
         "append",
         "build_session_task",
         "can_fetch",

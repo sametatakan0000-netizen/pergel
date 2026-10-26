@@ -126,7 +126,7 @@ Lightpanda (bizim), Chromium (Chrome-CFT, chrome-headless-shell, Brave, Edge, Vi
 Browser Use (OSS), Stagehand (Browserbase), Vercel agent-browser (`@e1` referansları, ~%93 token tasarrufu — satıcı beyanı), Playwright MCP, Puppeteer, Selenium, Firecrawl `/agent`+`/interact`, Steel leaderboard ajanları.
 
 ### Pazar gerçeği
-Piyasa iki eksende ayrışıyor: (1) **geçme/stealth** (bot-korumalı siteler) — burada kimsenin bizim iddiamız yok, ve kırmızı çizgimiz gereği aşma yapmıyoruz; (2) **maliyet + hız + hafiflik** — burası bizim asıl alanımız (self-host, ~17 MiB, ~20 ms). Biz C2/C3'ün **çalıştırdığı çekirdek katman** olabiliriz: aynı işi daha düşük sunucu maliyetiyle yaparız. Hukuki/sağlayıcı notu: Ninth Circuit (Ağu 2026) "erişimi yapan kullanıcıdır" dedi; agentic browsing hukuku hâlâ hareketli.
+Piyasa iki eksende ayrışıyor: (1) **geçme/stealth** (bot-korumalı siteler) — burada bizim tercihimiz net: bir reddi **atlatmayız, açıkça bildiririz** (`robots_disallowed`, `blocked_by_site`, `captcha_required`, `paywall_or_login_required`, `rate_limited_by_site`; bkz. product-skeleton §3a). Yasak olan şey aşma/paywall'dır, stealth'in kendisi değil; proxy ve tutarlı kimlik meşru kabul edilir. (2) **maliyet + hız + hafiflik** — burası bizim asıl alanımız (self-host, ~17 MiB, ~20 ms). Biz C2/C3'ün **çalıştırdığı çekirdek katman** olabiliriz: aynı işi daha düşük sunucu maliyetiyle yaparız. Hukuki/sağlayıcı notu: Ninth Circuit (Ağu 2026) "erişimi yapan kullanıcıdır" dedi; agentic browsing hukuku hâlâ hareketli.
 
 ## 5. Kaynaklar
 - Firecrawl vs Jina Reader 2026 — use-apify.com/blog/firecrawl-vs-jina-reader-2026
