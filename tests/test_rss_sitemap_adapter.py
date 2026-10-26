@@ -91,3 +91,14 @@ class TestRegistryRssLast(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCommonFeedPaths(unittest.TestCase):
+    def test_rss_bare_path_probed(self):
+        # news.ycombinator.com serves its feed at /rss (bare, no .xml).
+        site = "https://news.ycombinator.com/"
+        feed = site + "rss"
+        get = FakeGet({feed: RSS})
+        res = RssSitemapAdapter().fetch(site, get)
+        self.assertIsNotNone(res)
+        self.assertEqual(res.adapter, "rss")

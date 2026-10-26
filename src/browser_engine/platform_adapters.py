@@ -304,7 +304,7 @@ class RssSitemapAdapter:
 
     name = "rss"
     _SITE = re.compile(r"^https?://[^/]+/?$")
-    _FEED_PATHS = ("feed", "rss.xml", "atom.xml", "feed.xml", "index.xml")
+    _FEED_PATHS = ("feed", "rss", "rss.xml", "atom.xml", "feed.xml", "index.xml")
     _SITEMAP_PATHS = ("sitemap.xml",)
 
     def can_handle(self, url: str) -> bool:
