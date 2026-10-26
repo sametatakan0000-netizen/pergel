@@ -21,7 +21,7 @@ from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.engine_drivers import engine_driver
 from src.browser_engine.cdp_adblock_driver import make_adblock_driver
 from src.browser_engine.adblock_session import load_adblock_bundle
-from src.browser_engine.worker import BrowserWorker
+from src.browser_engine.worker import BrowserWorker, FetchBlocked
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
@@ -80,6 +80,19 @@ def _usage_from(raw: bytes) -> Dict[str, Any]:
     return usage if isinstance(usage, dict) else {}
 
 
+def _resolves_private(hostname: str) -> Optional[str]:
+    """Return error text if the host is unresolvable or resolves to a private/loopback address."""
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        return "target host does not resolve"
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return "target resolves to a private/loopback address"
+    return None
+
+
 def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
     """Reject non-http(s) and loopback/private/link-local targets (SSRF guard). Returns error text or None."""
     if not isinstance(url, str) or not url:
@@ -89,15 +102,22 @@ def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
         return "url must be http(s) with a host"
     if allow_private:
         return None
-    try:
-        infos = socket.getaddrinfo(parts.hostname, None)
-    except socket.gaierror:
-        return None  # shortcut: unresolvable host passes (fetch fails itself); DNS-rebinding/redirect-to-private not covered, pin resolved IP when exposed publicly
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0].split("%")[0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            return "target resolves to a private/loopback address"
-    return None
+    return _resolves_private(parts.hostname)
+
+
+def _guarded_driver(driver_fn: Callable[[str, str, str], str], allow_private: bool):
+    """Fetch-time SSRF re-check: closes the submit->fetch DNS-rebinding window.
+
+    # shortcut: engine subprocesses (lightpanda/chromium) re-resolve DNS and follow
+    # redirects on their own, so redirect-to-private inside an engine is not covered;
+    # pin the resolved IP when exposed publicly.
+    """
+    def wrapped(engine: str, url: str, session_name: str) -> str:
+        err = _validate_target(url, allow_private)
+        if err:
+            raise FetchBlocked(f"ssrf guard: {err}")
+        return driver_fn(engine, url, session_name)
+    return wrapped
 
 
 # Default-on adblock enforcement. Filter lists live here (mirror of the public
@@ -191,7 +211,7 @@ class BrowserFarmSaaSServer:
         # The loopback Hermes subscription proxy holds the real Portal credentials.
         self.upstream_api_key = os.environ.get("ORACLE_UPSTREAM_API_KEY", "local-router")
         self.worker = BrowserWorker(
-            driver_fn=driver_fn or _resolve_driver(adblock_list_paths),
+            driver_fn=_guarded_driver(driver_fn or _resolve_driver(adblock_list_paths), allow_private_targets),
             orchestrator=BrowserFarmOrchestrator(db_path=os.path.join(self.db_dir, "browser_memory.db")),
         )
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)

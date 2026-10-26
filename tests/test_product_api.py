@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import urllib.error
 import urllib.request
+from unittest import mock
 
 from src.api.server import BrowserFarmSaaSServer
 from src.browser_engine.worker import FetchBlocked
@@ -85,6 +86,37 @@ class TestBrowseJob(_Base):
     def test_private_targets_allowed_when_opted_in(self):
         base = self.start(allow_private_targets=True)
         self.assertEqual(call(base, "/v1/jobs/browse", {"url": "http://127.0.0.1:1/x"})[0], 200)
+
+
+class TestSsrfFetchTimeGuard(_Base):
+    def test_unresolvable_host_rejected_at_submit(self):
+        def deny(host, *args, **kwargs):
+            if isinstance(host, str) and host.endswith(".invalid"):
+                raise _socket.gaierror("nxdomain")
+            return _fake_dns(host, *args, **kwargs)
+        base = self.start()
+        with mock.patch("socket.getaddrinfo", deny):
+            st, body = call(base, "/v1/jobs/browse", {"url": "http://no-such-host.invalid/x"})
+        self.assertEqual(st, 400)
+        self.assertIn("resolve", body["error"])
+
+    def test_dns_rebinding_blocked_at_fetch_time(self):
+        """Submit-time DNS is public, fetch-time DNS flips private -> policy block, no engine call."""
+        calls = {"n": 0}
+        def rebind(host, *args, **kwargs):
+            if isinstance(host, str) and host.endswith("example.com"):
+                calls["n"] += 1
+                ip = "93.184.216.34" if calls["n"] == 1 else "127.0.0.1"
+                return [(_socket.AF_INET, _socket.SOCK_STREAM, 6, "", (ip, 0))]
+            return _fake_dns(host, *args, **kwargs)
+        driver = mock.Mock(return_value=PAGE)
+        base = self.start(driver=driver)
+        with mock.patch("socket.getaddrinfo", rebind):
+            st, job = call(base, "/v1/jobs/browse", {"url": "https://shop.example.com/p"})
+        self.assertEqual(st, 200)
+        self.assertEqual(job["status"], "failed")
+        self.assertTrue(job["blocked"])
+        driver.assert_not_called()
 
 
 class TestFanout(_Base):
