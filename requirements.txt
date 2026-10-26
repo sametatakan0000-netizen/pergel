@@ -1,1 +1,2 @@
 trafilatura>=2,<3
+youtube-transcript-api>=1.0

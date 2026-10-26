@@ -140,6 +140,63 @@ class GithubAdapter:
         )
 
 
+class YoutubeTranscriptAdapter:
+    """Fetch a video's official transcript (captions) before any rendering.
+
+    Uses youtube-transcript-api when available (dependency-injected fetcher in
+    tests). Returns None when no transcript exists so the engine ladder or the
+    oEmbed adapter can take over.
+    """
+
+    name = "youtube-transcript"
+    _YT = re.compile(
+        r"^https://(?:www\.|m\.)?youtube\.com/(?:watch\?(?:[^#]*&)?v=|shorts/|embed/)"
+        r"([\w-]{6,})"
+        r"|^https://youtu\.be/([\w-]{6,})"
+    )
+
+    def __init__(self, fetcher: Optional[Callable] = None) -> None:
+        self._fetcher = fetcher
+
+    def extract_video_id(self, url: str) -> Optional[str]:
+        m = self._YT.match(url)
+        if not m:
+            return None
+        return m.group(1) or m.group(2)
+
+    def can_handle(self, url: str) -> bool:
+        return self.extract_video_id(url) is not None
+
+    def _default_fetch(self, video_id: str, languages=("en",)):
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+        except ImportError:
+            return None
+        try:
+            fetched = YouTubeTranscriptApi().fetch(video_id, languages=languages)
+            return [s.text for s in fetched]
+        except Exception:
+            return None
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        video_id = self.extract_video_id(url)
+        if video_id is None:
+            return None
+        fetcher = self._fetcher or self._default_fetch
+        segments = fetcher(video_id)
+        if not segments:
+            return None
+        text = "\n".join(s.strip() for s in segments if s and s.strip())
+        if not text:
+            return None
+        return AdapterResult(
+            adapter=self.name,
+            url=url,
+            markdown=text + "\n",
+            metadata={"video_id": video_id, "segments": len(segments)},
+        )
+
+
 class OEmbedAdapter:
     """Known-provider oEmbed endpoints only (no arbitrary-site discovery).
 
@@ -210,4 +267,4 @@ class AdapterRegistry:
 
 
 def default_registry() -> AdapterRegistry:
-    return AdapterRegistry([NpmAdapter(), GithubAdapter(), OEmbedAdapter()])
+    return AdapterRegistry([NpmAdapter(), GithubAdapter(), YoutubeTranscriptAdapter(), OEmbedAdapter()])

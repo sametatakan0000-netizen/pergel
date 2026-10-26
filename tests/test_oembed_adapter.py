@@ -79,15 +79,18 @@ class TestOEmbedKnownProviders(unittest.TestCase):
 
 
 class TestRegistryOrder(unittest.TestCase):
-    def test_registry_has_npm_github_oembed(self):
+    def test_registry_has_npm_github_transcript_oembed(self):
         names = [a.name for a in default_registry().adapters]
-        self.assertEqual(names, ["npm", "github", "oembed"])
+        self.assertEqual(names, ["npm", "github", "youtube-transcript", "oembed"])
 
     def test_each_url_routes_to_its_adapter(self):
         reg = default_registry()
         self.assertEqual(reg.match("https://github.com/o/r").name, "github")
         self.assertEqual(reg.match("https://www.npmjs.com/package/x").name, "npm")
-        self.assertEqual(reg.match("https://www.youtube.com/watch?v=dQw4w9WgXcQ").name, "oembed")
+        # YouTube now routes to the transcript adapter (oEmbed is its fallback).
+        self.assertEqual(
+            reg.match("https://www.youtube.com/watch?v=dQw4w9WgXcQ").name,
+            "youtube-transcript")
         self.assertIsNone(reg.match("https://blog.example.com/p"))
 
 
