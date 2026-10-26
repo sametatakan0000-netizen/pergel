@@ -108,9 +108,11 @@ def _validate_target(url: Any, allow_private: bool) -> Optional[str]:
 def _guarded_driver(driver_fn: Callable[[str, str, str], str], allow_private: bool):
     """Fetch-time SSRF re-check: closes the submit->fetch DNS-rebinding window.
 
-    # shortcut: engine subprocesses (lightpanda/chromium) re-resolve DNS and follow
-    # redirects on their own, so redirect-to-private inside an engine is not covered;
-    # pin the resolved IP when exposed publicly.
+    # shortcut: engine subprocesses re-resolve DNS (rebinding) and IP is not pinned
+    # to the validated resolve. redirect-to-private IS closed at the enforcement
+    # layer (CDP ssrf_guard in cdp_bridge re-validates every redirect hop); what
+    # remains is IP pinning + non-CDP engines (lightpanda). Pin the resolved IP
+    # when exposed publicly.
     """
     def wrapped(engine: str, url: str, session_name: str) -> str:
         err = _validate_target(url, allow_private)

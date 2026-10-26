@@ -7,9 +7,9 @@ here — the transport lives in the caller (``CDPBridge``).
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional
 
-from .rule_engine import Decision, RuleEngine
+from .rule_engine import RuleEngine
 
 # CDP Fetch resource types (PascalCase) -> DNR resourceTypes (snake/lower).
 _CDP_TO_DNR_TYPE = {
@@ -40,15 +40,31 @@ def _dnr_type(cdp_resource_type: Optional[str]) -> str:
 
 def decide_cdp_response(engine: RuleEngine, *, request_id: str, url: str,
                         resource_type: str,
-                        request_headers: Optional[dict] = None) -> dict:
+                        request_headers: Optional[dict] = None,
+                        ssrf_guard: Optional[Callable[[str], bool]] = None) -> dict:
     """Return the CDP message answering a ``Fetch.requestPaused`` event.
 
     Block  -> ``Fetch.failRequest`` with ``BlockedByClient``
     Redirect -> ``Fetch.continueRequest`` with the replacement ``url``
     modifyHeaders -> ``Fetch.continueRequest`` with rewritten ``headers``
     Allow / no match -> ``Fetch.continueRequest`` unmodified
+
+    ``ssrf_guard(url) -> True`` marks an SSRF-risk target (private/loopback).
+    When set, BOTH the request target and any redirect hop that would leave for
+    a private host are refused — this is the enforcement-layer close of the
+    redirect-to-private gap the fetch-time guard in ``server.py`` cannot cover,
+    because the engine follows redirects itself.
     """
     decision = engine.check(url, resource_type=_dnr_type(resource_type))
+
+    # SSRF: the target itself (a redirect hop reaches here as a fresh paused
+    # request) and any policy redirect we would send the browser to.
+    if ssrf_guard is not None:
+        if ssrf_guard(url):
+            return _blocked(request_id, rule_id=None)
+        if (decision.action == "redirect" and decision.redirect_url
+                and ssrf_guard(decision.redirect_url)):
+            return _blocked(request_id, rule_id=decision.rule_id)
 
     if decision.action == "block":
         return {
@@ -69,6 +85,12 @@ def decide_cdp_response(engine: RuleEngine, *, request_id: str, url: str,
     return {"method": "Fetch.continueRequest", "params": params}
 
 
+def _blocked(request_id: str, rule_id=None) -> dict:
+    return {"method": "Fetch.failRequest",
+            "params": {"requestId": request_id, "errorReason": "BlockedByClient",
+                       "ruleId": rule_id}}
+
+
 def _headers_to_cdp(headers: dict) -> list:
     """CDP wants a list of {name, value} entries, not a dict."""
     return [{"name": k, "value": v} for k, v in headers.items()]
@@ -81,10 +103,11 @@ class CDPBridge:
     only I/O seam; ``on_request_paused`` is pure message construction.
     """
 
-    def __init__(self, engine: RuleEngine, send, stats=None) -> None:
+    def __init__(self, engine: RuleEngine, send, stats=None, ssrf_guard=None) -> None:
         self.engine = engine
         self._send = send
         self._stats = stats
+        self._ssrf_guard = ssrf_guard
 
     def on_request_paused(self, params: dict) -> dict:
         """Build and dispatch the response for a Fetch.requestPaused event."""
@@ -95,6 +118,7 @@ class CDPBridge:
             resource_type=params.get("resourceType", "Other"),
             request_headers=_cdp_headers_to_dict(
                 params.get("request", {}).get("headers", {})),
+            ssrf_guard=self._ssrf_guard,
         )
         if self._stats is not None:
             self._stats.record(_action_of(msg), rule_id=_rule_id_of(msg))
