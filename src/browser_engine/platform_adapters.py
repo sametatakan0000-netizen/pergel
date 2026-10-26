@@ -365,6 +365,76 @@ class RssSitemapAdapter:
         return self._probe(base, self._SITEMAP_PATHS, get, "sitemap")
 
 
+class WaybackAdapter:
+    """Archived fallback: Internet Archive Wayback Machine (official, free).
+
+    Used for sites with no readable channel left (Reddit .json is 403 since
+    May 2026, LinkedIn has no public read API) or pages that disappeared. The
+    Availability API returns the closest snapshot; we fetch its raw replay body.
+    Hosts are fixed and allow-listed — the target URL is only ever a query param.
+    """
+
+    name = "wayback"
+    _WAYBACK_HOST = "archive.org"
+    _WAYBACK_REPLAY = "web.archive.org"
+
+    def can_handle(self, url: str) -> bool:
+        low = url.lower()
+        if "web.archive.org" in low:
+            return True
+        # Sites with no structured/readable channel -> archived path.
+        return any(h in low for h in ("reddit.com/", "linkedin.com/posts/"))
+
+    def _html_to_markdown(self, html: str) -> str:
+        text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html)
+        for tag in ("h1", "h2", "h3"):
+            text = re.sub(rf"(?is)<{tag}[^>]*>(.*?)</{tag}>", r"\n## \1\n", text)
+        text = re.sub(r"(?is)<p[^>]*>", "\n", text)
+        text = re.sub(r"(?s)<[^>]+>", "", text)
+        text = re.sub(r"[ \t]+", " ", text)
+        return "\n".join(l.strip() for l in text.splitlines() if l.strip()) + "\n"
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        import urllib.parse
+
+        # Resolve target: strip a leading web.archive.org/<ts>/<mode>/ wrapper.
+        target = url
+        m = re.match(r"^(?:https?://)?web\.archive\.org/(?:web/)?\d+\w*/(https?://.+)$", url)
+        if m:
+            target = m.group(1)
+
+        api = "https://archive.org/wayback/available?url=" + urllib.parse.quote(target, safe="")
+        data = get(api)
+        if isinstance(data, (bytes, bytearray)):
+            data = bytes(data).decode("utf-8", "replace")
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except ValueError:
+                return None
+        if not isinstance(data, dict):
+            return None
+        closest = (data.get("archived_snapshots") or {}).get("closest") or {}
+        if not closest.get("available"):
+            return None
+        ts = closest.get("timestamp", "")
+        if not ts:
+            return None
+
+        raw = f"https://web.archive.org/web/{ts}id_/{target}"
+        body = get(raw)
+        if isinstance(body, (bytes, bytearray)):
+            body = bytes(body).decode("utf-8", "replace")
+        if not isinstance(body, str) or not body.strip():
+            return None
+
+        markdown = self._html_to_markdown(body)
+        return AdapterResult(
+            adapter=self.name, url=target, markdown=markdown,
+            metadata={"timestamp": ts, "snapshot": closest.get("url"), "source": raw},
+        )
+
+
 class AdapterRegistry:
     def __init__(self, adapters: List) -> None:
         self.adapters = list(adapters)
@@ -384,4 +454,4 @@ class AdapterRegistry:
 
 def default_registry() -> AdapterRegistry:
     return AdapterRegistry([NpmAdapter(), GithubAdapter(), YoutubeTranscriptAdapter(),
-                            OEmbedAdapter(), RssSitemapAdapter()])
+                            OEmbedAdapter(), RssSitemapAdapter(), WaybackAdapter()])

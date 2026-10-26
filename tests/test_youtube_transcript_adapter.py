@@ -59,7 +59,7 @@ class TestYoutubeTranscriptAdapter(unittest.TestCase):
 class TestRegistryYoutubeFirst(unittest.TestCase):
     def test_youtube_transcript_before_oembed(self):
         names = [a.name for a in default_registry().adapters]
-        self.assertEqual(names, ["npm", "github", "youtube-transcript", "oembed", "rss"])
+        self.assertEqual(names, ["npm", "github", "youtube-transcript", "oembed", "rss", "wayback"])
 
     def test_youtube_url_routes_to_transcript_adapter(self):
         reg = default_registry()
