@@ -30,11 +30,13 @@ def _system_resolver(host: str) -> list[str]:
 
 
 def pick_validated_address(host: str,
-                           resolver: Callable[[str], Iterable[str]] = _system_resolver) -> str:
+                           resolver: Callable[[str], Iterable[str]] = _system_resolver,
+                           allow_private: bool = False) -> str:
     """Resolve ``host`` and return one validated address.
 
     Denies the host if resolution fails or if ANY returned address is non-public
     (a mixed public/private answer is the classic rebinding pattern).
+    ``allow_private`` is a test-only escape hatch (see EgressPolicy.allow_literal).
     """
     try:
         answers = list(resolver(host))
@@ -48,7 +50,7 @@ def pick_validated_address(host: str,
             ip = ipaddress.ip_address(raw)
         except ValueError as exc:
             raise EgressDenied(f"invalid address from resolver: {raw!r}") from exc
-        if not _is_public(ip):
+        if not _is_public(ip) and not allow_private:
             raise EgressDenied(f"non-public address for {host}: {raw}")
         validated = validated or str(ip)
     return validated  # type: ignore[return-value]
@@ -80,7 +82,8 @@ class EgressPolicy:
         try:
             literal = ipaddress.ip_address(host)
         except ValueError:
-            ip = pick_validated_address(host, self._resolver)
+            ip = pick_validated_address(host, self._resolver,
+                                        allow_private=self._allow_literal)
         else:
             if not _is_public(literal) and not self._allow_literal:
                 raise EgressDenied(f"non-public literal: {host}")
