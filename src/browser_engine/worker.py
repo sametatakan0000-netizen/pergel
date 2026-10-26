@@ -8,6 +8,11 @@ import urllib.request
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
+from src.browser_engine.platform_adapters import (
+    AdapterResult,
+    AdapterRegistry,
+    default_registry,
+)
 
 
 def _strip_non_script_tags(raw_html: str) -> str:
@@ -252,6 +257,21 @@ def _classify_refusal(status: int, retry_after, text: str):
     return "", ""
 
 
+def _adapter_result_to_task_result(job_id: str, res: AdapterResult, attempts: List[str]) -> Dict[str, Any]:
+    """Translate an AdapterResult into the task-result dict shape."""
+    return {
+        "job_id": job_id,
+        "session_name": "platform-adapter",
+        "final_engine": f"platform-adapter:{res.adapter}",
+        "attempted_engines": attempts,
+        "oracle_passed": True,
+        "adapter": res.adapter,
+        "adapter_metadata": res.metadata,
+        "markdown": res.markdown,
+        "discovered_apis": [],
+    }
+
+
 class BrowserWorker:
     """Lightpanda -> Chromium Browser-Use -> Camofox kademeli yükseltme ve Self-Evolving Oracle işçisi."""
 
@@ -261,9 +281,11 @@ class BrowserWorker:
         self,
         driver_fn: Optional[Callable[[str, str, str], str]] = None,
         orchestrator: Optional[BrowserFarmOrchestrator] = None,
+        adapter_registry: Optional[AdapterRegistry] = None,
     ) -> None:
         self.driver_fn = driver_fn or _default_url_driver
         self.orchestrator = orchestrator or BrowserFarmOrchestrator()
+        self.adapter_registry = adapter_registry if adapter_registry is not None else default_registry()
 
     def execute_task(
         self,
@@ -278,6 +300,10 @@ class BrowserWorker:
         # via contextvar so any driver (adblock, CDP, plain-HTTP) picks it up
         # without changing the driver_fn contract.
         _USER_DIRECTED.set(user_directed)
+        adapter_result = self.adapter_registry.run(url) if self.adapter_registry is not None else None
+        if adapter_result is not None:
+            return _adapter_result_to_task_result(job_id, adapter_result, [f"platform-adapter:{adapter_result.adapter}"])
+
         spec = self.orchestrator.build_session_task(
             job_id=job_id,
             url=url,

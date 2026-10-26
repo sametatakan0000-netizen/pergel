@@ -1,0 +1,155 @@
+"""Platform adapters: structured/official sources tried before the browser ladder.
+
+Each adapter claims URLs via can_handle(), fetches from an official JSON API
+through an injected getter, and returns AdapterResult or None. None means
+"fall through to the generic engine ladder". Only allow-listed API hosts are
+ever requested (SSRF guard), and no credentials are read or logged here.
+"""
+from __future__ import annotations
+
+import base64
+import json
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
+
+ALLOWED_API_HOSTS = frozenset({"registry.npmjs.org", "api.github.com"})
+_MAX_BYTES = 2 * 1024 * 1024
+
+
+@dataclass
+class AdapterResult:
+    adapter: str
+    url: str
+    markdown: str
+    metadata: Dict
+
+
+def _safe_api_url(url: str) -> Optional[str]:
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return None
+    if parts.scheme != "https" or parts.hostname not in ALLOWED_API_HOSTS:
+        return None
+    return url
+
+
+def _http_get_json(api_url: str):
+    safe = _safe_api_url(api_url)
+    if safe is None:
+        return None
+    req = urllib.request.Request(
+        safe,
+        headers={"Accept": "application/json", "User-Agent": "ai-browser-farm-adapter/1"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = resp.read(_MAX_BYTES + 1)[:_MAX_BYTES]
+        return json.loads(body.decode("utf-8", "replace"))
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+        return None
+
+
+class NpmAdapter:
+    name = "npm"
+    _PKG = re.compile(r"^https://www\.npmjs\.com/package/((?:@[^/]+/)?[^/?#]+)/?$")
+
+    def can_handle(self, url: str) -> bool:
+        return bool(self._PKG.match(url))
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        m = self._PKG.match(url)
+        if not m:
+            return None
+        name = m.group(1)
+        data = get(f"https://registry.npmjs.org/{name.replace('/', '%2F')}")
+        if not isinstance(data, dict) or not data.get("name"):
+            return None
+        latest = (data.get("dist-tags") or {}).get("latest", "")
+        lines = [f"# {data.get('name')}"]
+        if latest:
+            lines.append(f"Latest: {latest}")
+        if data.get("description"):
+            lines.append(str(data["description"]))
+        if data.get("license"):
+            lines.append(f"License: {data['license']}")
+        if data.get("homepage"):
+            lines.append(f"Homepage: {data['homepage']}")
+        readme = data.get("readme") or ""
+        if readme and readme.strip() and readme.strip() != "ERROR: No README data found!":
+            lines.append("")
+            lines.append(readme.strip())
+        return AdapterResult(
+            adapter=self.name,
+            url=url,
+            markdown="\n".join(lines).strip() + "\n",
+            metadata={"package": data.get("name"), "latest": latest},
+        )
+
+
+class GithubAdapter:
+    name = "github"
+    _REPO = re.compile(r"^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)/?$")
+    _RESERVED = frozenset({"settings", "orgs", "login", "marketplace", "topics",
+                           "explore", "features", "sponsors", "notifications"})
+
+    def can_handle(self, url: str) -> bool:
+        m = self._REPO.match(url)
+        return bool(m) and m.group(1).lower() not in self._RESERVED
+
+    def fetch(self, url: str, get: Callable[[str], object]) -> Optional[AdapterResult]:
+        m = self._REPO.match(url)
+        if not m or m.group(1).lower() in self._RESERVED:
+            return None
+        owner, repo = m.group(1), m.group(2)
+        meta = get(f"https://api.github.com/repos/{owner}/{repo}")
+        if not isinstance(meta, dict) or not meta.get("full_name"):
+            return None
+        lines = [f"# {meta['full_name']}"]
+        if meta.get("description"):
+            lines.append(str(meta["description"]))
+        if "stargazers_count" in meta:
+            lines.append(f"Stars: {meta['stargazers_count']}")
+        lic = (meta.get("license") or {}).get("spdx_id")
+        if lic:
+            lines.append(f"License: {lic}")
+        readme_obj = get(f"https://api.github.com/repos/{owner}/{repo}/readme")
+        if isinstance(readme_obj, dict) and readme_obj.get("encoding") == "base64":
+            try:
+                text = base64.b64decode(readme_obj.get("content", "")).decode("utf-8", "replace")
+                if text.strip():
+                    lines.append("")
+                    lines.append(text.strip())
+            except (ValueError, TypeError):
+                pass
+        return AdapterResult(
+            adapter=self.name,
+            url=url,
+            markdown="\n".join(lines).strip() + "\n",
+            metadata={"full_name": meta["full_name"]},
+        )
+
+
+class AdapterRegistry:
+    def __init__(self, adapters: List) -> None:
+        self.adapters = list(adapters)
+
+    def match(self, url: str):
+        for a in self.adapters:
+            if a.can_handle(url):
+                return a
+        return None
+
+    def run(self, url: str, get: Optional[Callable[[str], object]] = None) -> Optional[AdapterResult]:
+        adapter = self.match(url)
+        if adapter is None:
+            return None
+        return adapter.fetch(url, get or _http_get_json)
+
+
+def default_registry() -> AdapterRegistry:
+    return AdapterRegistry([NpmAdapter(), GithubAdapter()])
