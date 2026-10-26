@@ -409,6 +409,8 @@ class BrowserFarmSaaSServer:
                     completed_job = parent.job_store.get_job(job["job_id"])
                     completed_job["discovered_apis"] = exec_res["discovered_apis"]
                     completed_job["attempted_engines"] = exec_res["attempted_engines"]
+                    completed_job["adapter"] = exec_res.get("adapter")
+                    completed_job["adapter_metadata"] = exec_res.get("adapter_metadata")
                     completed_job["blocked"] = bool(exec_res.get("blocked"))
                     blocked_code = exec_res.get("blocked_code")
                     if blocked_code:
