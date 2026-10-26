@@ -605,10 +605,16 @@ class AdapterRegistry:
         return None
 
     def run(self, url: str, get: Optional[Callable[[str], object]] = None) -> Optional[AdapterResult]:
-        adapter = self.match(url)
-        if adapter is None:
-            return None
-        return adapter.fetch(url, get or getattr(adapter, "default_getter", _http_get_json))
+        # Try every adapter that can handle the URL until one produces a result;
+        # a None from one adapter (e.g. no creds) must fall through to the next.
+        for adapter in self.adapters:
+            if not adapter.can_handle(url):
+                continue
+            getter = get or getattr(adapter, "default_getter", _http_get_json)
+            res = adapter.fetch(url, getter)
+            if res is not None:
+                return res
+        return None
 
 
 def default_registry() -> AdapterRegistry:

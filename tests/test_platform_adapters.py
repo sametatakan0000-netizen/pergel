@@ -122,3 +122,26 @@ class TestRegistry(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRegistryRunFallsThrough(unittest.TestCase):
+    def test_run_tries_next_adapter_when_first_returns_none(self):
+        from unittest import mock
+
+        reg = default_registry()
+        url = "https://www.reddit.com/r/python/comments/abc/"
+
+        def fake_get(u):
+            if "archive.org/wayback/available" in u:
+                return {"archived_snapshots": {"closest": {
+                    "available": True,
+                    "url": "http://web.archive.org/web/20240101000000/" + url,
+                    "timestamp": "20240101000000", "status": "200"}}}
+            return "<html><body><p>archived reddit page</p></body></html>"
+
+        # reddit-oauth matches first but returns None (no creds); run() must
+        # fall through to the wayback adapter instead of giving up.
+        with mock.patch("src.browser_engine.platform_adapters._reddit_oauth_creds", return_value=None):
+            res = reg.run(url, fake_get)
+        self.assertIsNotNone(res)
+        self.assertEqual(res.adapter, "wayback")
