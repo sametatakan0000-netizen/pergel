@@ -20,7 +20,12 @@ UNIT_DIR="$HOME/.config/systemd/user"
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 [[ -d "$REPO_SRC/src/router" ]] || die "router source not found at $REPO_SRC (set ORACLE_ROUTER_REPO)"
 HERMES_BIN="$(command -v hermes)" || die "hermes not on PATH"
-PYTHON_BIN="$(command -v python3)" || die "python3 not on PATH"
+# Prefer the repo venv python so adapter deps (youtube-transcript-api) import at runtime.
+if [[ -x "$REPO_SRC/.venv/bin/python" ]]; then
+  PYTHON_BIN="$REPO_SRC/.venv/bin/python"
+else
+  PYTHON_BIN="$(command -v python3)" || die "python3 not on PATH"
+fi
 command -v systemctl >/dev/null || die "systemctl not available"
 
 COMMIT="unknown"
