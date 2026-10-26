@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 72,
-    "total_classes": 44,
-    "total_functions": 405,
-    "total_loc": 7623
+    "total_files": 73,
+    "total_classes": 45,
+    "total_functions": 420,
+    "total_loc": 7828
   },
   "modules": [
     {
@@ -1431,6 +1431,66 @@
       "change_risk": 4.21
     },
     {
+      "module": "src.browser_engine.egress_guard",
+      "path": "src/browser_engine/egress_guard.py",
+      "loc": 128,
+      "classes": [
+        "EgressGuard"
+      ],
+      "functions": [
+        "_sudo_run",
+        "start_egress_guard",
+        "_teardown_netns",
+        "__init__",
+        "port",
+        "start",
+        "stop",
+        "_serve",
+        "_run",
+        "handler"
+      ],
+      "imports": [
+        "__future__",
+        "asyncio",
+        "atexit",
+        "egress_proxy",
+        "egress_relay",
+        "netns",
+        "os",
+        "subprocess",
+        "threading",
+        "typing"
+      ],
+      "calls": [
+        "EgressGuard",
+        "EgressPolicy",
+        "Event",
+        "RuntimeError",
+        "Thread",
+        "_serve",
+        "_sudo_run",
+        "append",
+        "call_soon_threadsafe",
+        "exists",
+        "expanduser",
+        "getsockname",
+        "handle_client",
+        "new_event_loop",
+        "plan_netns",
+        "plan_teardown",
+        "register",
+        "run",
+        "run_until_complete",
+        "serve_forever",
+        "set",
+        "set_event_loop",
+        "start",
+        "start_server",
+        "wait"
+      ],
+      "change_risk": 7.8
+    },
+    {
       "module": "src.browser_engine.egress_proxy",
       "path": "src/browser_engine/egress_proxy.py",
       "loc": 91,
@@ -1558,12 +1618,17 @@
     {
       "module": "src.browser_engine.engine_drivers",
       "path": "src/browser_engine/engine_drivers.py",
-      "loc": 129,
+      "loc": 206,
       "classes": [
         "EngineUnavailable",
         "_ChromiumPool"
       ],
       "functions": [
+        "_egress_enforce",
+        "_chromium_launch_args",
+        "_netns_chromium_wrapper",
+        "_launch_kwargs",
+        "_ensure_egress_guard",
         "_lightpanda_bin",
         "_lightpanda_html",
         "shutdown_pools",
@@ -1581,8 +1646,11 @@
         "os",
         "playwright.sync_api",
         "shutil",
+        "src.browser_engine",
+        "src.browser_engine.netns",
         "src.browser_engine.worker",
         "subprocess",
+        "tempfile",
         "typing"
       ],
       "calls": [
@@ -1592,34 +1660,46 @@
         "_ChromiumPool",
         "_allowed_by_robots",
         "_chromium_html",
+        "_chromium_launch_args",
         "_default_url_driver",
+        "_egress_enforce",
+        "_ensure_egress_guard",
         "_fetch_once",
         "_lightpanda_bin",
         "_lightpanda_html",
+        "_netns_chromium_wrapper",
         "_reset",
+        "chmod",
+        "chromium_proxy_args",
         "close",
         "content",
         "decode",
         "exists",
         "expanduser",
+        "fdopen",
         "fetch",
         "get",
         "goto",
         "hasattr",
+        "int",
         "is_connected",
         "launch",
+        "lower",
+        "mkstemp",
         "new_page",
         "register",
         "result",
         "run",
         "start",
+        "start_egress_guard",
         "stop",
         "strip",
         "submit",
         "sync_playwright",
-        "which"
+        "which",
+        "write"
       ],
-      "change_risk": 8.81
+      "change_risk": 10.0
     },
     {
       "module": "src.browser_engine.extension_host",
@@ -3076,7 +3156,8 @@
     "src.browser_engine.adblock_session.build_network_engine",
     "src.browser_engine.cdp_adblock_driver.browse",
     "src.browser_engine.cdp_adblock_driver.driver",
-    "src.browser_engine.egress_relay.handle_client",
+    "src.browser_engine.egress_guard.handler",
+    "src.browser_engine.egress_guard.port",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.browser_engine.extension_host.attach",
     "src.browser_engine.extension_host.detach",
@@ -3091,9 +3172,6 @@
     "src.browser_engine.native_capabilities.note_from_page",
     "src.browser_engine.native_capabilities.reader_mode",
     "src.browser_engine.native_capabilities.translate_lines",
-    "src.browser_engine.netns.chromium_proxy_args",
-    "src.browser_engine.netns.plan_netns",
-    "src.browser_engine.netns.plan_teardown",
     "src.browser_engine.scriptlets.supported_scriptlets",
     "src.browser_engine.telemetry.top_rules",
     "src.browser_engine.telemetry.total_decisions",

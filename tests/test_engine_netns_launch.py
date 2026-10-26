@@ -9,8 +9,11 @@ class NetnsChromiumWrapperTests(unittest.TestCase):
         from src.browser_engine.engine_drivers import _netns_chromium_wrapper
         path = _netns_chromium_wrapper("/opt/chrome", namespace="bf_engine")
         text = open(path).read()
-        self.assertIn("ip netns exec bf_engine", text)
+        self.assertIn("bf_netns_exec", text)
+        # namespace is hardcoded in the setuid helper (see bf_netns_exec.c):
+        # the wrapper must NOT pass it as an arg, only the chrome binary.
         self.assertIn("/opt/chrome", text)
+        self.assertNotIn("bf_netns_exec bf_engine", text)
         self.assertIn("exec ", text)
         self.assertNotIn("SUDO_PASSWORD", text)  # never bake secrets into files
         self.assertEqual(os.stat(path).st_mode & 0o777, 0o700)

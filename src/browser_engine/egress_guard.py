@@ -103,7 +103,10 @@ def start_egress_guard(*, use_netns: bool = True,
                        proxy_port: int = 8899) -> EgressGuard:
     """Activate enforcement: start the proxy and (optionally) the namespace."""
     global _current_guard
-    guard = EgressGuard(policy, listen_port=proxy_port)
+    # Never bind 0.0.0.0: the relay must only be reachable from the netns
+    # veth (netns mode) or loopback (no-netns). Otherwise it is LAN-exposed.
+    bind = "10.255.255.1" if use_netns else "127.0.0.1"
+    guard = EgressGuard(policy, listen_host=bind, listen_port=proxy_port)
     guard.start()
     if use_netns:
         from .netns import plan_netns

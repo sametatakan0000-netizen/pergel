@@ -13,7 +13,9 @@ class LaunchArgsTests(unittest.TestCase):
                                            "ORACLE_EGRESS_PROXY_HOST": "10.255.255.1",
                                            "ORACLE_EGRESS_PROXY_PORT": "8899"}):
             from src.browser_engine.engine_drivers import _chromium_launch_args
-            args = _chromium_launch_args()
+            # Argument generation only: do not bind a real proxy in unit tests.
+            with mock.patch("src.browser_engine.engine_drivers._ensure_egress_guard"):
+                args = _chromium_launch_args()
         self.assertIn("--proxy-server=http://10.255.255.1:8899", args)
         self.assertTrue(any(a.startswith("--host-resolver-rules=") for a in args))
 

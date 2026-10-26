@@ -61,13 +61,11 @@ def _netns_chromium_wrapper(chrome_bin: str, namespace: str = NETNS_NAME) -> str
     body = (
         "#!/bin/sh\n"
         "# generated: run Chromium inside the egress namespace (fail-closed).\n"
-        "# Enters bf_engine netns as root, then drops back to the calling user\n"
-        "# via setpriv so Chromium runs unprivileged (Chrome refuses root).\n"
-        "# The sudoers rule allows ONLY this exact invocation; sudo -n never\n"
-        "# prompts. If the rule is absent, this fails closed (non-zero).\n"
-        f'exec sudo -n ip netns exec {namespace} '
-        f'/usr/bin/setpriv --reuid="$(id -u)" --regid="$(id -g)" --init-groups '
-        f'/usr/bin/env HOME="{os.path.expanduser("~")}" "{chrome_bin}" "$@"\n'
+        "# Uses the setuid helper bf_netns_exec (no sudo) so Playwright pipe\n"
+        "# fds 3,4 survive; sudo-rs closes fd 3+ and breaks the pipe protocol.\n"
+        "# The helper must be built static: after setresuid its own interpreter\n"
+        "# is unavailable, and a dynamic binary dies before execv (execvp ENOENT).\n"
+        f'exec /usr/local/bin/bf_netns_exec "{chrome_bin}" "$@"\n'
     )
     fd, path = tempfile.mkstemp(prefix="bf_chrome_", suffix=".sh")
     with os.fdopen(fd, "w") as fh:
@@ -93,6 +91,8 @@ def _launch_kwargs(chrome_bin: Optional[str] = None) -> dict:
 def _ensure_egress_guard() -> None:
     """Start the live egress proxy once per process (serving-path wiring)."""
     from src.browser_engine import egress_guard
+    # Reuse a guard that is already live in this process (e.g. started by the
+    # caller) instead of binding the same port a second time.
     if egress_guard._current_guard is None:
         egress_guard.start_egress_guard(
             use_netns=os.environ.get("ORACLE_EGRESS_NETNS", "1") == "1",
