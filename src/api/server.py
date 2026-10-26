@@ -166,10 +166,12 @@ def _resolve_driver(adblock_list_paths):
                 os.path.join(DEFAULT_FILTER_LISTS_DIR, f)
                 for f in os.listdir(DEFAULT_FILTER_LISTS_DIR) if f.endswith(".txt"))
     paths = [p for p in paths if os.path.isfile(p)]
-    if not paths:
+    host = _maybe_extension_host()
+    if not paths and host is None:
         return engine_driver
-    return _with_fallback(make_adblock_driver(
-        load_adblock_bundle(paths), extensions=_maybe_extension_host()))
+    # Extensions alone (no filter lists) still need the CDP enforcement path.
+    bundle = load_adblock_bundle(paths) if paths else load_adblock_bundle([])
+    return _with_fallback(make_adblock_driver(bundle, extensions=host))
 
 
 def _maybe_extension_host():
