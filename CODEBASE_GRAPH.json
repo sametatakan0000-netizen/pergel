@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 68,
-    "total_classes": 39,
-    "total_functions": 389,
-    "total_loc": 7223
+    "total_files": 72,
+    "total_classes": 44,
+    "total_functions": 405,
+    "total_loc": 7623
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 677,
+      "loc": 679,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -1431,6 +1431,131 @@
       "change_risk": 4.21
     },
     {
+      "module": "src.browser_engine.egress_proxy",
+      "path": "src/browser_engine/egress_proxy.py",
+      "loc": 91,
+      "classes": [
+        "EgressDenied",
+        "Egress",
+        "EgressPolicy"
+      ],
+      "functions": [
+        "_is_public",
+        "_system_resolver",
+        "pick_validated_address",
+        "__init__",
+        "check_url"
+      ],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "ipaddress",
+        "socket",
+        "typing",
+        "urllib.parse"
+      ],
+      "calls": [
+        "Egress",
+        "EgressDenied",
+        "_is_public",
+        "dataclass",
+        "frozenset",
+        "getaddrinfo",
+        "ip_address",
+        "list",
+        "pick_validated_address",
+        "resolver",
+        "str",
+        "urlsplit"
+      ],
+      "change_risk": 5.94
+    },
+    {
+      "module": "src.browser_engine.egress_proxy_server",
+      "path": "src/browser_engine/egress_proxy_server.py",
+      "loc": 71,
+      "classes": [
+        "ProxyEndpoint",
+        "Decision"
+      ],
+      "functions": [
+        "decide",
+        "decide_redirect"
+      ],
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "egress_proxy",
+        "typing",
+        "urllib.parse"
+      ],
+      "calls": [
+        "Decision",
+        "EgressDenied",
+        "check_url",
+        "dataclass",
+        "int",
+        "isdigit",
+        "rpartition",
+        "startswith",
+        "upper",
+        "urlsplit"
+      ],
+      "change_risk": 3.89
+    },
+    {
+      "module": "src.browser_engine.egress_relay",
+      "path": "src/browser_engine/egress_relay.py",
+      "loc": 174,
+      "classes": [],
+      "functions": [
+        "_read_request",
+        "_splice",
+        "_peer",
+        "handle_client",
+        "_forward_response",
+        "pump"
+      ],
+      "imports": [
+        "__future__",
+        "asyncio",
+        "egress_proxy",
+        "egress_proxy_server",
+        "typing",
+        "urllib.parse"
+      ],
+      "calls": [
+        "_forward_response",
+        "_read_request",
+        "_splice",
+        "append",
+        "close",
+        "create_task",
+        "decide",
+        "decide_redirect",
+        "decode",
+        "drain",
+        "encode",
+        "gather",
+        "get_extra_info",
+        "int",
+        "len",
+        "lower",
+        "open_connection",
+        "pump",
+        "read",
+        "readuntil",
+        "split",
+        "startswith",
+        "str",
+        "strip",
+        "urlsplit",
+        "write",
+        "write_eof"
+      ],
+      "change_risk": 10.0
+    },
+    {
       "module": "src.browser_engine.engine_drivers",
       "path": "src/browser_engine/engine_drivers.py",
       "loc": 129,
@@ -1618,6 +1743,22 @@
         "translate"
       ],
       "change_risk": 6.55
+    },
+    {
+      "module": "src.browser_engine.netns",
+      "path": "src/browser_engine/netns.py",
+      "loc": 62,
+      "classes": [],
+      "functions": [
+        "plan_netns",
+        "plan_teardown",
+        "chromium_proxy_args"
+      ],
+      "imports": [
+        "__future__"
+      ],
+      "calls": [],
+      "change_risk": 0.98
     },
     {
       "module": "src.browser_engine.procedural",
@@ -2935,6 +3076,7 @@
     "src.browser_engine.adblock_session.build_network_engine",
     "src.browser_engine.cdp_adblock_driver.browse",
     "src.browser_engine.cdp_adblock_driver.driver",
+    "src.browser_engine.egress_relay.handle_client",
     "src.browser_engine.engine_drivers.shutdown_pools",
     "src.browser_engine.extension_host.attach",
     "src.browser_engine.extension_host.detach",
@@ -2949,6 +3091,9 @@
     "src.browser_engine.native_capabilities.note_from_page",
     "src.browser_engine.native_capabilities.reader_mode",
     "src.browser_engine.native_capabilities.translate_lines",
+    "src.browser_engine.netns.chromium_proxy_args",
+    "src.browser_engine.netns.plan_netns",
+    "src.browser_engine.netns.plan_teardown",
     "src.browser_engine.scriptlets.supported_scriptlets",
     "src.browser_engine.telemetry.top_rules",
     "src.browser_engine.telemetry.total_decisions",
