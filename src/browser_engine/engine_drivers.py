@@ -46,6 +46,50 @@ def _chromium_launch_args() -> list:
     return chromium_proxy_args(proxy_host=host, proxy_port=port)
 
 
+NETNS_NAME = "bf_engine"
+
+
+def _netns_chromium_wrapper(chrome_bin: str, namespace: str = NETNS_NAME) -> str:
+    """Write a tiny wrapper script that execs Chromium inside the netns.
+
+    Contains no secrets. sudo is NOT invoked here: the netns is created
+    beforehand by EgressGuard, and this wrapper only enters it, so the
+    process runs as the caller user via a privileged `ip netns exec` that
+    the host sudoers policy must allow for this exact command.
+    """
+    import tempfile
+    body = (
+        "#!/bin/sh\n"
+        "# generated: run Chromium inside the egress namespace (fail-closed).\n"
+        "# Enters bf_engine netns as root, then drops back to the calling user\n"
+        "# via setpriv so Chromium runs unprivileged (Chrome refuses root).\n"
+        "# The sudoers rule allows ONLY this exact invocation; sudo -n never\n"
+        "# prompts. If the rule is absent, this fails closed (non-zero).\n"
+        f'exec sudo -n ip netns exec {namespace} '
+        f'/usr/bin/setpriv --reuid="$(id -u)" --regid="$(id -g)" --init-groups '
+        f'/usr/bin/env HOME="{os.path.expanduser("~")}" "{chrome_bin}" "$@"\n'
+    )
+    fd, path = tempfile.mkstemp(prefix="bf_chrome_", suffix=".sh")
+    with os.fdopen(fd, "w") as fh:
+        fh.write(body)
+    os.chmod(path, 0o700)
+    return path
+
+
+def _launch_kwargs(chrome_bin: Optional[str] = None) -> dict:
+    """Playwright launch kwargs. {} when enforcement is off (plain launch)."""
+    if not _egress_enforce():
+        return {}
+    _ensure_egress_guard()
+    args = _chromium_launch_args()
+    kw: dict = {"args": args}
+    if os.environ.get("ORACLE_EGRESS_NETNS", "1") == "1":
+        if not chrome_bin:
+            raise EngineUnavailable("netns enforcement needs an explicit chrome binary")
+        kw["executable_path"] = _netns_chromium_wrapper(chrome_bin)
+    return kw
+
+
 def _ensure_egress_guard() -> None:
     """Start the live egress proxy once per process (serving-path wiring)."""
     from src.browser_engine import egress_guard
