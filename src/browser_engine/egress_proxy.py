@@ -64,8 +64,10 @@ class Egress:
 class EgressPolicy:
     """Per-request policy. Call ``check_url`` for the first URL and every redirect hop."""
 
-    def __init__(self, resolver: Callable[[str], Iterable[str]] = _system_resolver):
+    def __init__(self, resolver: Callable[[str], Iterable[str]] = _system_resolver,
+                 allow_literal: bool = False):
         self._resolver = resolver
+        self._allow_literal = allow_literal
 
     def check_url(self, url: str) -> Egress:
         parts = urlsplit(url)
@@ -80,7 +82,7 @@ class EgressPolicy:
         except ValueError:
             ip = pick_validated_address(host, self._resolver)
         else:
-            if not _is_public(literal):
+            if not _is_public(literal) and not self._allow_literal:
                 raise EgressDenied(f"non-public literal: {host}")
             ip = str(literal)
         return Egress(url=url, host=host, ip=ip)
