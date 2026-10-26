@@ -5,6 +5,7 @@ import time
 import urllib.parse
 import urllib.robotparser
 import urllib.request
+from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 
@@ -90,6 +91,16 @@ MAX_BODY_BYTES = 2 * 1024 * 1024
 ROBOTS_TTL_S = 3600
 _ROBOTS_CACHE: Dict[str, Any] = {}  # origin -> (parser, fetched_at)
 
+# User-directed policy (2026-10-26): an explicit single-URL request is made by a
+# human via a logged-in browser session, so robots.txt is reported as a note and
+# the fetch proceeds. Automated crawling (browse jobs without user_directed) still
+# honors robots. Site-level refusals (403/429/captcha/paywall) are NEVER bypassed.
+_USER_DIRECTED: ContextVar[bool] = ContextVar("user_directed", default=False)
+
+
+def is_user_directed() -> bool:
+    return _USER_DIRECTED.get()
+
 
 class FetchBlocked(Exception):
     """Policy block (robots.txt / non-HTML / site refusal). Escalating to a heavier
@@ -119,10 +130,19 @@ def _allowed_by_robots(url: str, user_agent: str) -> bool:
     return rp.can_fetch(user_agent, url)
 
 
-def _default_url_raw(engine: str, url: str, session_name: str) -> str:
-    """Raw HTML fetch (plain HTTP). Honors robots.txt. Used by body-cap checks."""
+def _default_url_raw(engine: str, url: str, session_name: str,
+                     user_directed: Optional[bool] = None) -> str:
+    """Raw HTML fetch (plain HTTP). Honors robots.txt for automated crawl.
+
+    ``user_directed=True`` marks an explicit single-URL request from the user
+    (their own logged-in session): robots.txt is then skipped and reported as a
+    note instead of a block. Site-level refusals (403/429/captcha/paywall) are
+    still surfaced — only the robots policy bends for an explicit user request.
+    """
+    if user_directed is None:
+        user_directed = is_user_directed()
     ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
-    if not _allowed_by_robots(url, "HermesBrowserFarm"):
+    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm"):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "text/html,*/*;q=0.5"})
     try:
@@ -143,10 +163,12 @@ def _default_url_raw(engine: str, url: str, session_name: str) -> str:
     return text
 
 
-def _default_url_driver(engine: str, url: str, session_name: str) -> str:
-    """Plain-HTTP fetch fallback (camofox tier and engines without binaries). Honors robots.txt.
+def _default_url_driver(engine: str, url: str, session_name: str,
+                        user_directed: Optional[bool] = None) -> str:
+    """Plain-HTTP fetch fallback (camofox tier and engines without binaries).
+    Honors robots.txt unless user_directed (explicit single-URL request).
     Returns raw HTML — callers use html_to_clean_markdown() for agent output."""
-    return _default_url_raw(engine, url, session_name)
+    return _default_url_raw(engine, url, session_name, user_directed=user_directed)
 
 
 def _classify_refusal(status: int, retry_after, text: str):
@@ -202,7 +224,13 @@ class BrowserWorker:
         url: str,
         needs_vision: bool = False,
         js_complexity: str = "low",
+        user_directed: bool = False,
     ) -> Dict[str, Any]:
+        # user_directed: explicit single-URL request — robots.txt is skipped
+        # (reported as a note) and site refusals are still surfaced. Propagated
+        # via contextvar so any driver (adblock, CDP, plain-HTTP) picks it up
+        # without changing the driver_fn contract.
+        _USER_DIRECTED.set(user_directed)
         spec = self.orchestrator.build_session_task(
             job_id=job_id,
             url=url,

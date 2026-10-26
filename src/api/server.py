@@ -375,6 +375,10 @@ class BrowserFarmSaaSServer:
                     goal = payload.get("goal", "")
                     needs_vision = bool(payload.get("needs_vision", False))
                     js_complexity = payload.get("js_complexity", "low")
+                    # user_directed: explicit single-URL request from the user
+                    # (their own logged-in session). Robots.txt is then reported
+                    # as a note rather than a block; site refusals still surface.
+                    user_directed = bool(payload.get("user_directed", False))
                     webhook_url = payload.get("webhook_url")
                     err = _validate_target(url, parent.allow_private_targets)
                     if err:
@@ -394,6 +398,7 @@ class BrowserFarmSaaSServer:
                         url=url,
                         needs_vision=needs_vision,
                         js_complexity=js_complexity,
+                        user_directed=user_directed,
                     )
                     parent.job_store.mark_completed(
                         job_id=job["job_id"],

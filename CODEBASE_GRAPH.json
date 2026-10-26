@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 73,
     "total_classes": 46,
-    "total_functions": 429,
-    "total_loc": 8048
+    "total_functions": 430,
+    "total_loc": 8090
   },
   "modules": [
     {
@@ -182,7 +182,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 722,
+      "loc": 727,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -1632,7 +1632,7 @@
     {
       "module": "src.browser_engine.engine_drivers",
       "path": "src/browser_engine/engine_drivers.py",
-      "loc": 206,
+      "loc": 215,
       "classes": [
         "EngineUnavailable",
         "_ChromiumPool"
@@ -1697,6 +1697,7 @@
         "hasattr",
         "int",
         "is_connected",
+        "is_user_directed",
         "launch",
         "lower",
         "mkstemp",
@@ -2077,7 +2078,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 268,
+      "loc": 296,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2087,6 +2088,7 @@
         "discover_har_api_endpoints",
         "html_to_clean_markdown",
         "_regex_markdown",
+        "is_user_directed",
         "_allowed_by_robots",
         "_default_url_raw",
         "_default_url_driver",
@@ -2096,6 +2098,7 @@
         "execute_task"
       ],
       "imports": [
+        "contextvars",
         "html",
         "re",
         "src.browser_engine.browser_orchestrator",
@@ -2108,6 +2111,7 @@
       ],
       "calls": [
         "BrowserFarmOrchestrator",
+        "ContextVar",
         "FetchBlocked",
         "Request",
         "RobotFileParser",
@@ -2131,6 +2135,7 @@
         "group",
         "html_to_clean_markdown",
         "index",
+        "is_user_directed",
         "join",
         "len",
         "lower",
@@ -2138,6 +2143,7 @@
         "read",
         "record_domain_escalation",
         "rstrip",
+        "set",
         "split",
         "splitlines",
         "startswith",

@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from src.browser_engine.worker import (
+    is_user_directed,
     MAX_BODY_BYTES,
     FetchBlocked,
     _allowed_by_robots,
@@ -194,9 +195,17 @@ def _chromium_html(url: str, session_name: str) -> str:
     return chromium_pool.fetch(url, user_agent=f"{_UA_BASE} (chromium-browser-use; {session_name})")
 
 
-def engine_driver(engine: str, url: str, session_name: str) -> str:
-    """`BrowserWorker.driver_fn` contract: raw HTML string, exception on failure."""
-    if not _allowed_by_robots(url, "HermesBrowserFarm"):
+def engine_driver(engine: str, url: str, session_name: str,
+                  user_directed: Optional[bool] = None) -> str:
+    """`BrowserWorker.driver_fn` contract: raw HTML string, exception on failure.
+
+    Honors robots.txt for automated crawl. ``user_directed=True`` (or the
+    worker's contextvar) marks an explicit single-URL user request: robots is
+    then skipped and reported as a note, while site refusals still surface.
+    """
+    if user_directed is None:
+        user_directed = is_user_directed()
+    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm"):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     if engine == "lightpanda":
         return _lightpanda_html(url, session_name)
