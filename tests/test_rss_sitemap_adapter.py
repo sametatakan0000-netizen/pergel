@@ -102,3 +102,16 @@ class TestCommonFeedPaths(unittest.TestCase):
         res = RssSitemapAdapter().fetch(site, get)
         self.assertIsNotNone(res)
         self.assertEqual(res.adapter, "rss")
+
+
+class TestRssUsesItsOwnGetter(unittest.TestCase):
+    def test_default_getter_is_text_not_json(self):
+        adapter = RssSitemapAdapter()
+        self.assertTrue(callable(adapter.default_getter))
+        from src.browser_engine import platform_adapters as pa
+        import unittest.mock as um
+        with um.patch.object(pa, "_http_get_text", return_value=RSS) as m:
+            res = pa.default_registry().run("https://news.ycombinator.com/")
+        self.assertIsNotNone(res)
+        self.assertEqual(res.adapter, "rss")
+        m.assert_called()

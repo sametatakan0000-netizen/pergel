@@ -23,10 +23,19 @@ def _fake_dns(host, *args, **kwargs):
 
 def setUpModule():
     _socket.getaddrinfo = _fake_dns
+    # Hermetic: the fake DNS maps example.com to a non-routable-in-test IP, so the
+    # RSS/sitemap probe would hang on real TCP. Disable that adapter for this module;
+    # its behaviour is covered by tests/test_rss_sitemap_adapter.py.
+    global _RSS_SAVED
+    from src.browser_engine import platform_adapters as _pa
+    _RSS_SAVED = _pa.RssSitemapAdapter.fetch
+    _pa.RssSitemapAdapter.fetch = lambda self, url, get: None
 
 
 def tearDownModule():
     _socket.getaddrinfo = _REAL_GETADDRINFO
+    from src.browser_engine import platform_adapters as _pa
+    _pa.RssSitemapAdapter.fetch = _RSS_SAVED
 
 PAGE = ("<html><body><article><h1>Plans</h1><p>" + "The starter plan costs 49 dollars monthly. " * 6 +
         "</p><script>fetch('/api/v2/pricing.json')</script></article></body></html>")

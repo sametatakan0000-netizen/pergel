@@ -303,6 +303,7 @@ class RssSitemapAdapter:
     """
 
     name = "rss"
+    default_getter = staticmethod(lambda url: _http_get_text(url))
     _SITE = re.compile(r"^https?://[^/]+/?$")
     _FEED_PATHS = ("feed", "rss", "rss.xml", "atom.xml", "feed.xml", "index.xml")
     _SITEMAP_PATHS = ("sitemap.xml",)
@@ -378,7 +379,7 @@ class AdapterRegistry:
         adapter = self.match(url)
         if adapter is None:
             return None
-        return adapter.fetch(url, get or _http_get_json)
+        return adapter.fetch(url, get or getattr(adapter, "default_getter", _http_get_json))
 
 
 def default_registry() -> AdapterRegistry:
