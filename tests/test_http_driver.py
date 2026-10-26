@@ -43,8 +43,9 @@ class TestHttpDriver(unittest.TestCase):
     def fetch(self, path):
         return _default_url_driver("lightpanda", self.base + path, "s1")
 
-    def test_ok_returns_html(self):
-        self.assertIn("<h1>Hello</h1>", self.fetch("/ok"))
+    def test_ok_returns_raw_html_for_discovery(self):
+        out = self.fetch("/ok")
+        self.assertIn("<h1>Hello</h1>", out)  # raw HTML preserved for discover_har_api_endpoints
 
     def test_robots_disallow_blocks(self):
         with self.assertRaises(FetchBlocked):

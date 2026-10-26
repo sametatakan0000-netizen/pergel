@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 73,
     "total_classes": 46,
-    "total_functions": 428,
-    "total_loc": 8035
+    "total_functions": 429,
+    "total_loc": 8042
   },
   "modules": [
     {
@@ -1028,7 +1028,7 @@
     {
       "module": "src.bench.suites.fidelity",
       "path": "src/bench/suites/fidelity.py",
-      "loc": 114,
+      "loc": 115,
       "classes": [
         "_DisallowedHandler"
       ],
@@ -1055,7 +1055,7 @@
         "BrowserWorker",
         "Thread",
         "ThreadingHTTPServer",
-        "_default_url_driver",
+        "_default_url_raw",
         "any",
         "append",
         "case",
@@ -1082,7 +1082,7 @@
         "urlsplit",
         "write"
       ],
-      "change_risk": 7.23
+      "change_risk": 7.24
     },
     {
       "module": "src.browser_engine",
@@ -2077,7 +2077,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 256,
+      "loc": 262,
       "classes": [
         "FetchBlocked",
         "BrowserWorker"
@@ -2088,6 +2088,7 @@
         "html_to_clean_markdown",
         "_regex_markdown",
         "_allowed_by_robots",
+        "_default_url_raw",
         "_default_url_driver",
         "_classify_refusal",
         "__init__",
@@ -2113,6 +2114,7 @@
         "__init__",
         "_allowed_by_robots",
         "_classify_refusal",
+        "_default_url_raw",
         "_regex_markdown",
         "_strip_non_script_tags",
         "any",

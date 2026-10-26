@@ -113,8 +113,8 @@ def _allowed_by_robots(url: str, user_agent: str) -> bool:
     return rp.can_fetch(user_agent, url)
 
 
-def _default_url_driver(engine: str, url: str, session_name: str) -> str:
-    """Plain-HTTP fetch fallback (camofox tier and engines without binaries). Honors robots.txt."""
+def _default_url_raw(engine: str, url: str, session_name: str) -> str:
+    """Raw HTML fetch (plain HTTP). Honors robots.txt. Used by body-cap checks."""
     ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
     if not _allowed_by_robots(url, "HermesBrowserFarm"):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
@@ -135,6 +135,12 @@ def _default_url_driver(engine: str, url: str, session_name: str) -> str:
     if code:
         raise FetchBlocked(message, code=code)
     return text
+
+
+def _default_url_driver(engine: str, url: str, session_name: str) -> str:
+    """Plain-HTTP fetch fallback (camofox tier and engines without binaries). Honors robots.txt.
+    Returns raw HTML — callers use html_to_clean_markdown() for agent output."""
+    return _default_url_raw(engine, url, session_name)
 
 
 def _classify_refusal(status: int, retry_after, text: str):

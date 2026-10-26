@@ -19,6 +19,7 @@ from src.browser_engine.worker import (
     MAX_BODY_BYTES,
     BrowserWorker,
     _default_url_driver,
+    _default_url_raw,
 )
 from src.bench.fixture_server import MARKERS
 
@@ -83,7 +84,7 @@ def robots_block_never_escalates(base: str) -> Optional[str]:
 
 
 def body_cap_2mb(base: str) -> Optional[str]:
-    raw = _default_url_driver("chromium-browser-use", base + "/heavy?n=50000", "fidelity")
+    raw = _default_url_raw("chromium-browser-use", base + "/heavy?n=50000", "fidelity")
     size = len(raw.encode("utf-8"))
     if size == MAX_BODY_BYTES:
         return None
