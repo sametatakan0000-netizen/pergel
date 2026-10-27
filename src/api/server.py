@@ -21,7 +21,11 @@ from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.engine_drivers import engine_driver
 from src.browser_engine.cdp_adblock_driver import make_adblock_driver
 from src.browser_engine.adblock_session import load_adblock_bundle
-from src.browser_engine.worker import BrowserWorker, FetchBlocked
+from src.browser_engine.worker import (
+    BrowserWorker,
+    FetchBlocked,
+    private_targets_allowed,
+)
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
 from src.infra.webhook_dispatcher import WebhookDispatcher
 from src.router.live_router import ADVERTISED_MODELS, VIRTUAL_PROFILES, LiveRouter, price_tier
@@ -129,7 +133,10 @@ def _guarded_driver(driver_fn: Callable[[str, str, str], str], allow_private: bo
         err = _validate_target(url, allow_private)
         if err:
             raise FetchBlocked(f"ssrf guard: {err}", code="target_private_address")
-        return driver_fn(engine, url, session_name)
+        # allow_private (user's own logged-in session) permits private targets
+        # for this request's plain-HTTP fetches (robots + fallback engine) only.
+        with private_targets_allowed(allow_private):
+            return driver_fn(engine, url, session_name)
     return wrapped
 
 

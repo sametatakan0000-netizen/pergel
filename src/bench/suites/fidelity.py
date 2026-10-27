@@ -20,6 +20,7 @@ from src.browser_engine.worker import (
     BrowserWorker,
     _default_url_driver,
     _default_url_raw,
+    private_targets_allowed,
 )
 from src.bench.fixture_server import MARKERS
 
@@ -103,13 +104,16 @@ def run_fidelity(base_url: str) -> Dict[str, Any]:
     """Run every case against a fixture-server base URL; never raises."""
     passed: List[str] = []
     failed: Dict[str, str] = {}
-    for case in CASES:
-        try:
-            reason = case(base_url)
-        except Exception as exc:  # a crash is a failed case, not a harness error
-            reason = f"{type(exc).__name__}: {exc}"
-        if reason is None:
-            passed.append(case.__name__)
-        else:
-            failed[case.__name__] = reason
+    # This bench is localhost-only by design (deterministic fixture server on
+    # 127.0.0.1) — explicitly opt into private targets for its cases.
+    with private_targets_allowed(True):
+        for case in CASES:
+            try:
+                reason = case(base_url)
+            except Exception as exc:  # a crash is a failed case, not a harness error
+                reason = f"{type(exc).__name__}: {exc}"
+            if reason is None:
+                passed.append(case.__name__)
+            else:
+                failed[case.__name__] = reason
     return {"passed": passed, "failed": failed}

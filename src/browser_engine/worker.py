@@ -2,9 +2,11 @@
 import html
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.robotparser
 import urllib.request
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
@@ -12,6 +14,12 @@ from src.browser_engine.platform_adapters import (
     AdapterResult,
     AdapterRegistry,
     default_registry,
+)
+from src.browser_engine.egress_proxy import (
+    EgressAddressError,
+    EgressDenied,
+    EgressPolicy,
+    pinned_opener,
 )
 
 
@@ -154,6 +162,29 @@ def is_user_directed() -> bool:
     return _USER_DIRECTED.get()
 
 
+# Plain-HTTP egress policy for this request context. Default (False): reject
+# private/loopback/link-local targets at every hop. A user-directed request may
+# set allow_private_targets=True (the user's own logged-in session may
+# legitimately reach an intranet target) — private targets are then permitted in
+# THIS context only. The plain-HTTP fallback reads it via _egress_policy(); the
+# API layer flips it per request with private_targets_allowed().
+_ALLOW_PRIVATE: ContextVar[bool] = ContextVar("allow_private_targets", default=False)
+
+
+@contextmanager
+def private_targets_allowed(allowed: bool = True):
+    """Permit (or deny) private fetch targets in this request context."""
+    token = _ALLOW_PRIVATE.set(allowed)
+    try:
+        yield
+    finally:
+        _ALLOW_PRIVATE.reset(token)
+
+
+def _egress_policy() -> EgressPolicy:
+    return EgressPolicy(allow_literal=_ALLOW_PRIVATE.get())
+
+
 class FetchBlocked(Exception):
     """Policy block (robots.txt / non-HTML / site refusal). Escalating to a heavier
     engine must NOT bypass it. Carries a stable machine-readable code so the API
@@ -165,7 +196,53 @@ class FetchBlocked(Exception):
         self.message = message
 
 
-def _allowed_by_robots(url: str, user_agent: str) -> bool:
+_MAX_HOPS = 10  # urllib's default redirect budget
+
+
+def _check_hop(url: str, policy, egress=None):
+    """Validate one fetch hop and return its Egress. Reuse `egress` when the
+    caller already resolved this hop (the same host must never be resolved
+    twice within one fetch)."""
+    if egress is not None:
+        return egress
+    try:
+        return policy.check_url(url)
+    except EgressAddressError as exc:
+        raise urllib.error.URLError(str(exc)) from exc
+    except EgressDenied as exc:
+        raise FetchBlocked(f"ssrf guard: {exc}", code="target_private_address") from exc
+
+
+def _pinned_fetch(url, policy, timeout=15, headers=None, egress=None, max_hops=_MAX_HOPS):
+    """Egress-checked fetch with DNS pinning: resolve ONCE per hop and CONNECT
+    to that exact validated IP (closes the DNS-rebinding TOCTOU window of
+    urlopen, which re-resolves at connect time). Every redirect hop is
+    re-validated before it is followed. Returns an open response; caller closes.
+    """
+    current = url
+    for _ in range(max_hops + 1):
+        egress = _check_hop(current, policy, egress)
+        req = urllib.request.Request(current, headers=headers or {})
+        try:
+            return pinned_opener(egress.ip).open(req, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (301, 302, 303, 307, 308):
+                raise
+            location = exc.headers.get("Location") if exc.headers else None
+            exc.close()
+            if not location:
+                raise FetchBlocked(f"redirect without location (HTTP {exc.code})",
+                                   code="blocked_by_site") from exc
+            current = urllib.parse.urljoin(current, location)
+            egress = None  # the next hop re-resolves and re-validates
+    raise FetchBlocked(f"too many redirects: {url}", code="blocked_by_site")
+
+
+def _allowed_by_robots(url: str, user_agent: str, egress=None, policy=None) -> bool:
+    """robots.txt check (512KB cap, cached in-memory 1h). Unreachable or
+    missing robots.txt = allow all. The robots fetch itself rides the same
+    pinned-IP egress path as the page fetch; `egress` reuses the caller's
+    validated pin (same origin = one resolution)."""
     parts = urllib.parse.urlsplit(url)
     origin = f"{parts.scheme}://{parts.netloc}"
     cached = _ROBOTS_CACHE.get(origin)
@@ -173,8 +250,9 @@ def _allowed_by_robots(url: str, user_agent: str) -> bool:
     if rp is None:
         rp = urllib.robotparser.RobotFileParser()
         try:
-            req = urllib.request.Request(origin + "/robots.txt", headers={"User-Agent": user_agent})
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            resp = _pinned_fetch(origin + "/robots.txt", policy or _egress_policy(),
+                                 timeout=10, headers={"User-Agent": user_agent}, egress=egress)
+            with resp:
                 rp.parse(resp.read(512 * 1024).decode("utf-8", errors="replace").splitlines())
         except Exception:  # shortcut: unreachable/missing robots.txt = allow all (cached ROBOTS_TTL_S), fail closed on 5xx if abuse appears
             rp.parse([])
@@ -183,22 +261,31 @@ def _allowed_by_robots(url: str, user_agent: str) -> bool:
 
 
 def _default_url_raw(engine: str, url: str, session_name: str,
-                     user_directed: Optional[bool] = None) -> str:
+                     user_directed: Optional[bool] = None,
+                     policy: Optional[EgressPolicy] = None) -> str:
     """Raw HTML fetch (plain HTTP). Honors robots.txt for automated crawl.
 
     ``user_directed=True`` marks an explicit single-URL request from the user
     (their own logged-in session): robots.txt is then skipped and reported as a
     note instead of a block. Site-level refusals (403/429/captcha/paywall) are
     still surfaced — only the robots policy bends for an explicit user request.
+
+    Egress: the target is validated and PINNED (resolved once; the connect
+    dials that exact IP) and every redirect hop is re-validated — a DNS answer
+    that flips after validation can no longer reach a private address. Private
+    targets are rejected unless the request context opted in via
+    private_targets_allowed() (user's own logged-in session only).
     """
     if user_directed is None:
         user_directed = is_user_directed()
+    policy = policy or _egress_policy()
+    egress = _check_hop(url, policy)  # validate + pin BEFORE any request
     ua = f"HermesBrowserFarm/1.0 ({engine}; {session_name})"
-    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm"):
+    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm", egress=egress, policy=policy):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
-    req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "text/html,*/*;q=0.5"})
+    req_headers = {"User-Agent": ua, "Accept": "text/html,*/*;q=0.5"}
     try:
-        resp = urllib.request.urlopen(req, timeout=15)
+        resp = _pinned_fetch(url, policy, timeout=15, headers=req_headers, egress=egress)
     except urllib.error.HTTPError as exc:
         code, message = _classify_refusal(exc.code, exc.headers.get("Retry-After"), "")
         raise FetchBlocked(message or f"HTTP {exc.code}", code=code or "blocked_by_site")
@@ -216,11 +303,12 @@ def _default_url_raw(engine: str, url: str, session_name: str,
 
 
 def _default_url_driver(engine: str, url: str, session_name: str,
-                        user_directed: Optional[bool] = None) -> str:
+                        user_directed: Optional[bool] = None,
+                        policy: Optional[EgressPolicy] = None) -> str:
     """Plain-HTTP fetch fallback (camofox tier and engines without binaries).
     Honors robots.txt unless user_directed (explicit single-URL request).
     Returns raw HTML — callers use html_to_clean_markdown() for agent output."""
-    return _default_url_raw(engine, url, session_name, user_directed=user_directed)
+    return _default_url_raw(engine, url, session_name, user_directed=user_directed, policy=policy)
 
 
 def _classify_refusal(status: int, retry_after, text: str):
@@ -298,8 +386,22 @@ class BrowserWorker:
         # user_directed: explicit single-URL request — robots.txt is skipped
         # (reported as a note) and site refusals are still surfaced. Propagated
         # via contextvar so any driver (adblock, CDP, plain-HTTP) picks it up
-        # without changing the driver_fn contract.
-        _USER_DIRECTED.set(user_directed)
+        # without changing the driver_fn contract. Scoped to THIS call: a leaked
+        # user_directed=True would make later automated fetches skip robots too.
+        token = _USER_DIRECTED.set(user_directed)
+        try:
+            return self._execute_task_impl(job_id, url, needs_vision, js_complexity, user_directed)
+        finally:
+            _USER_DIRECTED.reset(token)
+
+    def _execute_task_impl(
+        self,
+        job_id: str,
+        url: str,
+        needs_vision: bool = False,
+        js_complexity: str = "low",
+        user_directed: bool = False,
+    ) -> Dict[str, Any]:
         adapter_result = self.adapter_registry.run(url) if self.adapter_registry is not None else None
         if adapter_result is not None:
             return _adapter_result_to_task_result(job_id, adapter_result, [f"platform-adapter:{adapter_result.adapter}"])

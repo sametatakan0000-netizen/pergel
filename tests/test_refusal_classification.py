@@ -9,6 +9,7 @@ import threading
 import unittest
 import urllib.error
 
+from src.browser_engine.egress_proxy import EgressPolicy
 from src.browser_engine.worker import FetchBlocked, _default_url_driver
 
 
@@ -70,7 +71,8 @@ class RefusalClassificationTests(unittest.TestCase):
         cls.httpd.shutdown()
 
     def _drive(self, path):
-        return _default_url_driver("lightpanda", f"{self.base}{path}", "s1")
+        return _default_url_driver("lightpanda", f"{self.base}{path}", "s1",
+                                   policy=EgressPolicy(allow_literal=True))
 
     def _assert_block(self, path, expected_code):
         with self.assertRaises(FetchBlocked) as ctx:

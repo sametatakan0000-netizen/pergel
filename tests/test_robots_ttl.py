@@ -8,10 +8,10 @@ class RobotsTTL(unittest.TestCase):
         w._ROBOTS_CACHE.clear()
         calls = []
 
-        def fake_open(req, timeout=0):
+        def fake_fetch(url, policy, timeout=15, headers=None, egress=None, **kw):
             calls.append(1)
             raise OSError("down")
-        with mock.patch.object(w.urllib.request, "urlopen", fake_open):
+        with mock.patch.object(w, "_pinned_fetch", fake_fetch):
             w._allowed_by_robots("http://h.test/a", "UA")
             w._allowed_by_robots("http://h.test/b", "UA")
             self.assertEqual(len(calls), 1)

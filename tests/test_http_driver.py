@@ -2,6 +2,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from src.browser_engine.egress_proxy import EgressPolicy
 from src.browser_engine.worker import FetchBlocked, _default_url_driver
 
 BODY = b"<html><body><h1>Hello</h1><p>" + b"word " * 40 + b"</p></body></html>"
@@ -41,7 +42,9 @@ class TestHttpDriver(unittest.TestCase):
         cls.srv.server_close()
 
     def fetch(self, path):
-        return _default_url_driver("lightpanda", self.base + path, "s1")
+        # Local test server is a private IP: opt in via policy (production default is strict).
+        return _default_url_driver("lightpanda", self.base + path, "s1",
+                                   policy=EgressPolicy(allow_literal=True))
 
     def test_ok_returns_raw_html_for_discovery(self):
         out = self.fetch("/ok")
