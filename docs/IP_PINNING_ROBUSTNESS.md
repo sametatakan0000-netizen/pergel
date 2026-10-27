@@ -105,6 +105,29 @@ fetchler robots.txt'i atlayabilirdi; artık kapsam çağrıyla sınırlı.
 | `robots.txt` fetchi | Her zaman serbest ağ | Aynı pin + politika; TTL penceresinde tek çözümleme |
 | `user_directed` bayrağı | Sonsuza kadar açık kalabilirdi (ContextVar sızıntısı) | Çağrı sonunda `reset` |
 
+## Canlı TLS Doğrulaması (2026-10-27)
+
+Mock değil; gerçek kendinden-imzalı sertifika (SAN `DNS:localhost` + `IP:127.0.0.1`) + loopback HTTPS sunucusu ile gerçek TLS el sıkışmaları ölçüldü. Kod değiştirilmedi.
+
+| Senaryo | Sonuç |
+|---|---|
+| Worker yolu (`_default_url_raw`), default trust, self-signed sertifika | `URLError(SSLCertVerificationError)`, verify_code=18, "certificate verify failed: self-signed certificate" |
+| Aynı çağrı, sertifika trust store'a anchor edildiğinde | **SUCCESS**, gövde `tls-pinned-ok` → reddin tek nedeni sertifika zinciri doğrulaması |
+| `_PinnedHTTPSConnection` doğrudan, CERT_NONE, gerçek handshake (TLSv1.3) | **SUCCESS**; `server_hostname='localhost'` (=URL host), dialed IP `127.0.0.1` (=pin'li IP) |
+| URL host `wrong.test` (SAN'da yok) | `SSLCertVerificationError`, verify_code=62, "Hostname mismatch" — `ValueError` değil |
+| IP-literal URL (`127.0.0.1`) | **SUCCESS**; `Host='127.0.0.1:port'`, SNI=None (IP için SNI gönderilmez) |
+
+Sunucu tarafı `client_connected` kanıtı (socket pin'li IP'ye bağlandı, Host/SNI orijinal hostname'te kaldı):
+`dialed_target_ip_port=['127.0.0.1', 45461]`, `Host='localhost:45461'`, SNI=`'localhost'`.
+
+**Ölçülen davranış özeti:** TCP soketi pin'li IP'ye bağlanırken TLS SNI ve `Host` başlığı orijinal
+hostname'te kalıyor; tek reddetme nedeni sertifika zinciri doğrulaması, SNI/hostname mismatch değil.
+
+Ek ölçülen ayrıntı: Python `ssl.SSLSocket.accept()` handshake'i `accept()` içinde eager yapar; istemci
+sertifikayı reddedince `SSLError` yutulur (`socketserver` `except OSError: return`), yani başarısız TLS
+denemeleri uygulama katmanı logunda görünmez — SNI callback'i ile doğrulandı (13 bağlantının 8'i
+`client_connected`'ta, kalanı yalnızca SNI eventinde).
+
 ## Simülasyon / Kontrollü Saldırgan Senaryoları
 
 1. **İki DNS Cevabı Senaryosu:** Bir test, aynı ana bilgisayar için çağrı başına iki farklı
