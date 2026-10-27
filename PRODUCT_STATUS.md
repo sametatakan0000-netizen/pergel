@@ -43,8 +43,8 @@ Before falling back to the engine ladder, `execute_task` now tries platform adap
   - Tests: `test_platform_adapters.py` + per-adapter test files. Full non-live suite: **595 passed** (verified 2026-10-27).
   - Next in this layer (not yet built): `storage_state` user-session tier (step 3 of the stealth/bot ladder) and the paid-unblocker last resort (step 4, requires explicit user opt-in). Both are ToS-sensitive; currently unimplemented.
 
-## Known flaky (pre-existing, 2026-10-26)
-- `tests/test_cosmetic_timing.py::TestCosmeticDocumentStart::test_late_injection_is_observable` fails intermittently (~2/5 runs) in a visibility probe ("probe never saw the ad even with late injection"). **Pre-dates** the platform-adapter work (reproduced with worker changes stashed: 4/5 pass without, 3/5 with — same instability either way). Not caused by `a9bc973`. Needs a timing/latency fix in the cosmetic injection visibility check.
+## Known flaky -> FIXED (2026-10-27)
+- `tests/test_cosmetic_timing.py` flake fixed: `_run()` now waits (poll `typeof window.__sawVisible === 'boolean'`) for the page's inline probe script to init before evaluating, so the final `window.__sawVisible` read no longer races the parser. Root cause was an uninitialized `window.__sawVisible` (undefined -> falsy) when `Runtime.evaluate` ran ahead of the data-URL parse. Verified 8/8 green.
 
 ## Still pending / awaits user (blocked on HFY input)
 1. `hermes login` to reconnect the Nous Portal connector (sticky fallback is covering meanwhile).

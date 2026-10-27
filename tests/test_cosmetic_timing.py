@@ -116,6 +116,16 @@ class TestCosmeticDocumentStart(unittest.TestCase):
                 await call("Page.navigate",
                            {"url": "data:text/html," + _PAGE.replace("#", "%23")},
                            sid=sid)
+                # Wait for the page's inline probe script to initialise so
+                # window.__sawVisible is a real boolean, not undefined. Without
+                # this the final evaluate races the parser (intermittent flake).
+                for _ in range(100):
+                    ready = await call("Runtime.evaluate",
+                                       {"expression": "typeof window.__sawVisible === 'boolean'",
+                                        "returnByValue": True}, sid=sid)
+                    if ready["result"]["result"].get("value"):
+                        break
+                    await asyncio.sleep(0.02)
                 if not inject_at_document_start:
                     await asyncio.sleep(0.5)  # late injection: after load
                     await call("Runtime.evaluate", {"expression": inject}, sid=sid)
