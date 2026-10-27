@@ -74,10 +74,10 @@ gerçek dış ağ trafiği yoktur).
 | Test | Kontrol ettiği güvenlik özelliği |
 |---|---|
 | `test_opener_dials_ip_and_never_resolves_hostname` | Hostname'i hiç çözümlemeden yalnızca doğrulanmış IP'ye bağlanır; 3xx yönlendirme `HTTPError` olarak caller'a döner. |
-| `test_https_pins_verified_ip_and_preserves_hostname` | HTTPS'te pin'lenmiş IP'ye bağlanır + TLS `server_hostname` özgün hostta kalır (SNI/cert adı korunur). |
-| `test_ip_literal_is_blocked` | `http://127.0.0.1/...` literal hedef, politika açılmadan `FetchBlocked` (SSRF kapanır). |
-| `test_redirect_to_denied_host_is_blocked_and_not_fetched` | `302` ile `169.254.169.254`'e yönlendirme, bağlantı açılmadan `FetchBlocked` ile düşer. |
-| `test_robots_txt_fetch_is_pinned_and_does_not_re_resolve` | robots.txt fetchi pin üzerinden gider; TTL penceresinde ikinci DNS çözümlemesi yapılmaz (tek çağrı). |
+| `test_fetch_pins_to_validated_ip_single_resolution` | `_default_url_raw` çözümlemeyi yalnızca bir kez yapar, bağlantıyı o IP'ye kurar (DNS rebinding penceresi kapalı). |
+| `test_strict_policy_denies_private_target_before_connect` | `http://127.0.0.1/...` literal hedef, politika açılmadan `FetchBlocked` (SSRF kapanır). |
+| `test_non_http_schemes_are_blocked` | `ftp://`, `data://`, `file://`, `javascript:` şemaları çözümleme/erişim öncesi reddedilir (ölçümle doğrulandı). |
+| `test_redirect_to_denied_host_is_blocked_and_not_fetched` | `302` ile başka host'a yönlendirme, bağlantı açılmadan yeniden politika kontrolünden geçer; yasaklıysa `FetchBlocked`. |
 
 Ek (aynı turda bulunan): `tests/test_user_directed_robots.py::test_user_directed_flag_does_not_leak_beyond_execute_task`
 — `user_directed=True` bayrağı çağrı sonrası ContextVar'dan sıfırlanmazsa sonraki otomatik
@@ -86,7 +86,7 @@ fetchler robots.txt'i atlayabilirdi; artık kapsam çağrıyla sınırlı.
 ### Durum (doğrulandı)
 
 * RED turu: `tests.test_ip_pinning` 4/4 hata (eski `urlopen` yaması ile pencere açık).
-* GREEN turu: `tests.test_ip_pinning` 5/5 yeşil + sızıntı testi yeşil.
+* GREEN turu: `tests.test_ip_pinning` 5/5 yeşil + `test_non_http_schemes_are_blocked` (2026-10-27 eklendi) + sızıntı testi yeşil.
 * Tam süit: `python -m unittest discover -s tests -t .` → **604 test OK** (5 skip; canlı/geçici).
 * Regresyonlar: `test_bench_fidelity` fixture harness'i bilerek `private_targets_allowed(True)`
   ile localhost'a koşuyor (CI içi deterministik bench); `test_http_driver` /
@@ -99,7 +99,7 @@ fetchler robots.txt'i atlayabilirdi; artık kapsam çağrıyla sınırlı.
 |---|---|---|
 | `https://trusted.example` → A kaydı `203.0.113.10` → kayıt aniden `127.0.0.1` | `urlopen` soket açarken `127.0.0.1`'e gidebilirdi | `_pinned_fetch` yalnızca onaylı `203.0.113.10`'a bağlanır |
 | `302 Location: http://169.254.169.254/` | Yeni hedef politikasız açılır | Yeniden politika kontrolü; `EgressDenied`/`FetchBlocked` |
-| `ftp://`, `data:` URL'leri | Açık giriş (önceden koşulsuz idi) | Test edildi; `ftp://` açık girişte `FetchBlocked`/URLError zinciri |
+| `ftp://`, `data:`, `file://`, `javascript:` URL'leri | Ölçüldü: `FetchBlocked` ("scheme not allowed") ile reddediliyor | Ölçümle doğrulandı (bkz. `test_non_http_schemes_are_blocked`) |
 | Çoklu yönlendirme (`302 -> 302 -> ...`) | Zincir sonu politikasız | Her hedefte `check_url` (kayıt IP'si + pin) |
 | TLS SNI / sertifika eşleşmesi | Yanlış host'a sertifika doğrulaması riski | `_PinnedHTTPSConnection` `server_hostname=self.host` |
 | `robots.txt` fetchi | Her zaman serbest ağ | Aynı pin + politika; TTL penceresinde tek çözümleme |
@@ -121,8 +121,7 @@ fetchler robots.txt'i atlayabilirdi; artık kapsam çağrıyla sınırlı.
 1. `http.client.HTTPSConnection.connect()` içindeki TLS sürümü el sıkışması sırasında
    soket kapanma davranışı işletim sistemine bağlıdır; test yalnızca `server_hostname`
    argümanının sağlandığını doğrular.
-2. `ftp://`, `data:`, `javascript:` gibi şemalar zaten açık giriş (raw URL) için uygun
-   değildir; bunlar için ayrı bir politika testi gerekir.
+2. Şema kontrolü `EgressPolicy` içinde değil, `_check_hop` öncesinde uygulanan şema reddinde; bu davranış testle kilitlendi.
 3. 512KB üzerindeki `robots.txt` dosyaları için `can_fetch` hâlâ yükleme zamanında
    kontrol edilir; yeniden `Content-Length` doğrulaması eklenebilir.
 

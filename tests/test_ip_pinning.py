@@ -93,6 +93,15 @@ class TestFetchPinning(unittest.TestCase):
             w._default_url_raw("lightpanda", "http://127.0.0.1:9/x", "s")
         self.assertEqual(cm.exception.code, "target_private_address")
 
+    def test_non_http_schemes_are_blocked(self):
+        # Measured 2026-10-27: ftp/data/file/javascript all reject with
+        # "scheme not allowed" before any resolution happens.
+        for url in ("ftp://203.0.113.5/x", "data:text/html,<p>hi</p>",
+                    "file:///etc/passwd", "javascript:alert(1)"):
+            with self.assertRaises(w.FetchBlocked) as cm:
+                w._default_url_raw("lightpanda", url, "s")
+            self.assertEqual(cm.exception.code, "target_private_address")
+
 
 class _ScriptedPolicy:
     """Hop 1 (pinned.test) passes pinned to 127.0.0.1; any other host is denied."""
