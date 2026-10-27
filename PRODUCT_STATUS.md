@@ -49,7 +49,7 @@ Before falling back to the engine ladder, `execute_task` now tries platform adap
 
 ## Still pending / awaits user (blocked on HFY input)
 1. ~~`hermes login` to reconnect the Nous Portal connector~~ — DONE (2026-10-27): `hermes auth add nous` re-imported the shared OAuth session (`sametatakan0000@gmail.com`, device_code, priority=0); `hermes auth list` confirms active. No manual link step needed.
-2. Three cross-vendor evaluations for that connector's review (0/3 done).
+2. Three cross-vendor evaluations for that connector's review (3/3 done: `docs/rea/security_posture_evaluation_2026-10.md`, `docs/rea/cdp_surface_evaluation_2026-10.md`, `docs/product/mv3_dnr_evaluation_2026-10.md`; commits bbc3b8d, 7bce12d).
 3. ~~A8 machine-access questions~~ — withdrawn (2026-10-25): REA scope is market-wide (all browsers + all OS/ISO images), run on our own machine under HFY's blanket approval; no external lab needed.
 
 ## Known side effects (2026-10-25)
