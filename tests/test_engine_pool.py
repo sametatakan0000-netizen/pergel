@@ -1,5 +1,7 @@
 """Chromium pool: one persistent browser owned by a dedicated worker thread."""
 import sys
+import threading
+import time
 import types
 import unittest
 from unittest import mock
@@ -74,6 +76,71 @@ def _install_fake_playwright(fake: _FakePlaywright):
     return mock.patch.dict(sys.modules, {"playwright": module, "playwright.sync_api": sync_api})
 
 
+class _HangingPlaywright:
+    """Fake whose navigation blocks until `release` is set (a truly hung engine)."""
+
+    def __init__(self, started: threading.Event, release: threading.Event) -> None:
+        self._started = started
+        self._release = release
+        self.stopped = 0
+
+    def start(self):
+        return self
+
+    def stop(self):
+        self.stopped += 1
+
+    @property
+    def sync_playwright(self):
+        return lambda: self
+
+    @property
+    def chromium(self):
+        outer = self
+
+        class _Page:
+            def goto(self, url: str, **kw):
+                outer._started.set()
+                outer._release.wait(30)  # bounded so a broken test cannot hang the suite
+
+            def content(self) -> str:
+                return "<html>hung</html>"
+
+        class _Browser:
+            def is_connected(self) -> bool:
+                return True
+
+            def new_page(self, user_agent: str = "") -> "_Page":
+                return _Page()
+
+            def close(self):
+                pass
+
+        class _Chromium:
+            def launch(self, headless: bool):
+                return _Browser()
+
+        return _Chromium()
+
+
+def _install_fake_playwright_factory(fakes):
+    """One fake per pool generation: `sync_playwright()` pops the next fake."""
+    it = iter(fakes)
+    last = fakes[-1]
+
+    def factory():
+        try:
+            return next(it)
+        except StopIteration:
+            return last
+
+    module = types.ModuleType("playwright")
+    sync_api = types.ModuleType("playwright.sync_api")
+    sync_api.sync_playwright = factory
+    module.sync_api = sync_api
+    return mock.patch.dict(sys.modules, {"playwright": module, "playwright.sync_api": sync_api})
+
+
 class ChromiumPoolTests(unittest.TestCase):
     def setUp(self):
         import importlib
@@ -121,6 +188,38 @@ class ChromiumPoolTests(unittest.TestCase):
         with mock.patch.dict(sys.modules, {"playwright": None, "playwright.sync_api": None}):
             with self.assertRaises(self.ed.EngineUnavailable):
                 self.ed.chromium_pool.fetch("https://a.example/", "s1")
+
+    def test_hung_worker_is_replaced_and_pool_recovers(self):
+        started = threading.Event()
+        release = threading.Event()
+        hung = _HangingPlaywright(started, release)
+        ok = _FakePlaywright()
+        with _install_fake_playwright_factory([hung, ok]):
+            with self.assertRaises(TimeoutError):
+                self.ed.chromium_pool.fetch("https://hang.example/", "s1", timeout_s=0.5)
+            self.assertTrue(started.wait(5), "hung worker never began navigation")
+            out = self.ed.chromium_pool.fetch("https://b.example/", "s2", timeout_s=5)
+        self.assertEqual(out, "<html>content-1</html>")
+        self.assertEqual(ok.browser.launch_count, 1)
+        release.set()  # hung worker wakes; must clean up ONLY its own generation
+        deadline = time.time() + 5
+        while hung.stopped == 0 and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(hung.stopped, 1)
+        self.assertEqual(ok.stopped, 0)
+
+    def test_navigation_timeout_still_reuses_live_worker(self):
+        # Task-side TimeoutError is NOT a hung worker: the worker thread stays
+        # healthy and the browser must not be recycled (covered above); this
+        # guards the caller/task timeout distinction explicitly.
+        fake = _FakePlaywright()
+        with _install_fake_playwright(fake):
+            with self.assertRaises(TimeoutError):
+                self.ed.chromium_pool.fetch("https://timeout/", "s1", timeout_s=5)
+            self.assertEqual(fake.browser.launch_count, 1)
+            out = self.ed.chromium_pool.fetch("https://b.example/", "s2", timeout_s=5)
+        self.assertEqual(out, "<html>content-1</html>")
+        self.assertEqual(fake.browser.launch_count, 1)
 
 
 if __name__ == "__main__":

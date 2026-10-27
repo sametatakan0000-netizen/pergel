@@ -9,7 +9,8 @@ import atexit
 import os
 import shutil
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
+import threading
+from concurrent.futures import ThreadPoolExecutor, wait as futures_wait
 from typing import Optional
 
 from src.browser_engine.worker import (
@@ -125,28 +126,48 @@ def _lightpanda_html(url: str, session_name: str) -> str:
     return out[:MAX_BODY_BYTES]
 
 
-class _ChromiumPool:
-    """Kalıcı headless Chromium; tek işçi thread'i sahiplenir, her fetch yeni page açar.
-    sync Playwright oluşturan thread'e bağlı olduğu için havuz, tüm çağrıları tek
-    ThreadPoolExecutor işçisine yollar (ThreadingHTTPServer thread'leri arası güvenli)."""
+class _WorkerHung(TimeoutError):
+    """Caller-side hang: the worker thread never finished within the budget.
+
+    Distinct from a task-raised TimeoutError (navigation timeout): a hung
+    worker must be replaced, a timed-out navigation must not recycle the
+    healthy engine."""
+
+
+class _ChromiumWorker:
+    """One executor thread owning one (playwright, browser) generation.
+
+    A generation is abandoned as a unit on hang so a stuck Playwright call
+    can never wedge the pool again."""
 
     def __init__(self) -> None:
         self._exec = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chromium-pool")
         self._pw = None
         self._browser = None
+        self._abandoned = False
 
-    def fetch(self, url: str, user_agent: str) -> str:
+    def fetch(self, url: str, user_agent: str, timeout_s: float) -> str:
         future = self._exec.submit(self._fetch_on_worker, url, user_agent)
-        # shortcut: a hung navigation blocks the single worker; result timeout only unblocks the caller
-        return future.result(timeout=CHROMIUM_TIMEOUT_S + 30)
+        done, _ = futures_wait([future], timeout=timeout_s)
+        if not done:
+            raise _WorkerHung(f"chromium worker hung >{timeout_s}s on {url}")
+        return future.result()  # task exceptions (incl. TimeoutError) re-raise as-is
+
+    def abandon(self) -> None:
+        """Caller-side hang: drop this generation; it self-cleans when it wakes."""
+        self._abandoned = True
+        # shortcut: a never-waking worker keeps its chromium subprocess and delays
+        #   interpreter exit until the hung call returns; upgrade: kill the browser
+        #   process or isolate each fetch in its own subprocess.
+        self._exec.shutdown(wait=False)
 
     def _fetch_on_worker(self, url: str, user_agent: str) -> str:
         try:
             return self._fetch_once(url, user_agent)
         finally:
             browser = self._browser
-            if browser is not None and hasattr(browser, "is_connected") and not browser.is_connected():
-                self._reset()  # dead engine -> fresh launch on next fetch
+            if self._abandoned or (browser is not None and hasattr(browser, "is_connected") and not browser.is_connected()):
+                self._reset()  # dead/abandoned generation -> close own engine only
 
     def _fetch_once(self, url: str, user_agent: str) -> str:
         browser = self._browser
@@ -178,6 +199,35 @@ class _ChromiumPool:
             pass
         self._pw = None
         self._browser = None
+
+
+class _ChromiumPool:
+    """Kalıcı headless Chromium; tek işçi thread'i sahiplenir, her fetch yeni page açar.
+    sync Playwright oluşturan thread'e bağlı olduğu için havuz, tüm çağrıları tek
+    ThreadPoolExecutor işçisine yollar (ThreadingHTTPServer thread'leri arası güvenli).
+    Takılan bir işçi kuşak değiştirilerek kenara atılır: havuz bir daha kalıcı kilitlenmez."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._worker = _ChromiumWorker()
+
+    def fetch(self, url: str, user_agent: str, timeout_s: Optional[float] = None) -> str:
+        if timeout_s is None:
+            timeout_s = CHROMIUM_TIMEOUT_S + 30
+        with self._lock:
+            worker = self._worker
+        try:
+            return worker.fetch(url, user_agent, timeout_s)
+        except _WorkerHung:
+            with self._lock:
+                if self._worker is worker:
+                    worker.abandon()
+                    self._worker = _ChromiumWorker()  # fresh generation for next fetch
+            raise
+
+    def _reset(self) -> None:
+        with self._lock:
+            self._worker._reset()
 
 
 chromium_pool = _ChromiumPool()
