@@ -1,5 +1,6 @@
 """Chromium pool: one persistent browser owned by a dedicated worker thread."""
 import sys
+import subprocess
 import threading
 import time
 import types
@@ -83,6 +84,12 @@ class _HangingPlaywright:
         self._started = started
         self._release = release
         self.stopped = 0
+        self.browser_killed = False
+        # Real child process standing in for the chromium subprocess: killing it
+        # in `kill()` is the observable leak-prevention behavior under test.
+        self.child = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"]
+        )
 
     def start(self):
         return self
@@ -115,6 +122,15 @@ class _HangingPlaywright:
 
             def close(self):
                 pass
+
+            def kill(self):
+                outer.browser_killed = True
+                try:
+                    outer.child.kill()
+                    # Reap synchronously so poll() reflects death immediately.
+                    outer.child.wait(timeout=5)
+                except Exception:
+                    pass
 
         class _Chromium:
             def launch(self, headless: bool):
@@ -220,6 +236,51 @@ class ChromiumPoolTests(unittest.TestCase):
             out = self.ed.chromium_pool.fetch("https://b.example/", "s2", timeout_s=5)
         self.assertEqual(out, "<html>content-1</html>")
         self.assertEqual(fake.browser.launch_count, 1)
+
+
+    def test_hung_worker_abandon_kills_browser_subprocess(self):
+        # Regression for the `# shortcut:` note: a never-waking worker used to
+        # leak its chromium subprocess. abandon() must kill it immediately.
+        started = threading.Event()
+        release = threading.Event()
+        hung = _HangingPlaywright(started, release)
+        with _install_fake_playwright_factory([hung]):
+            with self.assertRaises(TimeoutError):
+                self.ed.chromium_pool.fetch("https://hang.example/", "s1", timeout_s=0.5)
+        # abandon() must have killed the fake's child process (the chromium stand-in)
+        deadline = time.time() + 5
+        while hung.child.poll() is None and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertIsNotNone(hung.child.poll(), "abandon() must kill the hung browser subprocess")
+        release.set()
+        deadline = time.time() + 5
+        while hung.stopped == 0 and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(hung.stopped, 1)
+        try:
+            hung.child.kill()
+        except Exception:
+            pass
+
+    def test_shutdown_pools_reaps_abandoned_subprocess(self):
+        # A hung generation left behind (even after pool reset) must not leak.
+        started = threading.Event()
+        release = threading.Event()
+        hung = _HangingPlaywright(started, release)
+        with _install_fake_playwright_factory([hung]):
+            with self.assertRaises(TimeoutError):
+                self.ed.chromium_pool.fetch("https://hang.example/", "s1", timeout_s=0.5)
+            self.ed.shutdown_pools()
+        self.assertTrue(hung.child.poll() is not None, "shutdown must reap the abandoned subprocess")
+        release.set()
+        deadline = time.time() + 5
+        while hung.stopped == 0 and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(hung.stopped, 1)
+        try:
+            hung.child.kill()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

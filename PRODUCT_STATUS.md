@@ -12,6 +12,7 @@ Run tests: `.venv/bin/python -m unittest discover -s tests -t .` (269 pass; test
 ## Not real yet
 - tier-3 `camofox` deliberately deferred (stealth, legal/ToS opt-in) -> falls back to plain-HTTP driver.
 - Chromium pool (2026-10-24): persistent headless browser owned by a single worker thread, fresh page per fetch, dead-engine auto-relaunch (`engine_drivers.py`). lightpanda stays per-fetch subprocess (CLI model).
+- Chromium leak fix (2026-10-27): a hung worker no longer leaks its chromium subprocess — `abandon()` force-kills the engine (`_kill_browser`), and `shutdown_pools()`/`reap()` sweep any abandoned generation. Closes the `# shortcut:` subprocess-leak note (TDD: RED `test_hung_worker_abandon_kills_browser_subprocess` + `test_shutdown_pools_reaps_abandoned_subprocess` → GREEN).
 - SaaS auth: `/v1/jobs/*` requires `Authorization: Bearer $BROWSE_API_KEY` when the env var is set (constant-time compare). Router paths (`/v1/chat/completions`, `/v1/router/*`, `/v1/models`) intentionally stay open for Hermes.
 - Rate limiting (2026-10-24): per-client token bucket on `/v1/jobs/*` + `/v1/search/fanout` (`ORACLE_JOBS_RPM`, default 60, 0=off; 429 with Retry-After). Router paths unthrottled.
 - Fan-out decomposition: lexical split on explicit conjunctions/punctuation only; no mid-phrase cuts. Semantic LLM split available and opt-in (`ORACLE_FANOUT_LLM=1`): one tiny call to the cheapest served priced model per fan-out (live-verified: 63+53 tokens ≈ $0.00001), used only when lexical yields a single long query; garbage/errors fall back to lexical; response carries `decomposition: llm|lexical`. Default OFF (no hidden model calls).
@@ -47,7 +48,7 @@ Before falling back to the engine ladder, `execute_task` now tries platform adap
 - `tests/test_cosmetic_timing.py` flake fixed: `_run()` now waits (poll `typeof window.__sawVisible === 'boolean'`) for the page's inline probe script to init before evaluating, so the final `window.__sawVisible` read no longer races the parser. Root cause was an uninitialized `window.__sawVisible` (undefined -> falsy) when `Runtime.evaluate` ran ahead of the data-URL parse. Verified 8/8 green.
 
 ## Still pending / awaits user (blocked on HFY input)
-1. `hermes login` to reconnect the Nous Portal connector (sticky fallback is covering meanwhile).
+1. ~~`hermes login` to reconnect the Nous Portal connector~~ — DONE (2026-10-27): `hermes auth add nous` re-imported the shared OAuth session (`sametatakan0000@gmail.com`, device_code, priority=0); `hermes auth list` confirms active. No manual link step needed.
 2. Three cross-vendor evaluations for that connector's review (0/3 done).
 3. ~~A8 machine-access questions~~ — withdrawn (2026-10-25): REA scope is market-wide (all browsers + all OS/ISO images), run on our own machine under HFY's blanket approval; no external lab needed.
 

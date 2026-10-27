@@ -156,10 +156,28 @@ class _ChromiumWorker:
     def abandon(self) -> None:
         """Caller-side hang: drop this generation; it self-cleans when it wakes."""
         self._abandoned = True
-        # shortcut: a never-waking worker keeps its chromium subprocess and delays
-        #   interpreter exit until the hung call returns; upgrade: kill the browser
-        #   process or isolate each fetch in its own subprocess.
+        self._kill_browser()  # never leak a hung chromium subprocess
         self._exec.shutdown(wait=False)
+
+    def _kill_browser(self) -> None:
+        """Force-kill the engine subprocess even when the worker is wedged."""
+        br = self._browser
+        self._browser = None
+        if br is None:
+            return
+        # Playwright's Browser.close() can block on a wedged connection; kill()
+        # is the hard stop. Fall back to close() when the driver has no kill().
+        try:
+            kill = getattr(br, "kill", None)
+            if callable(kill):
+                kill()
+                return
+        except Exception:
+            return
+        try:
+            br.close()
+        except Exception:
+            pass
 
     def _fetch_on_worker(self, url: str, user_agent: str) -> str:
         try:
@@ -210,6 +228,7 @@ class _ChromiumPool:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._worker = _ChromiumWorker()
+        self._abandoned: list[_ChromiumWorker] = []
 
     def fetch(self, url: str, user_agent: str, timeout_s: Optional[float] = None) -> str:
         if timeout_s is None:
@@ -222,10 +241,19 @@ class _ChromiumPool:
             with self._lock:
                 if self._worker is worker:
                     worker.abandon()
+                    self._abandoned.append(worker)  # reaped by reap()/shutdown
                     self._worker = _ChromiumWorker()  # fresh generation for next fetch
             raise
 
+    def reap(self) -> None:
+        """Force-kill any abandoned (hung) workers' engine subprocesses."""
+        with self._lock:
+            pending, self._abandoned = self._abandoned, []
+        for w in pending:
+            w._kill_browser()
+
     def _reset(self) -> None:
+        self.reap()  # never leak a hung generation's chromium subprocess
         with self._lock:
             self._worker._reset()
 
