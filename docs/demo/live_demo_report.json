@@ -1,0 +1,19 @@
+{
+  "chromium": "/home/pc/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome",
+  "url": "http://127.0.0.1:55895/",
+  "filter_stats": {
+    "total": 7,
+    "network": 1,
+    "cosmetic": 5,
+    "scriptlets": 0,
+    "procedural": 1
+  },
+  "before_text_len": 986,
+  "after_text_len": 648,
+  "before_has_ad": true,
+  "after_has_ad": false,
+  "after_has_real_content": true,
+  "after_has_organic": true,
+  "before_bytes": 53437,
+  "after_bytes": 46013
+}

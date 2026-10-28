@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 
 from .extension_host import ExtensionHost  # noqa: F401 (type only)
 from .adblock_session import AdblockBundle, build_injection
-from .cdp_bridge import CDPBridge
+from .cdp_bridge import CDPBridge, _action_of, _rule_id_of, decide_cdp_response
 
 try:
     import websockets
@@ -53,9 +53,15 @@ class AdblockBrowserSession:
     """One enforced Chromium session; async context manager."""
 
     def __init__(self, bundle: AdblockBundle, browser_path: Optional[str] = None,
-                 extensions: Optional["ExtensionHost"] = None):
+                 extensions: Optional["ExtensionHost"] = None,
+                 headless: bool = True, keep_open: bool = False,
+                 on_blocked: Optional[Callable[[dict], None]] = None):
         self.bundle = bundle
         self._browser_path = browser_path or _chromium()
+        self._headless = headless
+        self._keep_open = keep_open
+        self._on_blocked = on_blocked
+        self._tmp = tempfile.mkdtemp()
         self._proc = None
         self._ws = None
         self._sid = None
@@ -70,14 +76,21 @@ class AdblockBrowserSession:
         self._bridge = CDPBridge(source, send=lambda m: None)
 
     # --- lifecycle -------------------------------------------------------
+    def _build_command(self) -> list:
+        """The Chromium argv for this session (headless flag honours ``headless``)."""
+        cmd = [self._browser_path]
+        if self._headless:
+            cmd.append("--headless=new")
+        cmd += ["--no-sandbox", "--disable-gpu",
+                "--remote-debugging-port=0", "--user-data-dir=" + self._tmp,
+                "about:blank"]
+        return cmd
+
     async def __aenter__(self) -> "AdblockBrowserSession":
         if websockets is None or self._browser_path is None:
             raise RuntimeError("websockets lib or chromium binary unavailable")
-        self._tmp = tempfile.mkdtemp()
         self._proc = subprocess.Popen(
-            [self._browser_path, "--headless=new", "--no-sandbox", "--disable-gpu",
-             "--remote-debugging-port=0", "--user-data-dir=" + self._tmp,
-             "about:blank"],
+            self._build_command(),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         ws_url = self._wait_ws()
         self._ws = await websockets.connect(ws_url, max_size=2**24)
@@ -97,7 +110,8 @@ class AdblockBrowserSession:
             self._pump.cancel()
         if self._ws:
             await self._ws.close()
-        if self._proc:
+        # keep_open: the user is still driving the window; closing is the caller's job
+        if self._proc and not self._keep_open:
             self._proc.terminate()
 
     def _wait_ws(self) -> str:
@@ -153,6 +167,9 @@ class AdblockBrowserSession:
                     self._pending.pop(m["id"]).set_result(m)
                     continue
                 if m.get("method") == "Fetch.requestPaused":
+                    # surface the decision to the observer first (live counter),
+                    # then dispatch the real enforcement reply
+                    self._notify_decision(m["params"])
                     reply = self._bridge.on_request_paused(m["params"])
                     self._seq += 1
                     await self._ws.send(json.dumps(self._resume_message(
@@ -165,6 +182,27 @@ class AdblockBrowserSession:
             pass
 
     # --- driver API ------------------------------------------------------
+    def _notify_decision(self, params: dict) -> dict:
+        """Compute the enforcement decision for a paused request and surface it.
+
+        Pure message construction via ``decide_cdp_response`` (no socket send),
+        so the ``on_blocked`` callback can observe every request's fate — the
+        live block counter the user sees while driving the real window.
+        """
+        msg = decide_cdp_response(
+            self._bridge.engine,
+            request_id=params.get("requestId", ""),
+            url=params.get("request", {}).get("url", ""),
+            resource_type=params.get("resourceType", "Other"),
+            request_headers=dict(params.get("request", {}).get("headers", {})),
+        )
+        payload = {"action": _action_of(msg),
+                   "rule_id": _rule_id_of(msg),
+                   "url": params.get("request", {}).get("url", "")}
+        if self._on_blocked is not None:
+            self._on_blocked(payload)
+        return payload
+
     async def fetch(self, url: str, host: Optional[str] = None, timeout: float = 30.0):
         """Fetch a URL through the engine; return a scrape body.
 

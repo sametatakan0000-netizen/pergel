@@ -1,12 +1,12 @@
-== 2026-10-26T17:27:49+03:00 deploy
-Source : /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm (commit 491e4fa)
+== 2026-10-27T15:06:59+03:00 deploy
+Source : /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm (commit 7e50079)
 App    : /home/pc/.local/share/oracle-router/app
 Data   : /home/pc/.local/share/oracle-router/data
 Units  : /home/pc/.config/systemd/user
 
 
 Health:
-{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-26T14:27:50+00:00", "routable": 389}, "watchdog": {"timestamp": 1793024871.3723216, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
+{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-27T12:07:00+00:00", "routable": 387}, "watchdog": {"timestamp": 1793102821.1249151, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
 
 Next: bash /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm/scripts/host/verify_live.sh
 Optional (keep services running while logged out): loginctl enable-linger pc
@@ -18,9 +18,9 @@ active
 == /v1/models
 {"object": "list", "data": [{"id": "oracle/auto", "object": "model", "owned_by": "oracle-router", "context_length": 120000}]}
 == /v1/health
-{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-26T14:27:52+00:00", "routable": 389}, "watchdog": {"timestamp": 1793024874.6850193, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
+{"status": "ok", "upstream_ready": true, "registry": {"fetched_at": "2026-10-27T12:07:01+00:00", "routable": 387}, "watchdog": {"timestamp": 1793102824.518039, "healthy_services": ["job_store", "router_db"], "healed_services": [], "token_ttl_remaining": 3600, "token_refreshed": false}}
 == deployed commit
-491e4fa
+7e50079
 
 == hermes default model
   Model:        {'default': 'custom:oracle-router:oracle/auto', 'provider': 'oracle-router', 'base_url': 'http://127.0.0.1:8090/v1', 'api_mode': 'chat_completions'}
