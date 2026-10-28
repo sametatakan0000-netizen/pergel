@@ -5,15 +5,19 @@ import shutil
 import threading
 import unittest
 
+from src.browser_engine.egress_proxy import EgressPolicy
 from src.browser_engine.engine_drivers import (
     engine_driver,
     _lightpanda_bin,
     EngineUnavailable,
 )
-from src.browser_engine.worker import BrowserWorker, FetchBlocked
+from src.browser_engine.worker import BrowserWorker, FetchBlocked, private_targets_allowed
 
 PAGE = b"""<!doctype html><html><head><title>T</title></head>
 <body><h1>Merhaba Motor</h1><p>Bu bir test sayfasidir ve yeterince uzun bir govdeye sahiptir.</p></body></html>"""
+
+# Hermetic resolver stub: the SSRF pre-flight resolves hosts without real DNS.
+PUBLIC_POLICY = EgressPolicy(resolver=lambda host: ["93.184.216.34"])
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
@@ -39,15 +43,15 @@ class PolicyTests(unittest.TestCase):
         with mock.patch.object(ed, "_allowed_by_robots", return_value=False), \
                 mock.patch.object(subprocess, "run") as run:
             with self.assertRaises(FetchBlocked):
-                engine_driver("lightpanda", "https://blocked.example.com/", "s")
+                engine_driver("lightpanda", "https://blocked.example.com/", "s", policy=PUBLIC_POLICY)
         run.assert_not_called()
 
     def test_unknown_engine_falls_back_to_plain_http_driver(self):
         import src.browser_engine.engine_drivers as ed
         seen = {}
         orig_allowed, orig_default = ed._allowed_by_robots, ed._default_url_driver
-        ed._allowed_by_robots = lambda url, ua: True
-        ed._default_url_driver = lambda engine, url, s: seen.setdefault("call", (engine, url)) and ""
+        ed._allowed_by_robots = lambda url, ua, **kw: True
+        ed._default_url_driver = lambda engine, url, s, **kw: seen.setdefault("call", (engine, url)) and ""
         try:
             engine_driver("camofox", "https://example.com/", "s")
         finally:
@@ -74,7 +78,7 @@ class LightpandaStubTests(unittest.TestCase):
         os.chmod(stub, 0o755)
         os.environ["LIGHTPANDA_BIN"] = stub
         try:
-            out = engine_driver("lightpanda", "https://example.com/", "s")
+            out = engine_driver("lightpanda", "https://example.com/", "s", policy=PUBLIC_POLICY)
         finally:
             del os.environ["LIGHTPANDA_BIN"]
         self.assertIn("STUB-HTML", out)
@@ -87,7 +91,7 @@ class LightpandaStubTests(unittest.TestCase):
         os.environ["LIGHTPANDA_BIN"] = stub
         try:
             with self.assertRaises(Exception):
-                engine_driver("lightpanda", "https://example.com/", "s")
+                engine_driver("lightpanda", "https://example.com/", "s", policy=PUBLIC_POLICY)
         finally:
             del os.environ["LIGHTPANDA_BIN"]
 
@@ -114,7 +118,8 @@ class RealEngineIntegration(unittest.TestCase):
     def test_lightpanda_renders_local_page(self):
         if not (_lightpanda_bin() and os.path.exists(_lightpanda_bin())):
             self.skipTest("lightpanda binary not installed")
-        out = engine_driver("lightpanda", self.url, "it")
+        with private_targets_allowed():  # local test server = private target opt-in
+            out = engine_driver("lightpanda", self.url, "it")
         self.assertIn("Merhaba Motor", out)
 
     def test_chromium_renders_local_page(self):
@@ -122,13 +127,15 @@ class RealEngineIntegration(unittest.TestCase):
             import playwright  # noqa: F401
         except ImportError:
             self.skipTest("playwright not installed")
-        out = engine_driver("chromium-browser-use", self.url, "it")
+        with private_targets_allowed():  # local test server = private target opt-in
+            out = engine_driver("chromium-browser-use", self.url, "it")
         self.assertIn("Merhaba Motor", out)
 
     def test_worker_cascade_produces_markdown_with_real_engine(self):
         if not (_lightpanda_bin() and os.path.exists(_lightpanda_bin())):
             self.skipTest("lightpanda binary not installed")
-        res = BrowserWorker(driver_fn=engine_driver).execute_task("it1", self.url)
+        with private_targets_allowed():  # local test server = private target opt-in
+            res = BrowserWorker(driver_fn=engine_driver).execute_task("it1", self.url)
         self.assertTrue(res["oracle_passed"])
         self.assertIn("Merhaba Motor", res["markdown"])
 

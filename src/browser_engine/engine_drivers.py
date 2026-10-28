@@ -13,12 +13,15 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, wait as futures_wait
 from typing import Optional
 
+from src.browser_engine.egress_proxy import EgressPolicy
 from src.browser_engine.worker import (
     is_user_directed,
     MAX_BODY_BYTES,
     FetchBlocked,
     _allowed_by_robots,
+    _check_hop,
     _default_url_driver,
+    _egress_policy,
 )
 
 LIGHTPANDA_TIMEOUT_S = 30
@@ -112,12 +115,28 @@ def _lightpanda_bin() -> Optional[str]:
     return cand if cand and os.path.exists(cand) else None
 
 
+def _lightpanda_proxy_args() -> list:
+    """Lightpanda argv routing egress through the relay; [] when enforcement is off.
+
+    Lightpanda follows redirects itself (no CDP interception), so under
+    enforcement its traffic must traverse the validating EgressRelay — every
+    request, including redirect hops, is re-checked there (parity with
+    _chromium_launch_args).
+    """
+    if not _egress_enforce():
+        return []
+    _ensure_egress_guard()
+    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "10.255.255.1")
+    port = int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899"))
+    return ["--http-proxy", f"http://{host}:{port}"]
+
+
 def _lightpanda_html(url: str, session_name: str) -> str:
     binary = _lightpanda_bin()
     if not binary:
         raise EngineUnavailable("lightpanda binary not installed")
     proc = subprocess.run(
-        [binary, "fetch", url, "--dump", "html"],
+        [binary, "fetch", url, "--dump", "html", *_lightpanda_proxy_args()],
         capture_output=True, timeout=LIGHTPANDA_TIMEOUT_S,
     )
     out = proc.stdout.decode("utf-8", errors="replace")
@@ -274,20 +293,35 @@ def _chromium_html(url: str, session_name: str) -> str:
 
 
 def engine_driver(engine: str, url: str, session_name: str,
-                  user_directed: Optional[bool] = None) -> str:
+                  user_directed: Optional[bool] = None,
+                  policy: Optional[EgressPolicy] = None) -> str:
     """`BrowserWorker.driver_fn` contract: raw HTML string, exception on failure.
 
     Honors robots.txt for automated crawl. ``user_directed=True`` (or the
     worker's contextvar) marks an explicit single-URL user request: robots is
     then skipped and reported as a note, while site refusals still surface.
+
+    ``policy`` overrides the egress policy for the SSRF pre-flight (tests /
+    custom deployments); default is the live policy, which honors
+    ``private_targets_allowed()``.
     """
     if user_directed is None:
         user_directed = is_user_directed()
-    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm"):
+    policy = policy or _egress_policy()
+    egress = None
+    if engine in ("lightpanda", "chromium-browser-use"):
+        # Sub-process engines re-resolve DNS and follow redirects internally:
+        # SSRF-pre-flight the target with the plain-HTTP fallback's rules.
+        # shortcut: validates the target only; the engine re-resolves (DNS
+        # rebinding window) and does not pin to this resolve. upgrade: pin per
+        # engine or force the EgressRelay when exposed publicly.
+        egress = _check_hop(url, policy)
+    if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm",
+                                                    egress=egress, policy=policy):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     if engine == "lightpanda":
         return _lightpanda_html(url, session_name)
     if engine == "chromium-browser-use":
         return _chromium_html(url, session_name)
     # shortcut: camofox deferred (stealth opt-in + legal review), plain-HTTP until then
-    return _default_url_driver(engine, url, session_name)
+    return _default_url_driver(engine, url, session_name, policy=policy)
