@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 84,
     "total_classes": 65,
-    "total_functions": 565,
-    "total_loc": 11003
+    "total_functions": 570,
+    "total_loc": 11101
   },
   "modules": [
     {
@@ -828,10 +828,13 @@
     {
       "module": "src.bench.run",
       "path": "src/bench/run.py",
-      "loc": 79,
+      "loc": 139,
       "classes": [],
       "functions": [
         "_load_real_targets",
+        "is_blocked",
+        "flush_row",
+        "_reap_stray_drivers",
         "main"
       ],
       "imports": [
@@ -843,6 +846,8 @@
         "src.bench.fixture_server",
         "src.bench.report",
         "src.bench.runner",
+        "src.bench.targets",
+        "subprocess",
         "sys",
         "typing"
       ],
@@ -851,16 +856,24 @@
         "Scenario",
         "Target",
         "_load_real_targets",
+        "_reap_stray_drivers",
         "add_argument",
+        "append",
         "bool",
         "capture_env",
         "dump",
         "dumps",
         "exit",
         "fixture_server",
+        "flush_row",
+        "get",
         "getloadavg",
+        "int",
+        "is_blocked",
         "join",
+        "kill",
         "len",
+        "load_manifest",
         "main",
         "makedirs",
         "open",
@@ -868,33 +881,40 @@
         "print",
         "register_installed",
         "render_markdown",
+        "run",
         "run_cell",
         "sorted",
         "split",
         "write"
       ],
-      "change_risk": 6.99
+      "change_risk": 10.0
     },
     {
       "module": "src.bench.runner",
       "path": "src/bench/runner.py",
-      "loc": 46,
+      "loc": 84,
       "classes": [
         "Scenario",
         "Target"
       ],
       "functions": [
-        "run_cell"
+        "_run_lifecycle",
+        "run_cell",
+        "_work"
       ],
       "imports": [
         "dataclasses",
         "src.bench.procmem",
         "statistics",
+        "threading",
         "time",
         "typing"
       ],
       "calls": [
+        "Event",
+        "Thread",
         "TreeSampler",
+        "_run_lifecycle",
         "append",
         "dataclass",
         "fetch",
@@ -903,10 +923,13 @@
         "median",
         "perf_counter",
         "range",
+        "set",
         "start",
-        "stop"
+        "stop",
+        "type",
+        "wait"
       ],
-      "change_risk": 2.78
+      "change_risk": 4.65
     },
     {
       "module": "src.bench.stats",

@@ -1,42 +1,45 @@
 # llms.txt — Pergel
 
-> Gizliliğe saygılı, telemetrisiz, yapay zekâ için tasarlanmış açık kaynak masaüstü tarayıcı.
+> A privacy-respecting, telemetry-free, open-source desktop browser built for the AI era.
 
-Pergel; veri satmayan, arka planda telefon etmeyen, kullanıcıya kendi AI anahtarını
-(BYOK) kullandıran bir tarayıcıdır. Kod, insanlar kadar AI ajanları için de düzenlidir.
+Pergel never sells your data, never phones home, and lets you use your own AI key
+(BYOK). The code is organized for AI agents as much as humans.
 
-## Ne zaman kullan
+**English** | [Türkçe](README.tr.md)
 
-- Gizliliğe saygılı, telemetrisiz bir masaüstü tarayıcı arıyorsan.
-- Kendi AI sağlayıcı anahtarınla (OpenRouter, Nous, Ollama) çalışmak istiyorsan.
-- Depoda bir AI ajanı olarak çalışman gerekiyorsa (önce `AGENTS.md`'yi oku).
+## When to use this
 
-## Depo haritası
+- You want a privacy-respecting, telemetry-free desktop browser.
+- You want to run with your own AI provider key (OpenRouter, Nous, Ollama).
+- You are an AI agent working in this repository (read `AGENTS.md` first).
 
-- [README.md](README.md) — ürün özeti, dürüst benchmark tablosu, hızlı başlangıç.
-- [AGENTS.md](AGENTS.md) — ajan yönergesi: komutlar, kurallar, doğrulama.
-- [CODEBASE_GRAPH.json](CODEBASE_GRAPH.json) — AST tabanlı kod grafiği.
-- [docs/product/](docs/product/) — ürün iskeleti, benchmark raporu, pazar haritası.
-- [docs/rea/](docs/rea/) — tersine mühendislik ve bileşen notları.
+## Repository map
 
-## Hızlı başlangıç
+- [README.md](README.md) — product summary, honest benchmark tables, quick start.
+- [AGENTS.md](AGENTS.md) — agent policy: commands, rules, verification.
+- [CODEBASE_GRAPH.json](CODEBASE_GRAPH.json) — AST-based code graph.
+- [docs/product/](docs/product/) — product skeleton, benchmark report, market map.
+- [docs/rea/](docs/rea/) — reverse-engineering and component notes.
+
+## Quick start
 
 ```bash
-python3 -m unittest discover -s tests -t .   # testler
-PYTHONPATH=. python3 -m src.cli graph        # kod grafiğini tazele
-PYTHONPATH=. python3 -m src.cli doctor       # doktor + güvenlik denetimi
+python3 -m unittest discover -s tests -t .   # tests
+PYTHONPATH=. python3 -m src.cli graph        # refresh the code graph
+PYTHONPATH=. python3 -m src.cli doctor       # doctor + security audit
 ```
 
-## Dürüstlük ilkesi
+## Honesty principle
 
-Performans rakamları yalnızca yeniden üretilebilir ölçüm çıktılarıyla (`bench/results/`)
-yayınlanır. Ölçülmemiş iddialar ve abartılı "en hızlı tarayıcı" iddiası kullanılmaz.
+Performance numbers are published only alongside reproducible measurement output
+(`bench/results/`). Unmeasured claims and exaggerated "fastest browser" marketing are
+never used. Targets without raw data are marked `not measured`, never estimated.
 
-## Lisans
+## License
 
-Çoklu lisans (Chromium tabanlı kabuk BSD-3-Clause; otomasyon motoru AGPL-3.0).
-Bkz. [LICENSE](LICENSE).
+Multi-license (Chromium-based shell BSD-3-Clause; automation engine AGPL-3.0).
+See [LICENSE](LICENSE).
 
-## Destek
+## Support
 
-Pergel ücretsiz kalacak: [GitHub Sponsors](https://github.com/sponsors/sametatakan0000-netizen)
+Pergel stays free: [GitHub Sponsors](https://github.com/sponsors/sametatakan0000-netizen)
