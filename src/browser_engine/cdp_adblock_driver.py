@@ -55,16 +55,22 @@ class AdblockBrowserSession:
     def __init__(self, bundle: AdblockBundle, browser_path: Optional[str] = None,
                  extensions: Optional["ExtensionHost"] = None,
                  headless: bool = True, keep_open: bool = False,
-                 on_blocked: Optional[Callable[[dict], None]] = None):
+                 on_blocked: Optional[Callable[[dict], None]] = None,
+                 user_data_dir: Optional[str] = None,
+                 start_url: str = "about:blank"):
         self.bundle = bundle
         self._browser_path = browser_path or _chromium()
         self._headless = headless
         self._keep_open = keep_open
         self._on_blocked = on_blocked
-        self._tmp = tempfile.mkdtemp()
+        self._start_url = start_url
+        self._tmp = user_data_dir or tempfile.mkdtemp()
         self._proc = None
         self._ws = None
         self._sid = None
+        # targetId -> enforcement sessionId, one per PAGE target (every tab)
+        self.page_sessions: dict = {}
+        self._arm_tasks: set = set()
         self._seq = 0
         self._pending: dict[int, asyncio.Future] = {}
         self._pump: Optional[asyncio.Task] = None
@@ -83,7 +89,7 @@ class AdblockBrowserSession:
             cmd.append("--headless=new")
         cmd += ["--no-sandbox", "--disable-gpu",
                 "--remote-debugging-port=0", "--user-data-dir=" + self._tmp,
-                "about:blank"]
+                self._start_url]
         return cmd
 
     async def __aenter__(self) -> "AdblockBrowserSession":
@@ -103,7 +109,40 @@ class AdblockBrowserSession:
         await self._call("Fetch.enable")
         await self._call("Page.enable")
         await self._call("Runtime.enable")
+        self.page_sessions[page["targetId"]] = self._sid
+        # Every OTHER page target that already exists must be enforced too —
+        # the startup attach race is exactly why the visible window once came
+        # up with zero interception.
+        for t in tg["result"]["targetInfos"]:
+            if t["type"] != "page" or t["targetId"] == page["targetId"]:
+                continue
+            s = await self._call_root(
+                "Target.attachToTarget",
+                {"targetId": t["targetId"], "flatten": True})
+            await self._arm_page(t["targetId"], s["result"]["sessionId"])
+        # and every page target created later (new tabs) auto-attaches and is
+        # armed by the pump's Target.attachedToTarget handler
+        await self._call_root("Target.setAutoAttach", {
+            "autoAttach": True, "waitForDebuggerOnStart": False,
+            "flatten": True})
         return self
+
+    async def _arm_page(self, target_id: str, sid: str) -> None:
+        """Enable enforcement on one page target's session."""
+        await self._call_on(sid, "Fetch.enable")
+        await self._call_on(sid, "Page.enable")
+        self.page_sessions[target_id] = sid
+
+    async def wait_session_for(self, target_id: str,
+                               timeout: float = 5.0) -> str:
+        """Resolve when ``target_id``'s enforcement session is armed."""
+        import time
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if target_id in self.page_sessions:
+                return self.page_sessions[target_id]
+            await asyncio.sleep(0.05)
+        raise TimeoutError(f"no enforcement session for target {target_id}")
 
     async def __aexit__(self, *exc):
         if self._pump:
@@ -149,15 +188,30 @@ class AdblockBrowserSession:
         return out
 
     async def _call(self, method, params=None):
+        return await self._call_on(self._sid, method, params)
+
+    async def _call_on(self, sid, method, params=None):
         self._seq += 1
         mid = self._seq
         fut = asyncio.get_event_loop().create_future()
         self._pending[mid] = fut
         msg = {"id": mid, "method": method, "params": params or {}}
-        if self._sid:
-            msg["sessionId"] = self._sid
+        if sid:
+            msg["sessionId"] = sid
         await self._ws.send(json.dumps(msg))
         return await fut
+
+    async def _call_root(self, method, params=None):
+        """Browser-level command (no session): target management."""
+        return await self._call_on(None, method, params)
+
+    async def _send_on(self, sid, method, params=None):
+        """Fire-and-forget command on one session (no reply tracking)."""
+        self._seq += 1
+        msg = {"id": self._seq, "method": method, "params": params or {}}
+        if sid:
+            msg["sessionId"] = sid
+        await self._ws.send(json.dumps(msg))
 
     async def _run_pump(self):
         try:
@@ -175,6 +229,15 @@ class AdblockBrowserSession:
                     await self._ws.send(json.dumps(self._resume_message(
                         reply, self._seq, event_sid=m.get("sessionId"),
                         session_sid=self._sid)))
+                elif m.get("method") == "Target.attachedToTarget":
+                    # a new tab (or startup-raced page) attached via auto-attach
+                    p = m["params"]
+                    if p.get("targetInfo", {}).get("type") == "page":
+                        task = asyncio.get_event_loop().create_task(
+                            self._arm_page(p["targetInfo"]["targetId"],
+                                           p["sessionId"]))
+                        self._arm_tasks.add(task)
+                        task.add_done_callback(self._arm_tasks.discard)
                 elif m.get("method") in ("Page.loadEventFired",
                                          "Page.domContentEventFired"):
                     self._load_evt.set()
