@@ -1,6 +1,6 @@
 {
   "id": "chrome-cft",
-  "app_dir": "/home/pc/.local/share/bench-browsers/chrome-cft/chrome-linux64",
+  "app_dir": "~/pergel",
   "bundled_extensions": [
     {
       "path": "MEIPreload/manifest.json",

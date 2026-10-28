@@ -1,0 +1,42 @@
+# llms.txt — Pergel
+
+> Gizliliğe saygılı, telemetrisiz, yapay zekâ için tasarlanmış açık kaynak masaüstü tarayıcı.
+
+Pergel; veri satmayan, arka planda telefon etmeyen, kullanıcıya kendi AI anahtarını
+(BYOK) kullandıran bir tarayıcıdır. Kod, insanlar kadar AI ajanları için de düzenlidir.
+
+## Ne zaman kullan
+
+- Gizliliğe saygılı, telemetrisiz bir masaüstü tarayıcı arıyorsan.
+- Kendi AI sağlayıcı anahtarınla (OpenRouter, Nous, Ollama) çalışmak istiyorsan.
+- Depoda bir AI ajanı olarak çalışman gerekiyorsa (önce `AGENTS.md`'yi oku).
+
+## Depo haritası
+
+- [README.md](README.md) — ürün özeti, dürüst benchmark tablosu, hızlı başlangıç.
+- [AGENTS.md](AGENTS.md) — ajan yönergesi: komutlar, kurallar, doğrulama.
+- [CODEBASE_GRAPH.json](CODEBASE_GRAPH.json) — AST tabanlı kod grafiği.
+- [docs/product/](docs/product/) — ürün iskeleti, benchmark raporu, pazar haritası.
+- [docs/rea/](docs/rea/) — tersine mühendislik ve bileşen notları.
+
+## Hızlı başlangıç
+
+```bash
+python3 -m unittest discover -s tests -t .   # testler
+PYTHONPATH=. python3 -m src.cli graph        # kod grafiğini tazele
+PYTHONPATH=. python3 -m src.cli doctor       # doktor + güvenlik denetimi
+```
+
+## Dürüstlük ilkesi
+
+Performans rakamları yalnızca yeniden üretilebilir ölçüm çıktılarıyla (`bench/results/`)
+yayınlanır. Ölçülmemiş iddialar ve abartılı "en hızlı tarayıcı" iddiası kullanılmaz.
+
+## Lisans
+
+Çoklu lisans (Chromium tabanlı kabuk BSD-3-Clause; otomasyon motoru AGPL-3.0).
+Bkz. [LICENSE](LICENSE).
+
+## Destek
+
+Pergel ücretsiz kalacak: [GitHub Sponsors](https://github.com/sponsors/sametatakan0000-netizen)

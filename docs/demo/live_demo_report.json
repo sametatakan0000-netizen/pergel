@@ -1,5 +1,5 @@
 {
-  "chromium": "/home/pc/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome",
+  "chromium": "~/pergel",
   "url": "http://127.0.0.1:55895/",
   "filter_stats": {
     "total": 7,

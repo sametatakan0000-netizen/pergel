@@ -163,6 +163,9 @@ def prepare_profile(profile_dir: str, shield_port: int) -> str:
     shield = os.path.join(profile_dir, "vane_shield.html")
     with open(shield, "w") as f:
         f.write(render.render_shield_panel(shield_port))
+    panel = os.path.join(profile_dir, "vane_panel.html")
+    with open(panel, "w") as f:
+        f.write(render.render_side_panel(shield_port))
     return ntp
 
 

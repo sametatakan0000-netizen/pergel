@@ -226,7 +226,7 @@ def render_commandbar() -> str:
 """
 
 
-def render_side_panel() -> str:
+def render_side_panel(stats_port: int = 0) -> str:
     """Side panel: open-tab overview + free 'sentez' — synthesises the open
     tabs into one Google AI Mode query (zero cost, no model call)."""
     return f"""<!doctype html>
@@ -253,6 +253,27 @@ def render_side_panel() -> str:
 <h2>{tokens.NAME} · <span data-i18n="tabs_label">Tabs</span></h2>
 <button class="s" id="sentez" data-i18n="synthesize">Synthesize with AI Mode</button>
 <ul id="tabs"></ul>
+
+<div id="netdiag" style="margin-top:24px;padding:14px;border:1px solid #1c212a;border-radius:12px;">
+  <h2 style="margin-bottom:8px;">Ağ teşhisi · yerel</h2>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+    Veri cihazınızdan çıkmaz. Tüm ölçümler <code>127.0.0.1</code> üzerinden yerel olarak çalışır.</p>
+  <button class="s" id="run-netdiag">Bağlantıyı teşhis et</button>
+  <pre id="netdiag-out" style="margin-top:12px;font-size:11px;color:var(--text);white-space:pre-wrap;"></pre>
+</div>
+<script>
+  document.getElementById('run-netdiag').onclick = async () => {{
+    const out = document.getElementById('netdiag-out');
+    out.textContent = 'çalışıyor…';
+    try {{
+      const r = await fetch('http://127.0.0.1:{stats_port}/diag');
+      const j = await r.json();
+      out.textContent = JSON.stringify(j, null, 2);
+    }} catch (e) {{
+      out.textContent = 'teşhis sunucusu kapalı: ' + e.message;
+    }}
+  }};
+</script>
 <script>
   chrome.tabs.query({{}}, tabs => {{
     const ul = document.getElementById('tabs');

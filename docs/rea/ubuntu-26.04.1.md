@@ -42,4 +42,4 @@ Firefox 154 (snap) sits between our Chromium-fork spread (Vivaldi 152 → CFT/Ed
 - Snap auto-refresh behavior and connection to the snap store at runtime.
 
 ## Files
-ISO + squashfs work moved to **real disk** `/home/pc/rea-work/` (`downloads/`, `squash/`) — `/tmp` tmpfs (16 G) filled up during the 3.4 GB squashfs extract (errno 122 disk quota), so large artifacts live on `/dev/nvme0n1p2`.
+ISO + squashfs work moved to **real disk** `~/pergel (`downloads/`, `squash/`) — `/tmp` tmpfs (16 G) filled up during the 3.4 GB squashfs extract (errno 122 disk quota), so large artifacts live on `/dev/nvme0n1p2`.

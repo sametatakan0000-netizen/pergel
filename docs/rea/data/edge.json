@@ -1,6 +1,6 @@
 {
   "id": "edge",
-  "app_dir": "/home/pc/.local/share/bench-browsers/edge/opt/microsoft/msedge",
+  "app_dir": "~/pergel",
   "bundled_extensions": [
     {
       "path": "MEIPreload/manifest.json",

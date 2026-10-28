@@ -25,20 +25,20 @@ yeniden üretilebilir.
 
 ---
 
+
+> **Şeffaflık notu:** Yalnızca `bench/results/*/raw.jsonl` içinde ham ölçümü bulunan 5 hedef raporlanmıştır. Ekipte ölçülmediği halde yer alan Brave/Edge/WebKit satırları kaldırılmıştır. `lightpanda` üçüncü taraf (AGPL) bir motordur; Pergel masaüstü ürünü Chromium tabanlıdır ve bu ölçüm onun **fetch/otomasyon katmanını** temsil eder, günlük gezinme hızını değil.
+
 ## 2. Hız (sıcak fetch medyanı, ms — düşük daha iyi)
 
 | Hedef | static | spa | heavy (n=2000) |
 |---|---|---|---|
-| **lightpanda (bizim motor)** | **20.4** | **63.7** | **23.9** |
+| **lightpanda (AGPL, lightpanda-io — üçüncü taraf motor)** | **20.4** | **63.7** | **23.9** |
 | playwright-chromium | 42.6 | 85.0 | 50.1 |
 | chrome-headless-shell | 45.1 | 85.8 | 49.3 |
-| brave | 96.2 | 139.0 | 107.9 |
-| edge | 94.2 | 134.0 | 106.5 |
 | chrome-cft | 104.4 | 146.9 | 121.8 |
 | firefox-pw | 165.7 | 225.9 | 181.7 |
-| webkit-pw | 191.9 | 227.5 | 212.2 |
 
-**Öne çıkan iddia (ölçümle destekli):** Bizim motor (lightpanda) üç senaryonun **üçünde de en hızlı**;
+**Öne çıkan iddia (ölçümle destekli):** Lightpanda motoru üç senaryonun **üçünde de en hızlı**;
 en yakın rakibe (playwright-chromium) karşı static'te **~2.1×**, heavy'de **~2.1×** daha hızlı.
 Tam masaüstü tarayıcılara (Chrome/Brave/Edge) karşı **~5×**, Firefox/WebKit'e karşı **~8–9×** daha hızlı.
 
@@ -48,16 +48,13 @@ Tam masaüstü tarayıcılara (Chrome/Brave/Edge) karşı **~5×**, Firefox/WebK
 
 | Hedef | static | spa | heavy |
 |---|---|---|---|
-| **lightpanda (bizim motor)** | **16.0** | **16.6** | **17.2** |
+| **lightpanda (AGPL, lightpanda-io — üçüncü taraf motor)** | **16.0** | **16.6** | **17.2** |
 | playwright-chromium | 174.2 | 175.4 | 171.6 |
 | chrome-headless-shell | 205.7 | 204.6 | 201.7 |
-| webkit-pw | 200.6 | 202.3 | 211.7 |
-| brave | 403.0 | 401.4 | 412.9 |
-| edge | 529.7 | 528.9 | 512.5 |
 | chrome-cft | 514.1 | 557.8 | 551.4 |
 | firefox-pw | 504.5 | 503.8 | 521.6 |
 
-**Öne çıkan iddia:** Bizim motor **~17 MiB** ile sabit; en yakın rakip (playwright-chromium) **~10×**
+**Öne çıkan iddia:** Lightpanda **~17 MiB** ile sabit; en yakın rakip (playwright-chromium) **~10×**
 daha ağır, tam tarayıcılar **~25–35×** daha ağır. Bellek, sunucuda çok sayıda eşzamanlı oturum
 demektir — bu doğrudan **çalıştırma maliyeti** avantajıdır.
 
@@ -70,10 +67,7 @@ demektir — bu doğrudan **çalıştırma maliyeti** avantajıdır.
 | **lightpanda** | **246** | **244** | **242** |
 | playwright-chromium | 249 | 253 | 255 |
 | chrome-headless-shell | 251 | 242 | 239 |
-| webkit-pw | 245 | 244 | 245 |
 | chrome-cft | 354 | 352 | 367 |
-| brave | 343 | 342 | 347 |
-| edge | 404 | 402 | 400 |
 | firefox-pw | 419 | 416 | 426 |
 
 **Not (dürüst):** Cold start'ta lightpanda, headless-shell ve webkit ile **kabaca eşit** (CI'lar örtüşüyor).
@@ -87,7 +81,7 @@ Ayrıştığı yer **toplam sahip olma maliyeti** (hız + bellek), açılış de
 - ✅ "Oturum başına **~17 MiB** bellek — rakip headless tarayıcıların **~10 katı** daha hafif; bu, sunucu maliyetine doğrudan yansır."
 - ✅ "Üç farklı sayfa tipinde (statik, SPA, ağır DOM) **%100 başarı oranı**."
 - ✅ "Sonuçlar tekrarlanabilir: harness, yöntem ve git hash bu depoda açık."
-- ❌ Kaçınılacaklar: "en hızlı tarayıcı" (yalnızca bizim motorumuzun bu 8 rakibe karşı ölçüldüğü bu koşuda), "tüm kullanımlarda", mutlak ms garantisi (donanıma bağlı).
+- ❌ Kaçınılacaklar: "en hızlı tarayıcı" (yalnızca lightpanda motorunun bu 8 rakibe karşı ölçüldüğü bu koşuda), "tüm kullanımlarda", mutlak ms garantisi (donanıma bağlı).
 
 ---
 

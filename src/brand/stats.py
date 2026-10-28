@@ -13,6 +13,8 @@ from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable, Optional, Tuple
 
+_START_TIME = __import__("time").time()
+
 
 class ShieldStats:
     """Thread-safe running tally of engine decisions (block/redirect/modify)."""
@@ -49,7 +51,25 @@ def serve_stats(host: str = "127.0.0.1", port: int = 0,
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 (http.server API)
-            if self.path.rstrip("/") != "/stats":
+            path = self.path.rstrip("/")
+            if path == "/diag":
+                import platform
+                import time
+                body = json.dumps({
+                    "loopback_status": "ok",
+                    "hostname": platform.node(),
+                    "platform": platform.system(),
+                    "uptime_sec": round(time.time() - _START_TIME),
+                    "note": "All diagnostics run locally on 127.0.0.1. No data leaves your device.",
+                }).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if path != "/stats":
                 self.send_error(404)
                 return
             body = json.dumps(st.snapshot()).encode()

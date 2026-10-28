@@ -176,7 +176,7 @@ packages, 23 removable bloatware candidates; no activation/circumvention).
 
 **Pitfall (recorded):** `/tmp` is a 16 G tmpfs here; a 3.4 GB SquashFS extract
 overflowed it (errno 122 disk quota). Large ISO/rootfs artifacts live on real
-disk `/home/pc/rea-work/` — keep REA work dirs there, not `/tmp`.
+disk `~/pergel — keep REA work dirs there, not `/tmp`.
 
 ## Method per target (summary — full template in the plan, §A5)
 

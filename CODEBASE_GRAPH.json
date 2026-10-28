@@ -3,7 +3,7 @@
     "total_files": 84,
     "total_classes": 65,
     "total_functions": 565,
-    "total_loc": 10959
+    "total_loc": 11003
   },
   "modules": [
     {
@@ -1381,7 +1381,7 @@
     {
       "module": "src.brand.render",
       "path": "src/brand/render.py",
-      "loc": 390,
+      "loc": 411,
       "classes": [],
       "functions": [
         "search_url",
@@ -1418,12 +1418,12 @@
         "rgb",
         "write"
       ],
-      "change_risk": 8.08
+      "change_risk": 8.34
     },
     {
       "module": "src.brand.stats",
       "path": "src/brand/stats.py",
-      "loc": 75,
+      "loc": 95,
       "classes": [
         "ShieldStats",
         "Handler"
@@ -1442,7 +1442,9 @@
         "collections",
         "http.server",
         "json",
+        "platform",
         "threading",
+        "time",
         "typing"
       ],
       "calls": [
@@ -1451,6 +1453,7 @@
         "ShieldStats",
         "Thread",
         "ThreadingHTTPServer",
+        "__import__",
         "dumps",
         "encode",
         "end_headers",
@@ -1458,6 +1461,8 @@
         "join",
         "len",
         "most_common",
+        "node",
+        "round",
         "rstrip",
         "send_error",
         "send_header",
@@ -1468,10 +1473,12 @@
         "start",
         "str",
         "sum",
+        "system",
+        "time",
         "values",
         "write"
       ],
-      "change_risk": 3.74
+      "change_risk": 4.79
     },
     {
       "module": "src.brand.tokens",
@@ -1494,7 +1501,7 @@
     {
       "module": "src.brand.vane_app",
       "path": "src/brand/vane_app.py",
-      "loc": 226,
+      "loc": 229,
       "classes": [],
       "functions": [
         "user_dirs",
@@ -1563,6 +1570,7 @@
         "record",
         "render_ntp",
         "render_shield_panel",
+        "render_side_panel",
         "run",
         "serve_stats",
         "sink",
