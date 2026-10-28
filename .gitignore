@@ -9,3 +9,8 @@ live_router.db-*
 host_quickstart.log
 .venv/
 tests/_stubs/
+# internal ops/planning — never public
+.hermes/
+host_*.log
+workspace/
+*.env

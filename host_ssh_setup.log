@@ -1,103 +1,0 @@
-
-== 0. preflight (2026-10-23T20:52:48+03:00)
-user=pc home=/home/pc hermes_home=/home/pc/.hermes repo=/home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm
-current backend: docker
-
-== 1. sshd
-openssh-server missing -> installing (sudo password may be requested)
-Paket listeleri okunuyor...
-Bağımlılık ağacı oluşturuluyor...
-Durum bilgisi okunuyor...
-Solving dependencies...
-Aşağıdaki ek paketler kurulacak:
-  ncurses-term openssh-sftp-server ssh-import-id
-Önerilen paketler:
-  molly-guard monkeysphere ssh-askpass
-Aşağıdaki YENİ paketler kurulacak:
-  ncurses-term openssh-server openssh-sftp-server ssh-import-id
-0 paket yükseltilecek, 4 yeni paket kurulacak, 0 paket kaldırılacak ve 15 paket yükseltilmeyecek.
-950 kB arşiv dosyası indirilecek.
-Bu işlem tamamlandıktan sonra 7.585 kB ek disk alanı kullanılacak.
-İndir: 1 http://archive.ubuntu.com/ubuntu resolute/main amd64 ncurses-term all 6.6+20251231-1 [280 kB]
-İndir: 2 http://archive.ubuntu.com/ubuntu resolute-updates/main amd64 openssh-sftp-server amd64 1:10.2p1-2ubuntu3.8 [37,4 kB]
-İndir: 3 http://archive.ubuntu.com/ubuntu resolute-updates/main amd64 openssh-server amd64 1:10.2p1-2ubuntu3.8 [622 kB]
-İndir: 4 http://archive.ubuntu.com/ubuntu resolute/main amd64 ssh-import-id all 5.11-0ubuntu4 [10,2 kB]
-Paketler önyapılandırılıyor ...
-1 sn.'de 950 kB alındı (1.493 kB/s)
-Daha önce seçili olmayan ncurses-term paketi seçiliyor.
-(Veritabanı okunuyor ... (Veritabanı okunuyor ... 5%(Veritabanı okunuyor ... 10%(Veritabanı okunuyor ... 15%(Veritabanı okunuyor ... 20%(Veritabanı okunuyor ... 25%(Veritabanı okunuyor ... 30%(Veritabanı okunuyor ... 35%(Veritabanı okunuyor ... 40%(Veritabanı okunuyor ... 45%(Veritabanı okunuyor ... 50%(Veritabanı okunuyor ... 55%(Veritabanı okunuyor ... 60%(Veritabanı okunuyor ... 65%(Veritabanı okunuyor ... 70%(Veritabanı okunuyor ... 75%(Veritabanı okunuyor ... 80%(Veritabanı okunuyor ... 85%(Veritabanı okunuyor ... 90%(Veritabanı okunuyor ... 95%(Veritabanı okunuyor ... 100%(Veritabanı okunuyor ... 171988 dosya veya dizin kurulu durumda.)
-Paket açılacak: .../ncurses-term_6.6+20251231-1_all.deb ...
-Paket açılıyor: ncurses-term (6.6+20251231-1) ...
-Daha önce seçili olmayan openssh-sftp-server paketi seçiliyor.
-Paket açılacak: .../openssh-sftp-server_1%3a10.2p1-2ubuntu3.8_amd64.deb ...
-Paket açılıyor: openssh-sftp-server (1:10.2p1-2ubuntu3.8) ...
-Daha önce seçili olmayan openssh-server paketi seçiliyor.
-Paket açılacak: .../openssh-server_1%3a10.2p1-2ubuntu3.8_amd64.deb ...
-Paket açılıyor: openssh-server (1:10.2p1-2ubuntu3.8) ...
-Daha önce seçili olmayan ssh-import-id paketi seçiliyor.
-Paket açılacak: .../ssh-import-id_5.11-0ubuntu4_all.deb ...
-Paket açılıyor: ssh-import-id (5.11-0ubuntu4) ...
-Ayarlanıyor: openssh-sftp-server (1:10.2p1-2ubuntu3.8) ...
-Ayarlanıyor: openssh-server (1:10.2p1-2ubuntu3.8) ...
-Creating config file /etc/ssh/sshd_config with new version
-Creating user 'sshd' (sshd user) with UID 973 and GID 65534.
-Created symlink '/etc/systemd/system/sockets.target.wants/ssh.socket' → '/usr/lib/systemd/system/ssh.socket'.
-Created symlink '/etc/systemd/system/ssh.service.requires/ssh.socket' → '/usr/lib/systemd/system/ssh.socket'.
-Created symlink '/etc/systemd/system/ssh.service.wants/sshd-keygen.service' → '/usr/lib/systemd/system/sshd-keygen.service'.
-Created symlink '/etc/systemd/system/sshd.service.wants/sshd-keygen.service' → '/usr/lib/systemd/system/sshd-keygen.service'.
-Created symlink '/etc/systemd/system/sshd@.service.wants/sshd-keygen.service' → '/usr/lib/systemd/system/sshd-keygen.service'.
-Created symlink '/etc/systemd/system/ssh.socket.wants/sshd-keygen.service' → '/usr/lib/systemd/system/sshd-keygen.service'.
-Ayarlanıyor: ssh-import-id (5.11-0ubuntu4) ...
-Ayarlanıyor: ncurses-term (6.6+20251231-1) ...
-Tetikleyiciler işleniyor: man-db (2.13.1-1build1) ...
-Tetikleyiciler işleniyor: ufw (0.36.2-9build1) ...
-Synchronizing state of ssh.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
-Executing: /usr/lib/systemd/systemd-sysv-install enable ssh
-Created symlink '/etc/systemd/system/sshd.service' → '/usr/lib/systemd/system/ssh.service'.
-Created symlink '/etc/systemd/system/multi-user.target.wants/ssh.service' → '/usr/lib/systemd/system/ssh.service'.
-fresh install: password auth disabled (key-only)
-active: active / socket: active
-listening:
-LISTEN 0      4096         0.0.0.0:22         0.0.0.0:*   
-LISTEN 0      4096            [::]:22            [::]:*   
-
-== 2. dedicated key (loopback-only)
-key authorized (loopback only)
-
-== 3. login test (must pass before any config change)
-Warning: Permanently added '127.0.0.1' (ED25519) to the list of known hosts.
-ssh-ok
-pc
-/home/pc
-/usr/bin/systemctl
-
-== 4. switch backend
-backup: /home/pc/.hermes/config.yaml.bak-before-ssh
-✓ Set terminal.backend = ssh in /home/pc/.hermes/config.yaml
-✓ Set TERMINAL_SSH_HOST in /home/pc/.hermes/.env
-✓ Set TERMINAL_SSH_USER in /home/pc/.hermes/.env
-✓ Set TERMINAL_SSH_KEY in /home/pc/.hermes/.env
-backend now: ssh
-
-== 5. boot-survival + read-only diagnostics (for cleanup/remote topics)
-Linger=yes
-oracle-router: enabled
-hermes-proxy: not-found
-● hermes-gateway.service - Hermes Agent Gateway - Messaging Platform Integration
-     Loaded: loaded (/home/pc/.config/systemd/user/hermes-gateway.service; enabled; preset: enabled)
-     Active: active (running) since Fri 2026-10-23 19:16:28 +03; 1h 36min ago
- Invocation: c401581d77904e40a9a9417048f54282
-   Main PID: 2157 (hermes)
-      Tasks: 39 (limit: 37502)
-     Memory: 815.5M (peak: 836.1M)
-        CPU: 1min 705ms
-Total sessions: 16
-Total messages: 1162
-  telegram: 4 sessions
-Database size: 14.6 MB
-
-== DONE
-Next (you): send /restart in Telegram, then /new.
-Agent will verify with a host command and update cron paths (repo path changes: see below).
-Repo on host: /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm
-ROLLBACK (any time, host shell):  hermes config set terminal.backend docker   # then /restart
