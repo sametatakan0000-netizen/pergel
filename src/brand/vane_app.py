@@ -1,4 +1,4 @@
-"""Vane application entry point — this is what ``/usr/bin/vane`` runs.
+"""Pergel application entry point — this is what ``/usr/bin/pergel`` runs.
 
 Wires the whole product together for the desktop user:
 
@@ -15,15 +15,16 @@ import argparse
 import asyncio
 import json
 import os
+import shutil
 import sys
 from typing import Callable, Optional
 
 try:  # repo layout (python -m / pytest)
-    from src.brand import render, stats as stats_mod, tokens
+    from src.brand import i18n, migrate, render, stats as stats_mod, tokens
     from src.browser_engine.adblock_session import compile_adblock
     from src.browser_engine.cdp_adblock_driver import AdblockBrowserSession
 except ImportError:  # installed layout (/usr/lib/vane on sys.path)
-    from brand import render, stats as stats_mod, tokens
+    from brand import i18n, migrate, render, stats as stats_mod, tokens
     from browser_engine.adblock_session import compile_adblock
     from browser_engine.cdp_adblock_driver import AdblockBrowserSession
 
@@ -42,8 +43,13 @@ DEMO = [
 
 
 def user_dirs() -> dict:
-    """Per-user Vane dirs (config profile + filters)."""
-    cfg = os.path.join(os.path.expanduser("~"), ".config", "vane")
+    """Per-user Pergel dirs (config profile + filters), with a one-time
+    migration of the legacy ``~/.config/vane`` layout."""
+    home = os.path.expanduser("~")
+    cfg = os.path.join(home, ".config", "pergel")
+    legacy = os.path.join(home, ".config", "vane")
+    if not os.path.isdir(cfg) and os.path.isdir(legacy):
+        shutil.copytree(legacy, cfg)
     dirs = {
         "config": cfg,
         "profile": os.path.join(cfg, "profile"),
@@ -81,6 +87,49 @@ def make_on_blocked(shield: "stats_mod.ShieldStats",
     return on_decision
 
 
+def launch_flags(extension_dir: str) -> list:
+    """Window identity + chrome the user must never see.
+
+    ``--class=Pergel`` gives the window its own WM_CLASS (dock/menu identity);
+    ``--disable-infobars`` kills the "Chrome for Testing" banner and the
+    ``--no-sandbox`` warning bar; the load-extension pair makes every new tab
+    open the Pergel NTP instead of Chromium's Google page.
+    """
+    return ["--class=Pergel", "--disable-infobars", "--test-type",
+            "--no-first-run", "--no-default-browser-check",
+            "--disable-search-engine-choice-screen",
+            "--load-extension=" + extension_dir,
+            "--disable-extensions-except=" + extension_dir]
+
+
+def ensure_extension() -> str:
+    """Resolve (and materialise) the new-tab override extension.
+
+    Installed layout ships it under /usr/lib/vane/extension; repo/dev runs
+    build it into the user config dir instead.
+    """
+    installed = os.path.join("/usr/lib/vane", "extension")
+    if os.path.isfile(os.path.join(installed, "manifest.json")):
+        return installed
+    return render.write_extension(
+        os.path.join(user_dirs()["config"], "extension"))
+
+
+def maybe_auto_migrate(profile_dir: str, home: Optional[str] = None) -> dict:
+    """First-run data migration: pull bookmarks/history from every browser
+    found on the machine into the Pergel profile. Runs ONCE (marker file);
+    later runs never re-import. Counts only — no secret material."""
+    # marker lives INSIDE the profile dir so every profile migrates once
+    # and tests stay isolated (no shared /tmp or home state)
+    marker = os.path.join(os.path.abspath(profile_dir), ".migrated")
+    if os.path.exists(marker):
+        return {}
+    report = migrate.migrate(profile_dir, home=home)
+    with open(marker, "w") as f:
+        json.dump(report, f)
+    return report
+
+
 def prepare_profile(profile_dir: str, shield_port: int) -> str:
     """Write the branded surfaces into the Chromium profile dir.
 
@@ -97,11 +146,20 @@ def prepare_profile(profile_dir: str, shield_port: int) -> str:
         except (ValueError, OSError):
             prefs = {}
     prefs.update(render.theme_preferences())
+    prefs.update(render.performance_preferences())
     with open(prefs_path, "w") as f:
         json.dump(prefs, f)
+    # global-first NTP: default in the SYSTEM language plus one pre-rendered
+    # variant per locale (scriptless pages switch via plain links)
+    lang = os.environ.get("LANG", "en").split(".")[0].split("_")[0].lower()
+    if lang not in i18n.LOCALES:
+        lang = "en"
     ntp = os.path.join(profile_dir, "vane_ntp.html")
     with open(ntp, "w") as f:
-        f.write(render.render_ntp())
+        f.write(render.render_ntp(lang))
+    for code in i18n.LOCALES:
+        with open(os.path.join(profile_dir, f"vane_ntp_{code}.html"), "w") as f:
+            f.write(render.render_ntp(code))
     shield = os.path.join(profile_dir, "vane_shield.html")
     with open(shield, "w") as f:
         f.write(render.render_shield_panel(shield_port))
@@ -115,15 +173,18 @@ async def run(filter_paths: Optional[list] = None,
     shield = stats_mod.ShieldStats()
     stop, port = stats_mod.serve_stats(stats=shield)
     try:
+        maybe_auto_migrate(profile)
         ntp = prepare_profile(profile, port)
         bundle = compile_adblock(load_filters(filter_paths))
+        ext = ensure_extension()
         print(f"[{tokens.NAME}] motor hazır: {bundle.stats['total']} kural, "
               f"kalkan paneli 127.0.0.1:{port}")
         async with AdblockBrowserSession(
                 bundle, headless=False, keep_open=True,
                 on_blocked=make_on_blocked(shield),
                 user_data_dir=profile,
-                start_url="file://" + ntp) as sess:
+                start_url="file://" + ntp,
+                extra_args=launch_flags(ext)) as sess:
             while sess._proc.poll() is None:
                 await asyncio.sleep(0.5)
         print(f"[{tokens.NAME}] pencere kapandı. Engellenen: "
@@ -141,9 +202,23 @@ def main(argv: Optional[list] = None) -> int:
                     help="adblock kural dosyalari (satir-bir-kural)")
     ap.add_argument("--profile-dir", default=None,
                     help="Chromium profil dizini (varsayilan: ~/.config/vane/profile)")
+    ap.add_argument("--migrate", action="store_true",
+                    help="import data from other browsers (bookmarks, history)")
+    ap.add_argument("--passwords-csv", default=None,
+                    help="disa aktarilmis parola CSV dosyasi (url,username,password)")
+    ap.add_argument("--home", default=None,
+                    help="kaynak tarayici profillerinin aranacagi dizin (test kolayligi)")
     ap.add_argument("--version", action="version",
                     version=f"{tokens.NAME} {VERSION}")
     args = ap.parse_args(argv)
+    if args.migrate:
+        profile = args.profile_dir or user_dirs()["profile"]
+        report = migrate.migrate(profile, home=args.home,
+                                 passwords_csv=args.passwords_csv)
+        print(f"[{tokens.NAME}] aktarim tamam: "
+              f"{report['bookmarks']} yer imi, {report['history']} gecmis, "
+              f"{report['passwords']} parola")
+        return 0
     return asyncio.run(run(args.filters, args.profile_dir))
 
 

@@ -25,8 +25,8 @@ from src.brand.render import (
 
 
 class TestBrandTokens(unittest.TestCase):
-    def test_brand_name_is_vane(self):
-        self.assertEqual(tokens.NAME, "Vane")
+    def test_brand_name_is_pergel(self):
+        self.assertEqual(tokens.NAME, "Pergel")
 
     def test_tagline_is_minimalist_optimized(self):
         self.assertIn("minimal", tokens.TAGLINE.lower())
@@ -44,21 +44,31 @@ class TestBrandTokens(unittest.TestCase):
 
 
 class TestNewTabPage(unittest.TestCase):
-    def test_ntp_carries_brand_name_and_monogram(self):
+    def test_ntp_is_bare_wordmark(self):
+        # user: "logo bile olmayabilir, sadece yazı yeter"
         html = render_ntp()
-        self.assertIn("Vane", html)
-        self.assertIn("monogram", html)
+        self.assertIn("Pergel", html)
+        self.assertNotIn("monogram", html)
+        self.assertNotIn("<svg", html)
+        self.assertNotIn("clock", html)
 
-    def test_ntp_uses_the_accent_token(self):
+    def test_ntp_has_no_ai_decoration(self):
         html = render_ntp()
-        self.assertIn(tokens.ACCENT, html)
+        self.assertNotIn(tokens.TAGLINE, html)
+        self.assertNotIn("<script", html)
+
+    def test_ntp_search_box_actually_searches(self):
+        html = render_ntp()
+        self.assertIn('action="https://www.google.com/search"', html)
+        self.assertIn('name="q"', html)
 
     def test_ntp_is_micro_minimalist(self):
-        # no framework bloat: single inline document, no external requests
+        # no external ASSETS may load; the form action is a navigation
         html = render_ntp()
-        self.assertNotIn("http://", html)
-        self.assertNotIn("https://", html)
-        self.assertLess(len(html), 64_000)
+        self.assertNotIn("<img", html)
+        self.assertNotIn("<link", html)
+        self.assertNotIn('src="http', html)
+        self.assertLess(len(html), 16_000)
 
 
 class TestShieldPanel(unittest.TestCase):
@@ -69,7 +79,7 @@ class TestShieldPanel(unittest.TestCase):
 
     def test_panel_uses_brand_and_accent(self):
         html = render_shield_panel(stats_port=1)
-        self.assertIn("Vane", html)
+        self.assertIn("Pergel", html)
         self.assertIn(tokens.ACCENT, html)
 
 
@@ -87,9 +97,9 @@ class TestDesktopEntry(unittest.TestCase):
         text = render_desktop_entry()
         self.assertIn("[Desktop Entry]", text)
         self.assertIn("Type=Application", text)
-        self.assertIn("Name=Vane", text)
-        self.assertIn("Exec=vane %U", text)
-        self.assertIn("Icon=vane", text)
+        self.assertIn("Name=Pergel", text)
+        self.assertIn("Exec=pergel %U", text)
+        self.assertIn("Icon=pergel", text)
         self.assertIn("Categories=Network;WebBrowser;", text)
         self.assertIn("Terminal=false", text)
 

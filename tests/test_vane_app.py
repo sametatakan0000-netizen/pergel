@@ -44,7 +44,7 @@ class TestBrandedProfile(unittest.TestCase):
                 prefs["theme"]["colors"]["frame"],
                 list(tokens.rgb(tokens.BG)))
             with open(os.path.join(td, "vane_ntp.html")) as f:
-                self.assertIn("Vane", f.read())
+                self.assertIn("Pergel", f.read())
             with open(os.path.join(td, "vane_shield.html")) as f:
                 self.assertIn("41234", f.read())
 

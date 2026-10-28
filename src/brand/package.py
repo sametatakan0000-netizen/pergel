@@ -4,10 +4,10 @@ Layout (the identity users see):
 
   /usr/bin/vane                       double-click entry point
   /usr/share/applications/vane.desktop
-  /usr/share/icons/hicolor/*/apps/vane.png + scalable/vane.svg
-  /usr/lib/vane/{vane_app.py, brand/, browser_engine/}
+  /usr/share/icons/hicolor/*/apps/pergel.png + scalable/pergel.svg
+  /usr/lib/pergel/{vane_app.py, brand/, browser_engine/}
 
-The menu shows only "Vane" — no python/Chromium traces in the launcher.
+The menu shows only "Pergel" — no python/Chromium traces in the launcher.
 """
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ import subprocess
 import tempfile
 
 from .icons import SIZES, render_icons
-from .render import render_desktop_entry
+from .render import render_desktop_entry, write_extension
 
-PKG = "vane-browser"
+PKG = "pergel-browser"
 VERSION = "0.1.0"
 _ARCH = "all"
 
@@ -30,19 +30,19 @@ Priority: optional
 Architecture: {_ARCH}
 Depends: python3 (>= 3.10), python3-websockets
 Recommends: chromium | chromium-browser | google-chrome-stable
-Maintainer: Vane Team <vane@localhost>
-Description: Vane - mikro duzeyde minimalist optimize tarayici
- Vane, gomulu reklam/izleyici engelleme motoru, DNS-rebinding korumasi ve
- canli kalkan paneli ile gelen, cift tikla acilan bir web tarayicisidir.
+Maintainer: Pergel Team <pergel@localhost>
+Description: Pergel - minimalist AI-native web browser
+ Pergel is a double-click web browser with a built-in ad/tracker blocking
+ engine, DNS-rebinding protection and a live shield panel.
 Homepage: https://github.com/hfy/ai_browser_farm
 """
 
 _LAUNCHER = """#!/usr/bin/env python3
-# Vane launcher — installed entry point (users never see this file).
+# Pergel launcher — installed entry point (users never see this file).
 import os
 import sys
 
-sys.path.insert(0, "/usr/lib/vane")
+sys.path.insert(0, "/usr/lib/pergel")
 from vane_app import main  # noqa: E402
 
 if __name__ == "__main__":
@@ -63,15 +63,19 @@ def stage_tree(root: str) -> str:
     # --- launcher
     bindir = os.path.join(root, "usr/bin")
     os.makedirs(bindir, exist_ok=True)
-    launcher = os.path.join(bindir, "vane")
+    launcher = os.path.join(bindir, "pergel")
     with open(launcher, "w") as f:
         f.write(_LAUNCHER)
     os.chmod(launcher, 0o755)
+    # compat alias for muscle memory (vane -> pergel)
+    alias = os.path.join(bindir, "vane")
+    if not os.path.lexists(alias):
+        os.symlink("pergel", alias)
 
     # --- desktop entry
     appdir = os.path.join(root, "usr/share/applications")
     os.makedirs(appdir, exist_ok=True)
-    with open(os.path.join(appdir, "vane.desktop"), "w") as f:
+    with open(os.path.join(appdir, "pergel.desktop"), "w") as f:
         f.write(render_desktop_entry())
 
     # --- icon set (hicolor tree)
@@ -81,13 +85,13 @@ def stage_tree(root: str) -> str:
             d = os.path.join(root, f"usr/share/icons/hicolor/{size}x{size}/apps")
             os.makedirs(d, exist_ok=True)
             shutil.copy(out["png"].format(size=size),
-                        os.path.join(d, "vane.png"))
+                        os.path.join(d, "pergel.png"))
         svgdir = os.path.join(root, "usr/share/icons/hicolor/scalable/apps")
         os.makedirs(svgdir, exist_ok=True)
-        shutil.copy(out["svg"], os.path.join(svgdir, "vane.svg"))
+        shutil.copy(out["svg"], os.path.join(svgdir, "pergel.svg"))
 
     # --- engine + brand code under /usr/lib/vane
-    libdir = os.path.join(root, "usr/lib/vane")
+    libdir = os.path.join(root, "usr/lib/pergel")
     os.makedirs(libdir, exist_ok=True)
     for pkg in ("brand", "browser_engine"):
         shutil.copytree(os.path.join(_REPO_ROOT, "src", pkg),
@@ -96,6 +100,8 @@ def stage_tree(root: str) -> str:
     # top-level entry module next to the packages
     shutil.copy(os.path.join(_REPO_ROOT, "src/brand/vane_app.py"),
                 os.path.join(libdir, "vane_app.py"))
+    # new-tab override extension (chrome_url_overrides.newtab)
+    write_extension(os.path.join(libdir, "extension"))
     return root
 
 

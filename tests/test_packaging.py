@@ -51,21 +51,21 @@ class TestDebStaging(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = os.path.join(td, "vane-browser_0.1.0_amd64")
             stage_tree(root)
-            self.assertTrue(os.access(os.path.join(root, "usr/bin/vane"),
+            self.assertTrue(os.access(os.path.join(root, "usr/bin/pergel"),
                                       os.X_OK))
             with open(os.path.join(root, "usr/share/applications/"
-                                        "vane.desktop")) as f:
+                                        "pergel.desktop")) as f:
                 desktop = f.read()
-            self.assertIn("Name=Vane", desktop)
-            self.assertIn("Icon=vane", desktop)
+            self.assertIn("Name=Pergel", desktop)
+            self.assertIn("Icon=pergel", desktop)
             for s in SIZES:
                 self.assertTrue(os.path.isfile(os.path.join(
-                    root, f"usr/share/icons/hicolor/{s}x{s}/apps/vane.png")))
+                    root, f"usr/share/icons/hicolor/{s}x{s}/apps/pergel.png")))
             self.assertTrue(os.path.isfile(os.path.join(
-                root, "usr/share/icons/hicolor/scalable/apps/vane.svg")))
+                root, "usr/share/icons/hicolor/scalable/apps/pergel.svg")))
             # engine ships inside the package
             self.assertTrue(os.path.isfile(os.path.join(
-                root, "usr/lib/vane/vane_app.py")))
+                root, "usr/lib/pergel/vane_app.py")))
 
     def test_control_metadata(self):
         with tempfile.TemporaryDirectory() as td:
@@ -73,7 +73,7 @@ class TestDebStaging(unittest.TestCase):
             stage_tree(root)
             with open(os.path.join(root, "DEBIAN/control")) as f:
                 control = f.read()
-            self.assertIn("Package: vane-browser", control)
+            self.assertIn("Package: pergel-browser", control)
             self.assertIn("Architecture: all", control)
             self.assertIn("Depends:", control)
             self.assertIn("Homepage:", control)
@@ -86,11 +86,11 @@ class TestDebBuild(unittest.TestCase):
             self.assertTrue(os.path.isfile(deb))
             meta = subprocess.run(["dpkg-deb", "-f", deb], check=True,
                                   capture_output=True, text=True).stdout
-            self.assertIn("Package: vane-browser", meta)
+            self.assertIn("Package: pergel-browser", meta)
             contents = subprocess.run(["dpkg-deb", "-c", deb], check=True,
                                       capture_output=True, text=True).stdout
-            self.assertIn("./usr/bin/vane", contents)
-            self.assertIn("vane.desktop", contents)
+            self.assertIn("./usr/bin/pergel", contents)
+            self.assertIn("pergel.desktop", contents)
 
 
 if __name__ == "__main__":

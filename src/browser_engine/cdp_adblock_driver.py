@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import tempfile
 import urllib.request
@@ -49,6 +50,22 @@ def _chromium() -> Optional[str]:
     return None
 
 
+def browser_base_args(headless: bool = True) -> list:
+    """Flags every launch needs. ``--no-sandbox`` only as root: the desktop
+    user runs with the real sandbox (AppArmor userns profile).
+
+    ``--disable-gpu`` is a headless-CI crutch ONLY: on a real desktop it
+    forces software compositing and makes scrolling/navigation visibly
+    laggy, so a visible Vane window must get the GPU.
+    """
+    args = ["--remote-debugging-port=0"]
+    if headless:
+        args.insert(0, "--disable-gpu")
+    if os.geteuid() == 0:
+        args.insert(0, "--no-sandbox")
+    return args
+
+
 class AdblockBrowserSession:
     """One enforced Chromium session; async context manager."""
 
@@ -57,13 +74,15 @@ class AdblockBrowserSession:
                  headless: bool = True, keep_open: bool = False,
                  on_blocked: Optional[Callable[[dict], None]] = None,
                  user_data_dir: Optional[str] = None,
-                 start_url: str = "about:blank"):
+                 start_url: str = "about:blank",
+                 extra_args: Optional[list] = None):
         self.bundle = bundle
         self._browser_path = browser_path or _chromium()
         self._headless = headless
         self._keep_open = keep_open
         self._on_blocked = on_blocked
         self._start_url = start_url
+        self._extra_args = list(extra_args or [])
         self._tmp = user_data_dir or tempfile.mkdtemp()
         self._proc = None
         self._ws = None
@@ -87,9 +106,9 @@ class AdblockBrowserSession:
         cmd = [self._browser_path]
         if self._headless:
             cmd.append("--headless=new")
-        cmd += ["--no-sandbox", "--disable-gpu",
-                "--remote-debugging-port=0", "--user-data-dir=" + self._tmp,
-                self._start_url]
+        cmd += browser_base_args(self._headless)
+        cmd += ["--user-data-dir=" + self._tmp] + self._extra_args
+        cmd.append(self._start_url)
         return cmd
 
     async def __aenter__(self) -> "AdblockBrowserSession":

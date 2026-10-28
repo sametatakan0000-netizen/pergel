@@ -6,8 +6,8 @@ space. Any colour on any surface must come from here.
 """
 from __future__ import annotations
 
-NAME = "Vane"
-TAGLINE = "Mikro düzeyde minimalist optimize tarayıcı"
+NAME = "Pergel"
+TAGLINE = "Minimalist AI-native web browser"
 
 # --- palette (dark premium graphite + single mint accent) -----------------
 BG = "#0E1013"        # deep graphite — window frame / page base
