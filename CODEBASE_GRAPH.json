@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 91,
-    "total_classes": 71,
-    "total_functions": 625,
-    "total_loc": 13046
+    "total_files": 93,
+    "total_classes": 73,
+    "total_functions": 638,
+    "total_loc": 13166
   },
   "modules": [
     {
@@ -1859,6 +1859,43 @@
       "change_risk": 9.68
     },
     {
+      "module": "src.brand.session_manager",
+      "path": "src/brand/session_manager.py",
+      "loc": 71,
+      "classes": [
+        "SessionManager"
+      ],
+      "functions": [
+        "__init__",
+        "save_session",
+        "load_session",
+        "clear_session",
+        "has_crashed_session",
+        "get_restore_urls"
+      ],
+      "imports": [
+        "json",
+        "pathlib",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "Path",
+        "dumps",
+        "exists",
+        "get",
+        "load_session",
+        "loads",
+        "mkdir",
+        "read_text",
+        "rename",
+        "time",
+        "unlink",
+        "write_text"
+      ],
+      "change_risk": 5.29
+    },
+    {
       "module": "src.brand.stats",
       "path": "src/brand/stats.py",
       "loc": 95,
@@ -1917,6 +1954,37 @@
         "write"
       ],
       "change_risk": 4.79
+    },
+    {
+      "module": "src.brand.tab_hibernator",
+      "path": "src/brand/tab_hibernator.py",
+      "loc": 49,
+      "classes": [
+        "TabHibernator"
+      ],
+      "functions": [
+        "__init__",
+        "track_activity",
+        "get_idle_tabs",
+        "should_hibernate",
+        "mark_hibernated",
+        "mark_active",
+        "get_memory_stats"
+      ],
+      "imports": [
+        "time"
+      ],
+      "calls": [
+        "add",
+        "discard",
+        "get",
+        "get_idle_tabs",
+        "items",
+        "len",
+        "set",
+        "time"
+      ],
+      "change_risk": 1.21
     },
     {
       "module": "src.brand.tokens",
@@ -4354,8 +4422,17 @@
     "src.brand.package.build_deb",
     "src.brand.pergel_app.on_decision",
     "src.brand.render.search_url",
+    "src.brand.session_manager.clear_session",
+    "src.brand.session_manager.get_restore_urls",
+    "src.brand.session_manager.has_crashed_session",
+    "src.brand.session_manager.save_session",
     "src.brand.stats.do_GET",
     "src.brand.stats.log_message",
+    "src.brand.tab_hibernator.get_memory_stats",
+    "src.brand.tab_hibernator.mark_active",
+    "src.brand.tab_hibernator.mark_hibernated",
+    "src.brand.tab_hibernator.should_hibernate",
+    "src.brand.tab_hibernator.track_activity",
     "src.browser_engine.adblock_session.build_network_engine",
     "src.browser_engine.cdp_adblock_driver.browse",
     "src.browser_engine.cdp_adblock_driver.driver",

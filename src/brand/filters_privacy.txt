@@ -1,0 +1,80 @@
+! Pergel Privacy Filter - EasyPrivacy-aligned tracker blocking
+! Last updated: 2026-10-29
+! Source: EasyPrivacy, Disconnect, DuckDuckGo Tracker Radar
+
+! === Analytics/Tracking ===
+||google-analytics.com^
+||googletagmanager.com^
+||doubleclick.net^
+||facebook.net^
+||facebook.com/tr^
+||connect.facebook.net^
+||hotjar.com^
+||mixpanel.com^
+||segment.com^
+||segment.io^
+||amplitude.com^
+||fullstory.com^
+||logrocket.com^
+||mouseflow.com^
+||crazyegg.com^
+||clarity.ms^
+||heap.io^
+||matomo.cloud^
+||piwik.pro^
+||newrelic.com^
+||nr-data.net^
+||sentry.io^
+||bugsnag.com^
+||optimizely.com^
+||vwo.com^
+
+! === Ad Networks ===
+||adnxs.com^
+||adsrvr.org^
+||amazon-adsystem.com^
+||appnexus.com^
+||bidswitch.net^
+||casalemedia.com^
+||criteo.com^
+||criteo.net^
+||demdex.net^
+||dotomi.com^
+||rubiconproject.com^
+||pubmatic.com^
+||openx.net^
+||smartadserver.com^
+||teads.tv^
+||taboola.com^
+||outbrain.com^
+||revcontent.com^
+||mgid.com^
+||adform.net^
+||advertising.com^
+||bluekai.com^
+||exelator.com^
+||krxd.net^
+||rlcdn.com^
+||addthis.com^
+||sharethis.com^
+
+! === Social Trackers ===
+||analytics.twitter.com^
+||t.co/i/adsct^
+||ads.linkedin.com^
+||px.ads.linkedin.com^
+||snap.licdn.com^
+||bat.bing.com^
+||pinterest.com/ct^
+||redditstatic.com/ads^
+||analytics.tiktok.com^
+
+! === Fingerprinting ===
+||fingerprintjs.com^
+||fingerprint.com^
+||fingerprintjs-pro.com^
+
+! === Data Brokers ===
+||acxiom.com^
+||liveramp.com^
+||neustar.biz^
