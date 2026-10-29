@@ -3,7 +3,7 @@
     "total_files": 93,
     "total_classes": 73,
     "total_functions": 639,
-    "total_loc": 13265
+    "total_loc": 13280
   },
   "modules": [
     {
@@ -2180,7 +2180,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 551,
+      "loc": 566,
       "classes": [
         "AdblockBrowserSession"
       ],
@@ -2261,6 +2261,7 @@
         "add",
         "add_done_callback",
         "append",
+        "bool",
         "browser_base_args",
         "build_injection",
         "cancel",

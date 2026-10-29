@@ -188,13 +188,13 @@ class AdblockBrowserSession:
         try:
             await self._call("Page.addScriptToEvaluateOnNewDocument", {
                 "source": (
-                    "Object.defineProperty(navigator, 'webdriver',"
-                    " {get: () => undefined});"
-                    " window.chrome = window.chrome || {runtime: {}};"
-                    " Object.defineProperty(navigator, 'plugins',"
-                    " {get: () => [1, 2, 3, 4, 5]});"
-                    " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
+                    "try { Object.defineProperty(navigator, 'webdriver',"
+                    " {get: () => undefined}); } catch(e) {}"
+                    " try { window.chrome = window.chrome || {runtime: {}}; } catch(e) {}"
+                    " try { Object.defineProperty(navigator, 'plugins',"
+                    " {get: () => [1, 2, 3, 4, 5]}); } catch(e) {}"
+                    " try { Object.defineProperty(navigator, 'languages',"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']}); } catch(e) {}"
                 )})
         except Exception:
             pass  # non-fatal: browser still works without anti-detection
@@ -216,18 +216,28 @@ class AdblockBrowserSession:
             "flatten": True})
         return self
 
-    async def _arm_page(self, target_id: str, sid: str) -> None:
+    async def _arm_page(self, target_id: str, sid: str,
+                        is_popup: bool = False) -> None:
         """Enable enforcement + anti-detection on one page target's session.
 
         Called for every new tab/popup.  Mirrors the main-page setup in
         ``__aenter__`` so popups (OAuth dialogs etc.) are neither blocked by
         the adblock engine nor fingerprinted as automation.
+
+        For popups (opened via window.open, identified by openerId),
+        ``Fetch.enable`` is SKIPPED: request interception on a fresh popup
+        session can stall the initial navigation, causing a white screen.
+        The popup loads normally without interception.
         """
         import logging
         _log = logging.getLogger("pergel.cdp")
-        _log.info("_arm_page: tid=%s sid=%s", target_id[:12], sid[:12])
-        await self._call_on(sid, "Fetch.enable")
-        _log.info("_arm_page: Fetch.enable OK sid=%s", sid[:12])
+        _log.info("_arm_page: tid=%s sid=%s is_popup=%s",
+                  target_id[:12], sid[:12], is_popup)
+        if not is_popup:
+            await self._call_on(sid, "Fetch.enable")
+            _log.info("_arm_page: Fetch.enable OK sid=%s", sid[:12])
+        else:
+            _log.info("_arm_page: SKIPPING Fetch.enable for popup sid=%s", sid[:12])
         await self._call_on(sid, "Page.enable")
         try:
             await self._call_on(sid, "Network.enable")
@@ -238,13 +248,13 @@ class AdblockBrowserSession:
                 "platform": "Linux x86_64"})
             await self._call_on(sid, "Page.addScriptToEvaluateOnNewDocument", {
                 "source": (
-                    "Object.defineProperty(navigator, 'webdriver', "
-                    "{get: () => undefined}); "
-                    "window.chrome = window.chrome || {runtime: {}}; "
-                    "Object.defineProperty(navigator, 'plugins', "
-                    "{get: () => [1, 2, 3, 4, 5]}); "
-                    "Object.defineProperty(navigator, 'languages', "
-                    "{get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
+                    "try { Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined}); } catch(e) {} "
+                    "try { window.chrome = window.chrome || {runtime: {}}; } catch(e) {} "
+                    "try { Object.defineProperty(navigator, 'plugins', "
+                    "{get: () => [1, 2, 3, 4, 5]}); } catch(e) {} "
+                    "try { Object.defineProperty(navigator, 'languages', "
+                    "{get: () => ['tr-TR', 'tr', 'en-US', 'en']}); } catch(e) {}"
                 )})
         except Exception:
             pass  # non-fatal
@@ -396,9 +406,14 @@ class AdblockBrowserSession:
                               p.get("targetInfo", {}).get("targetId", "?")[:12],
                               p.get("sessionId", "?")[:12])
                     if p.get("targetInfo", {}).get("type") == "page":
+                        is_popup = bool(p.get("targetInfo", {}).get("openerId"))
+                        _log.info("  -> is_popup=%s (openerId=%s)",
+                                  is_popup,
+                                  p.get("targetInfo", {}).get("openerId"))
                         task = asyncio.get_event_loop().create_task(
                             self._arm_page(p["targetInfo"]["targetId"],
-                                           p["sessionId"]))
+                                           p["sessionId"],
+                                           is_popup=is_popup))
                         self._arm_tasks.add(task)
                         task.add_done_callback(self._arm_tasks.discard)
                 elif m.get("method") in ("Page.loadEventFired",
