@@ -128,6 +128,7 @@ class AdblockBrowserSession:
         self._pending: dict[int, asyncio.Future] = {}
         self._pump: Optional[asyncio.Task] = None
         self._load_evt = asyncio.Event() if websockets else None
+        self._paused_requests: dict = {}  # rid -> (sid, ts) for watchdog
         # Extension rules join the ad-block network rules at enforcement time
         # via CompositeEngine, so both decide on every request.
         source = (bundle.network, extensions) if extensions is not None \
@@ -161,6 +162,7 @@ class AdblockBrowserSession:
         ws_url = self._wait_ws()
         self._ws = await websockets.connect(ws_url, max_size=2**24)
         self._pump = asyncio.create_task(self._run_pump())
+        self._watchdog = asyncio.create_task(self._resume_watchdog())
         tg = await self._call("Target.getTargets")
         page = [t for t in tg["result"]["targetInfos"] if t["type"] == "page"][-1]
         sess = await self._call("Target.attachToTarget",
@@ -258,6 +260,8 @@ class AdblockBrowserSession:
     async def __aexit__(self, *exc):
         if self._pump:
             self._pump.cancel()
+            if getattr(self, "_watchdog", None):
+                self._watchdog.cancel()
         if self._ws:
             await self._ws.close()
         # keep_open: the user is still driving the window; closing is the caller's job
@@ -344,12 +348,36 @@ class AdblockBrowserSession:
                 if m.get("method") == "Fetch.requestPaused":
                     # surface the decision to the observer first (live counter),
                     # then dispatch the real enforcement reply
-                    self._notify_decision(m["params"])
-                    reply = self._bridge.on_request_paused(m["params"])
+                    params = m.get("params", {})
+                    rid = params.get("requestId", "")
+                    ev_sid = m.get("sessionId") or self._sid
+                    import time as _time
+                    self._paused_requests[rid] = (ev_sid, _time.monotonic())
+                    try:
+                        self._notify_decision(params)
+                        reply = self._bridge.on_request_paused(params)
+                    except Exception:
+                        # CRITICAL safety net: if the decision logic throws for
+                        # ANY reason, continue the request instead of letting it
+                        # hang forever (white-screen popup bug).  Allow through.
+                        import logging
+                        logging.getLogger("pergel.cdp").warning(
+                            "Fetch.requestPaused handler failed; continuing "
+                            "request %s (url=%s)", rid,
+                            params.get("request", {}).get("url", "?"),
+                            exc_info=True)
+                        reply = {"method": "Fetch.continueRequest",
+                                 "params": {"requestId": rid}}
                     self._seq += 1
-                    await self._ws.send(json.dumps(self._resume_message(
-                        reply, self._seq, event_sid=m.get("sessionId"),
-                        session_sid=self._sid)))
+                    try:
+                        await self._ws.send(json.dumps(self._resume_message(
+                            reply, self._seq, event_sid=ev_sid,
+                            session_sid=self._sid)))
+                    except Exception:
+                        import logging
+                        logging.getLogger("pergel.cdp").warning(
+                            "Failed to send resume for %s", rid, exc_info=True)
+                    self._paused_requests.pop(rid, None)
                 elif m.get("method") == "Target.attachedToTarget":
                     # a new tab (or startup-raced page) attached via auto-attach
                     p = m["params"]
@@ -366,6 +394,27 @@ class AdblockBrowserSession:
             pass
 
     # --- driver API ------------------------------------------------------
+    async def _resume_watchdog(self):
+        """Force-continue requests stuck >5s (safety net for popup white-screens)."""
+        import time
+        while True:
+            await asyncio.sleep(2)
+            now = time.monotonic()
+            stuck = [(rid, sid) for rid, (sid, ts)
+                     in list(self._paused_requests.items())
+                     if now - ts > 5.0]
+            for rid, sid in stuck:
+                self._paused_requests.pop(rid, None)
+                self._seq += 1
+                try:
+                    await self._ws.send(json.dumps({
+                        "id": self._seq,
+                        "method": "Fetch.continueRequest",
+                        "params": {"requestId": rid},
+                        **({"sessionId": sid} if sid else {})}))
+                except Exception:
+                    pass
+
     def _notify_decision(self, params: dict) -> dict:
         """Compute the enforcement decision for a paused request and surface it.
 
