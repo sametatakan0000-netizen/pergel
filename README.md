@@ -30,81 +30,172 @@ Rule: read `CODEBASE_GRAPH.json` before the code, `AGENTS.md` for rules and comm
 
 ---
 
-## Speed / memory — how to read this honestly
+## Installation
 
-> **Important:** The numbers below measure the product's **automation/fetch layer** —
-> the programmatic page-fetching engine. Pergel's desktop browsing experience is
-> **Chromium-based**; these ms figures do not represent everyday tab speed, they
-> represent headless fetch/automation throughput.
+Two supported paths. Pick the one that fits you — both are first-class.
 
-Measured with the `src/bench/run.py` harness against a deterministic local fixture
-server. Each cell is 10 independent lifecycles (fresh process) with a 95% bootstrap
-confidence interval. Hardware: 13th Gen Intel Core i5-13420H (12 cores), kernel 7.0.0-38.
-**Only targets with raw measurements in the repo (`bench/results/*/raw.jsonl`) are
-reported.** Targets that could not be measured on a given run are shown as
-`not measured` rather than filled with placeholder numbers.
+### A) Manual install (for people)
 
-<!-- BENCHMARK_TABLES:BEGIN -->
-## Scenario `static`
+**1 · Get the code**
 
-| target | success | warm fetch ms median [95% CI] | peak PSS MiB | cold start ms | vs baseline (latency) |
-|---|---|---|---|---|---|
-| brave | 100% | 103.3 [102.9–105.4] | 325.6 [322.0–333.8] | 363.6 [357.1–369.6] | 0.4× |
-| chrome-cft | 100% | 112.6 [112.2–114.4] | 479.5 [465.2–487.2] | 365.1 [361.9–373.0] | 0.4× |
-| chrome-headless-shell | 100% | 44.4 [43.6–45.4] | 175.0 [171.8–176.7] | 264.7 [262.6–269.7] | baseline |
-| edge | 100% | 99.0 [97.3–100.4] | 508.1 [506.7–512.4] | 426.9 [421.6–433.1] | 0.4× |
-| firefox-pw | 100% | 176.8 [175.3–178.3] | 506.8 [500.8–511.0] | 442.2 [438.5–451.3] | 0.3× |
-| lightpanda | 100% | 19.8 [18.8–20.6] | 23.1 [22.8–23.8] | 244.0 [240.4–249.4] | 2.2× |
-| playwright-chromium | 100% | 44.6 [43.5–46.1] | 176.0 [174.7–177.3] | 261.8 [259.9–264.1] | no significant difference |
-| webkit-pw | 100% | 203.4 [197.7–210.5] | 194.3 [190.0–197.2] | 266.4 [258.2–274.2] | 0.2× |
+```bash
+git clone https://github.com/sametatakan0000-netizen/pergel.git
+cd pergel
+```
 
+**2 · Requirements** — Python **3.10+** and a Chromium-family browser.
 
-## Scenario `spa`
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv chromium-browser   # or google-chrome-stable
+```
 
-| target | success | warm fetch ms median [95% CI] | peak PSS MiB | cold start ms | vs baseline (latency) |
-|---|---|---|---|---|---|
-| brave | 100% | 147.6 [145.2–149.6] | 354.1 [353.4–355.9] | 364.1 [359.1–384.4] | 0.6× |
-| chrome-cft | 100% | 155.2 [153.9–156.9] | 501.3 [497.8–508.0] | 361.3 [356.5–366.4] | 0.6× |
-| chrome-headless-shell | 100% | 86.6 [86.3–87.4] | 174.6 [174.2–175.3] | 262.8 [261.0–267.3] | baseline |
-| edge | 100% | 141.3 [140.7–142.6] | 513.8 [513.5–516.4] | 423.1 [416.5–433.5] | 0.6× |
-| firefox-pw | 100% | 236.5 [233.8–239.8] | 511.5 [503.9–516.3] | 435.8 [434.8–444.1] | 0.4× |
-| lightpanda | 100% | 63.5 [62.7–63.8] | 24.2 [23.9–25.1] | 244.4 [240.2–248.7] | 1.4× |
-| playwright-chromium | 100% | 87.5 [86.5–88.2] | 175.2 [174.6–176.4] | 267.6 [263.9–270.5] | no significant difference |
-| webkit-pw | 100% | 237.8 [236.7–244.8] | 197.5 [197.4–197.7] | 258.5 [255.6–268.2] | 0.4× |
+**3 · Python dependencies**
 
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+```
 
-## Scenario `heavy`
+**4 · Desktop app (recommended)** — build the Debian package and install it:
 
-| target | success | warm fetch ms median [95% CI] | peak PSS MiB | cold start ms | vs baseline (latency) |
-|---|---|---|---|---|---|
-| brave | 100% | 113.2 [111.4–114.2] | 366.4 [364.0–366.9] | 363.2 [356.1–372.3] | 0.5× |
-| chrome-cft | 100% | 119.9 [118.9–122.6] | 500.6 [497.2–509.9] | 367.2 [360.3–373.2] | 0.4× |
-| chrome-headless-shell | 100% | 51.4 [51.0–51.9] | 160.8 [153.6–190.5] | 264.4 [258.8–274.0] | baseline |
-| edge | 100% | 111.7 [110.0–113.3] | 493.9 [482.9–526.5] | 420.0 [415.2–428.8] | 0.5× |
-| firefox-pw | 100% | 194.1 [190.2–207.6] | 508.6 [501.0–530.9] | 447.9 [443.8–463.5] | 0.3× |
-| lightpanda | 100% | 25.0 [23.9–26.0] | 23.7 [23.4–25.6] | 242.7 [240.1–247.8] | 2.1× |
-| playwright-chromium | 100% | 51.8 [50.7–52.3] | 159.3 [154.9–167.7] | 263.9 [247.8–268.7] | no significant difference |
-| webkit-pw | 100% | 228.5 [221.5–232.6] | 207.3 [202.1–208.4] | 256.5 [251.9–267.1] | 0.2× |
+```bash
+PYTHONPATH=. python3 -c "from src.brand.package import build_deb; print(build_deb('dist'))"
+sudo apt install -y ./dist/pergel-browser_*.deb
+```
 
+This installs `pergel` to `/usr/bin/pergel` and a menu entry. Then just launch
+**Pergel** from your application menu, or run `pergel` in a terminal.
 
-*Run on 13th Gen Intel(R) Core(TM) i5-13420H (12 cores), kernel 7.0.0-38-generic, load 0.57, git a963c14, 2026-10-28T17:01:16.327261+00:00.*
-*Method: each cell = independent lifecycles (fresh process); the sample unit is the per-lifecycle median of warm fetches; CIs are 95% bootstrap; a ratio is shown only when CIs do not overlap (n>=10 lifecycles). Latency compares only successful fetches; success rate is reported beside it.*
+**5 · Verify it works**
 
-**Scope honesty:** these are the **automation/fetch layer** engines, not everyday tab speed.
-`lightpanda` is a third-party AGPL fetch-layer engine (not Pergel's own). `vivaldi` could not be
-measured on this rig (it never exposes the CDP DevTools port headless) and is deliberately shown
-as **`BLOCKED`** rather than given a fabricated number. Every cell above is backed by
-[`raw.jsonl`](bench/results/20261028-200116_full9/raw.jsonl).
-<!-- BENCHMARK_TABLES:END -->
+```bash
+pergel --help                       # the app launches
+python3 -m unittest discover -s tests -t .   # the suite is green
+```
 
-**How to read it correctly:** the fetch layer (lightpanda) is measured ~2.3× faster
-and ~10× lighter than the closest Chromium-based headless target. That is a direct
-**operating-cost** advantage for automation and crawling workloads.
+<details>
+<summary><b>No Debian/Ubuntu? Build a package on any distro</b></summary>
 
-**Claims we avoid:** "Pergel is the fastest browser," "fast in all uses," or any
-absolute ms guarantee. None of that is supported by this measurement. lightpanda is a
-third-party (AGPL) engine; it is not Pergel's own engine and is used only in the
-fetch/automation layer.
+The source is plain Python, so you can run it without a `.deb`:
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+PYTHONPATH=. python3 -m src.cli doctor   # sanity check
+```
+
+To produce a `.deb` anywhere `dpkg-deb` exists (Debian, Ubuntu, Mint, Pop!_OS,
+Kali, MX…), use the same `build_deb` command as step 4.
+</details>
+
+### B) Install with an AI agent (Claude Code, Codex, OpenCode, Hermes…)
+
+If you prefer to let an AI agent do the setup, hand it this repository and this
+instruction. Copy-paste prompt:
+
+> Clone `https://github.com/sametatakan0000-netizen/pergel.git` and install it for
+> me on this machine. First read `AGENTS.md` and `llms.txt`, then follow the
+> **Manual install** steps in `README.md` (steps 1–5) in order. Use a virtualenv,
+> never `sudo pip install`. If you build the `.deb`, install it with
+> `sudo apt install -y ./dist/pergel-browser_*.deb`. Then run
+> `python3 -m unittest discover -s tests -t .` and show me the result. Do not
+> edit any file outside the repository, and ask me before running any command
+> with `sudo`.
+
+Why this works well: the repo is **agent-native**. The agent has three curated
+entry points and will not guess its way around:
+
+| File | What the agent gets |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Commands, rules, and the "done is a claim" verification rule |
+| [`llms.txt`](llms.txt) | Link-first map of the documentation |
+| [`CODEBASE_GRAPH.json`](CODEBASE_GRAPH.json) | AST code graph — navigate without opening files one by one |
+
+Rules that keep an AI install safe: **(1)** the agent reads `AGENTS.md` before
+touching code; **(2)** it never invents results — measured or it did not happen;
+**(3)** `sudo` only for the `.deb` install, and only after asking you.
+
+---
+
+## Benchmarks — what we measured
+
+> **Scope:** these numbers measure the product's **automation/fetch layer** —
+> the programmatic page-fetching engine. Pergel's everyday desktop browsing is
+> **Chromium-based**; the ms figures below are *not* your tab speed, they are
+> headless fetch/automation throughput.
+
+Measured with `src/bench/run.py` against a deterministic local fixture server.
+Each cell = **10 independent lifecycles** (fresh process each time), reported as
+a median with a **95% bootstrap confidence interval**. Hardware: 13th Gen Intel
+Core i5-13420H (12 cores), kernel 7.0.0-38. Every number below is backed by the
+raw measurement file linked at the bottom — nothing here is estimated.
+
+**How to read the three scenarios:**
+- `static` — a plain HTML page. The simplest case.
+- `spa` — a JavaScript-driven single-page app. The engine must run JS and wait.
+- `heavy` — a large page with many resources. The stress case.
+
+### Speed — warm fetch median (ms, lower is better)
+
+| Engine | static | spa | heavy |
+|---|---|---|---|
+| **lightpanda** | **19.8** | **63.5** | **25.0** |
+| chrome-headless-shell | 44.4 | 86.6 | 51.4 |
+| playwright-chromium | 44.6 | 87.5 | 51.8 |
+| edge | 99.0 | 141.3 | 111.7 |
+| brave | 103.3 | 147.6 | 113.2 |
+| chrome-cft | 112.6 | 155.2 | 119.9 |
+| firefox-pw | 176.8 | 236.5 | 194.1 |
+| webkit-pw | 203.4 | 237.8 | 228.5 |
+
+### Memory — peak PSS (MiB, lower is better)
+
+| Engine | static | spa | heavy |
+|---|---|---|---|
+| **lightpanda** | **23.1** | **24.2** | **23.7** |
+| chrome-headless-shell | 175.0 | 174.6 | 160.8 |
+| playwright-chromium | 176.0 | 175.2 | 159.3 |
+| webkit-pw | 194.3 | 197.5 | 207.3 |
+| brave | 325.6 | 354.1 | 366.4 |
+| chrome-cft | 479.5 | 501.3 | 500.6 |
+| firefox-pw | 506.8 | 511.5 | 508.6 |
+| edge | 508.1 | 513.8 | 493.9 |
+
+### Cold start (ms, lower is better)
+
+| Engine | static | spa | heavy |
+|---|---|---|---|
+| lightpanda | 244.0 | 244.4 | 242.7 |
+| playwright-chromium | 261.8 | 267.6 | 263.9 |
+| chrome-headless-shell | 264.7 | 262.8 | 264.4 |
+| webkit-pw | 266.4 | 258.5 | 256.5 |
+| brave | 363.6 | 364.1 | 363.2 |
+| chrome-cft | 365.1 | 361.3 | 367.2 |
+| edge | 426.9 | 423.1 | 420.0 |
+| firefox-pw | 442.2 | 435.8 | 447.9 |
+
+**What this means in plain words:** on this measurement the fetch layer
+(`lightpanda`) is roughly **2× faster** and **~10× lighter** than the closest
+Chromium-based headless target. For automation and crawling workloads that is a
+direct **operating-cost** advantage: the same machine runs far more parallel
+sessions on the same RAM.
+
+**Success rate:** every engine above completed **100%** of its fetches in all
+three scenarios. One target, `vivaldi`, is shown as **`BLOCKED`**: it never
+exposes the CDP DevTools port headless, so it cannot be measured on this rig.
+Rather than invent a number, we mark it unmeasurable.
+
+*Run on 13th Gen Intel(R) Core(TM) i5-13420H (12 cores), kernel 7.0.0-38-generic, load 0.57, git 0a56efd, 2026-10-28.*
+*Method: sample unit is the per-lifecycle median of warm fetches; CIs are 95% bootstrap; a latency ratio is only claimed where CIs do not overlap (n≥10 lifecycles). Latency compares successful fetches only.*
+
+**Claims we deliberately avoid:** "Pergel is the fastest browser," "fast in all
+uses," or any absolute ms guarantee. This measurement does not support those.
+`lightpanda` is a third-party (AGPL) engine, not Pergel's own — it is used only
+in the fetch/automation layer.
+
+Every cell is backed by raw measurement data:
+[`bench/results/20261028-200116_full9/raw.jsonl`](bench/results/20261028-200116_full9/raw.jsonl).
 
 ---
 
