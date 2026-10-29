@@ -279,27 +279,6 @@ Açık ve sürekli geliştirildi — gerçek iş, sırasıyla (tam liste: `git l
 - **Yapay zekâ modu** — fan-out + alıntılar, REST API, MCP sunucusu, LiveRouter + model kaydı.
 - **Küresel öncelik** — 8 dil, RTL, erişilebilirlik.
 - **Kimlik** — tam marka yenileme (Vane → Pergel), ikonlar, `.deb` masaüstü paketi.
-- **Bu README** — okunabilir ölçüm tabloları, çift kurulum rehberi ve dürüst eksikler.
-
----
-
-## Dürüst eksikler (henüz olmayanlar)
-
-`docs/product/market-landscape_2026-10-26.md` ve `docs/product/human-face-review_2026-10-26.md`
-içinde belgelendi — şimdi bilmeniz, sonra fark etmenizden iyidir:
-
-1. **Oturum kayıt/tekrar, Canlı Görünüm** — henüz yok.
-2. **WebMCP** — henüz yok (Chromium 146+ gerektirir).
-3. **Anti-bot / CAPTCHA / konut proxy'si** — bilerek kapsam dışı. Bot duvarlarını ve ödeme
-   duvarlarını aşmak için gizlilik/dolandırıcılık önleme teknikleri geliştirmiyoruz.
-4. **Windows/macOS yerel paketleme** — kaynaktan çalışır; yükleyici yok.
-
-Yakında çıkanlar (önceden eksikler listesindeydi):
-- **Web arayüzü** — `http://127.0.0.1:8871/ui/` — `/start`, `/history`, `/settings` sekmeleri.
-- **Tarama / site haritası** — `/v1/crawl` (toplu çekme + çıkarma, en fazla 50 paralel) ve
-  `/v1/map` (sitemap tabanlı URL keşfi).
-- **Şema tabanlı JSON çıkarma** — `/v1/extract` (JSON-LD, CSS seçiciler, regex).
-- **Yapılandırılmış hata zarfı** — her API yanıtında `request_id` korelasyonu.
 
 ---
 

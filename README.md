@@ -345,30 +345,6 @@ Built openly and continuously — real work, in order (full list: `git log`):
   registry (public data, deterministic policy).
 - **Global-first** — 8 languages, RTL, accessibility.
 - **Identity** — a full rebrand (Vane -> Pergel), icons, `.deb` desktop package.
-- **This README** — readable benchmarks, dual install guides, and the honest gaps below.
-
----
-
-## Honest gaps (what Pergel does *not* have yet)
-
-Documented in `docs/product/market-landscape_2026-10-26.md` and
-`docs/product/human-face-review_2026-10-26.md` — we'd rather you know now than find out later:
-
-1. **Session record/replay, Live View** — not yet.
-2. **WebMCP** — not yet (needs Chromium 146+).
-3. **Anti-bot / CAPTCHA / residential proxy** — deliberately out of scope. We do **not** build
-   stealth/anti-detection to bypass paywalls or bot walls; our security work is defence
-   (SSRF/egress/privacy), never evasion.
-4. **Windows/macOS native packaging** — run from source works; installers not built.
-
-Recently shipped (previously listed here as gaps):
-- **Web UI** — `http://127.0.0.1:8871/ui/` with `/start`, `/history`, `/settings` tabs.
-- **Crawl / sitemap** — `/v1/crawl` (batch fetch + extract, max 50 parallel) and `/v1/map`
-  (sitemap-based URL discovery).
-- **Schema-based JSON extraction** — `/v1/extract` (JSON-LD, CSS selectors, regex).
-- **Structured error envelope** — `request_id` correlation on every API response.
-
-Roadmap: package + web UI first, then the launch push (Show HN, Reddit, product communities).
 
 ---
 
@@ -384,8 +360,6 @@ Everything above is grounded in documents kept in this repo:
   the four ways AI agents access the web, with competitor pricing.
 - [`docs/research/browser_engine_sota_2026-10.md`](docs/research/browser_engine_sota_2026-10.md) —
   the architecture decision table.
-- [`ROUTER_STATUS.md`](ROUTER_STATUS.md) — what the model router actually does today.
-- [`PRODUCT_STATUS.md`](PRODUCT_STATUS.md) — verified build & status.
 
 ---
 
