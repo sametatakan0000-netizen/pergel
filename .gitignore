@@ -14,3 +14,11 @@ tests/_stubs/
 host_*.log
 workspace/
 *.env
+# build artifacts
+dist/
+*.deb
+*.rpm
+*.AppImage
+# stale status files (use git log / tests for current state)
+PRODUCT_STATUS.md
+ROUTER_STATUS.md
