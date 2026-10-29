@@ -348,6 +348,18 @@ Built openly and continuously — real work, in order (full list: `git log`):
 
 ---
 
+## What Pergel does *not* have yet
+
+1. **Web UI** (`/ui/` control panel) — not built yet.
+2. **Session record/replay, Live View** — not yet.
+3. **WebMCP** — not yet (needs Chromium 146+).
+4. **Windows/macOS native packaging** — run from source works; installers not built.
+
+We do **not** build stealth/anti-detection to bypass paywalls or bot walls; our security
+work is defence (SSRF/egress/privacy), never evasion.
+
+---
+
 ## Docs & deep research
 
 Everything above is grounded in documents kept in this repo:

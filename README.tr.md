@@ -282,6 +282,18 @@ Açık ve sürekli geliştirildi — gerçek iş, sırasıyla (tam liste: `git l
 
 ---
 
+## Pergel'de henüz olmayanlar
+
+1. **Web arayüzü** (`/ui/` kontrol paneli) — henüz geliştirilmedi.
+2. **Oturum kayıt/tekrar, Canlı Görünüm** — henüz yok.
+3. **WebMCP** — henüz yok (Chromium 146+ gerektirir).
+4. **Windows/macOS yerel paketleme** — kaynaktan çalışır; yükleyici yok.
+
+Bot duvarlarını ve ödeme duvarlarını aşmak için gizlilik/dolandırıcılık önleme teknikleri
+geliştirmiyoruz; güvenlik çalışmalarımız savunma amaçlıdır (SSRF/egres/gizlilik).
+
+---
+
 ## Dürüstlük notu
 
 Bu depodaki performans sayıları yalnızca yeniden üretilebilir ölçüm çıktısıyla
