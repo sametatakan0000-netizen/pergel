@@ -223,7 +223,11 @@ class AdblockBrowserSession:
         ``__aenter__`` so popups (OAuth dialogs etc.) are neither blocked by
         the adblock engine nor fingerprinted as automation.
         """
+        import logging
+        _log = logging.getLogger("pergel.cdp")
+        _log.info("_arm_page: tid=%s sid=%s", target_id[:12], sid[:12])
         await self._call_on(sid, "Fetch.enable")
+        _log.info("_arm_page: Fetch.enable OK sid=%s", sid[:12])
         await self._call_on(sid, "Page.enable")
         try:
             await self._call_on(sid, "Network.enable")
@@ -346,9 +350,13 @@ class AdblockBrowserSession:
                     self._pending.pop(m["id"]).set_result(m)
                     continue
                 if m.get("method") == "Fetch.requestPaused":
-                    # surface the decision to the observer first (live counter),
-                    # then dispatch the real enforcement reply
+                    import logging
+                    _log = logging.getLogger("pergel.cdp")
                     params = m.get("params", {})
+                    _log.debug("Fetch.requestPaused: rid=%s url=%s sid=%s",
+                               params.get("requestId", "?")[:12],
+                               params.get("request", {}).get("url", "?")[:80],
+                               (m.get("sessionId") or self._sid or "?")[:12])
                     rid = params.get("requestId", "")
                     ev_sid = m.get("sessionId") or self._sid
                     import time as _time
@@ -380,7 +388,13 @@ class AdblockBrowserSession:
                     self._paused_requests.pop(rid, None)
                 elif m.get("method") == "Target.attachedToTarget":
                     # a new tab (or startup-raced page) attached via auto-attach
+                    import logging
+                    _log = logging.getLogger("pergel.cdp")
                     p = m["params"]
+                    _log.info("Target.attachedToTarget: type=%s tid=%s sid=%s",
+                              p.get("targetInfo", {}).get("type", "?"),
+                              p.get("targetInfo", {}).get("targetId", "?")[:12],
+                              p.get("sessionId", "?")[:12])
                     if p.get("targetInfo", {}).get("type") == "page":
                         task = asyncio.get_event_loop().create_task(
                             self._arm_page(p["targetInfo"]["targetId"],

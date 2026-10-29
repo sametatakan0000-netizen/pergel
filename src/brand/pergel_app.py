@@ -213,6 +213,8 @@ def main(argv: Optional[list] = None) -> int:
                     help="kaynak tarayici profillerinin aranacagi dizin (test kolayligi)")
     ap.add_argument("--version", action="version",
                     version=f"{tokens.NAME} {VERSION}")
+    ap.add_argument("--debug", action="store_true",
+                    help="debug loglari /tmp/pergel_debug.log dosyasina yaz")
     args = ap.parse_args(argv)
     if args.migrate:
         profile = args.profile_dir or user_dirs()["profile"]
@@ -222,6 +224,14 @@ def main(argv: Optional[list] = None) -> int:
               f"{report['bookmarks']} yer imi, {report['history']} gecmis, "
               f"{report['passwords']} parola")
         return 0
+    if args.debug:
+        import logging
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s %(name)s %(levelname)s %(message)s",
+            handlers=[logging.FileHandler("/tmp/pergel_debug.log", mode="w"),
+                      logging.StreamHandler()])
+        logging.getLogger("pergel").setLevel(logging.DEBUG)
     return asyncio.run(run(args.filters, args.profile_dir))
 
 
