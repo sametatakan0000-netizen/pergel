@@ -192,7 +192,7 @@ class AdblockBrowserSession:
                     " Object.defineProperty(navigator, 'plugins',"
                     " {get: () => [1, 2, 3, 4, 5]});"
                     " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
                 )})
         except Exception:
             pass  # non-fatal: browser still works without anti-detection
@@ -217,9 +217,9 @@ class AdblockBrowserSession:
     async def _arm_page(self, target_id: str, sid: str) -> None:
         """Enable enforcement + anti-detection on one page target's session.
 
-        Called for every new tab/popup.  Must mirror the main-page setup in
-        ``__aenter__`` -- popups without UA override and webdriver spoof
-        are detected as automation (OAuth providers reject them).
+        Called for every new tab/popup.  Mirrors the main-page setup in
+        ``__aenter__`` so popups (OAuth dialogs etc.) are neither blocked by
+        the adblock engine nor fingerprinted as automation.
         """
         await self._call_on(sid, "Fetch.enable")
         await self._call_on(sid, "Page.enable")
@@ -232,13 +232,13 @@ class AdblockBrowserSession:
                 "platform": "Linux x86_64"})
             await self._call_on(sid, "Page.addScriptToEvaluateOnNewDocument", {
                 "source": (
-                    "Object.defineProperty(navigator, 'webdriver',"
-                    " {get: () => undefined});"
-                    " window.chrome = window.chrome || {runtime: {}};"
-                    " Object.defineProperty(navigator, 'plugins',"
-                    " {get: () => [1, 2, 3, 4, 5]});"
-                    " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                    "Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined}); "
+                    "window.chrome = window.chrome || {runtime: {}}; "
+                    "Object.defineProperty(navigator, 'plugins', "
+                    "{get: () => [1, 2, 3, 4, 5]}); "
+                    "Object.defineProperty(navigator, 'languages', "
+                    "{get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
                 )})
         except Exception:
             pass  # non-fatal
