@@ -215,9 +215,33 @@ class AdblockBrowserSession:
         return self
 
     async def _arm_page(self, target_id: str, sid: str) -> None:
-        """Enable enforcement on one page target's session."""
+        """Enable enforcement + anti-detection on one page target's session.
+
+        Called for every new tab/popup.  Must mirror the main-page setup in
+        ``__aenter__`` -- popups without UA override and webdriver spoof
+        are detected as automation (OAuth providers reject them).
+        """
         await self._call_on(sid, "Fetch.enable")
         await self._call_on(sid, "Page.enable")
+        try:
+            await self._call_on(sid, "Network.enable")
+            await self._call_on(sid, "Network.setUserAgentOverride", {
+                "userAgent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
+                "acceptLanguage": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                "platform": "Linux x86_64"})
+            await self._call_on(sid, "Page.addScriptToEvaluateOnNewDocument", {
+                "source": (
+                    "Object.defineProperty(navigator, 'webdriver',"
+                    " {get: () => undefined});"
+                    " window.chrome = window.chrome || {runtime: {}};"
+                    " Object.defineProperty(navigator, 'plugins',"
+                    " {get: () => [1, 2, 3, 4, 5]});"
+                    " Object.defineProperty(navigator, 'languages',"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                )})
+        except Exception:
+            pass  # non-fatal
         self.page_sessions[target_id] = sid
 
     async def wait_session_for(self, target_id: str,
@@ -276,7 +300,9 @@ class AdblockBrowserSession:
         request never resumes — navigation hangs). It must run under the SAME
         session the pause arrived on.
         """
-        out = {"id": seq, "method": reply["method"], "params": reply["params"]}
+        params = dict(reply["params"])
+        params.pop("ruleId", None)  # strip non-CDP telemetry tag
+        out = {"id": seq, "method": reply["method"], "params": params}
         sid = event_sid or session_sid
         if sid:
             out["sessionId"] = sid
