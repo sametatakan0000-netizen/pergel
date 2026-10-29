@@ -16,6 +16,10 @@ provider. There is no middleman holding a balance or reading your prompts.
 - **No telemetry.** No background data flow, no data selling, no ad profiling. No account.
 - **BYOK.** Bring your own API key (OpenRouter, Nous, Ollama, and more).
 - **Open source & free.** No subscription tiers, no paywalled features — now and always.
+- **Crash recovery.** Sessions auto-persist; never lose your tabs again.
+- **Tracker blocking.** 60+ tracker domains blocked natively (EasyPrivacy-aligned).
+- **Memory saver.** Inactive tabs hibernate automatically (like Edge Sleeping Tabs).
+- **8 languages.** Turkish, English, German, Spanish, French, Russian, Arabic (RTL), Chinese.
 
 ---
 
