@@ -345,15 +345,15 @@ Built openly and continuously — real work, in order (full list: `git log`):
   registry (public data, deterministic policy).
 - **Global-first** — 8 languages, RTL, accessibility.
 - **Identity** — a full rebrand (Vane -> Pergel), icons, `.deb` desktop package.
+- **Web UI** — `http://127.0.0.1:8871/ui/` control panel (Start / History / Settings tabs).
 
 ---
 
 ## What Pergel does *not* have yet
 
-1. **Web UI** (`/ui/` control panel) — not built yet.
-2. **Session record/replay, Live View** — not yet.
-3. **WebMCP** — not yet (needs Chromium 146+).
-4. **Windows/macOS native packaging** — run from source works; installers not built.
+1. **Session record/replay, Live View** — not yet.
+2. **WebMCP** — not yet (needs Chromium 146+).
+3. **Windows/macOS native packaging** — run from source works; installers not built.
 
 We do **not** build stealth/anti-detection to bypass paywalls or bot walls; our security
 work is defence (SSRF/egress/privacy), never evasion.
