@@ -202,6 +202,14 @@ class AdblockBrowserSession:
         # keep_open: the user is still driving the window; closing is the caller's job
         if self._proc and not self._keep_open:
             self._proc.terminate()
+            # shortcut: reap the child so chrome cannot linger as <defunct> and
+            # GC ResourceWarnings; terminate() alone never waits. when to
+            # upgrade: process-group teardown if engines start grandchildren.
+            try:
+                self._proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+                self._proc.wait(timeout=5)
 
     def _wait_ws(self) -> str:
         import glob

@@ -3,7 +3,7 @@
     "total_files": 85,
     "total_classes": 65,
     "total_functions": 586,
-    "total_loc": 11526
+    "total_loc": 11545
   },
   "modules": [
     {
@@ -1463,7 +1463,7 @@
     {
       "module": "src.brand.render",
       "path": "src/brand/render.py",
-      "loc": 411,
+      "loc": 422,
       "classes": [],
       "functions": [
         "search_url",
@@ -1491,6 +1491,7 @@
         "join",
         "lang_links",
         "list",
+        "lower",
         "makedirs",
         "open",
         "quote_plus",
@@ -1498,9 +1499,10 @@
         "render_ntp",
         "render_side_panel",
         "rgb",
+        "split",
         "write"
       ],
-      "change_risk": 8.34
+      "change_risk": 9.68
     },
     {
       "module": "src.brand.stats",
@@ -1865,7 +1867,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 417,
+      "loc": 425,
       "classes": [
         "AdblockBrowserSession"
       ],
@@ -1968,6 +1970,7 @@
         "int",
         "isfile",
         "isinstance",
+        "kill",
         "list",
         "load",
         "loads",

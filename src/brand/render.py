@@ -310,12 +310,23 @@ def performance_preferences() -> dict:
 
 def write_extension(dest: str) -> str:
     """Write the new-tab override extension (and its SOTA UX surfaces) into
-    ``dest``."""
+    ``dest``.
+
+    Global-first: writes every ``vane_ntp_<lang>.html`` locale variant so the
+    scriptless ``lang_links()`` footer resolves, and the default ``vane_ntp.html``
+    matches the system language (same logic as ``prepare_profile``).
+    """
     os.makedirs(dest, exist_ok=True)
     with open(os.path.join(dest, "manifest.json"), "w") as f:
         json.dump(extension_manifest(), f, ensure_ascii=False, indent=2)
+    lang = os.environ.get("LANG", "en").split(".")[0].split("_")[0].lower()
+    if lang not in i18n.LOCALES:
+        lang = "en"
     with open(os.path.join(dest, "vane_ntp.html"), "w") as f:
-        f.write(render_ntp())
+        f.write(render_ntp(lang))
+    for code in i18n.LOCALES:
+        with open(os.path.join(dest, f"vane_ntp_{code}.html"), "w") as f:
+            f.write(render_ntp(code))
     with open(os.path.join(dest, "background.js"), "w") as f:
         f.write(_BACKGROUND_JS)
     with open(os.path.join(dest, "commandbar.html"), "w") as f:
