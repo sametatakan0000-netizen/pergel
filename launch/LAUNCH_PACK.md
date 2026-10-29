@@ -20,7 +20,7 @@ Hey HN! We built Pergel — an open-source browser engine that's privacy-first a
 - No residential proxies or CAPTCHA solving
 - No user tracking, ever
 
-**Tech:** Python + CDP (Chrome DevTools Protocol), 300+ tests, MIT licensed.
+**Tech:** Python + CDP (Chrome DevTools Protocol), 773 tests, MIT licensed.
 
 **Links:**
 - GitHub: https://github.com/sametatakan0000-netizen/pergel
@@ -73,7 +73,7 @@ No telemetry. No data collection. BYOK. MIT licensed.
 
 4/5: Under the hood:
 → Python + Chrome DevTools Protocol
-→ 300+ tests, TDD throughout
+→ 773 tests, TDD throughout
 → Session record/replay for deterministic testing
 → Structured error envelopes with request_id correlation
 
@@ -105,7 +105,7 @@ Telemetri yok. Veri toplama yok. BYOK. MIT lisanslı.
 
 4/5: İç yapı:
 → Python + Chrome DevTools Protocol
-→ 300+ test, TDD
+→ 773 test, TDD
 → Deterministik oturum kayıt/tekrar
 
 5/5: Star atın, fork'layın, kırın, eksikleri söyleyin.
@@ -132,6 +132,38 @@ Built for developers and AI agents who need reliable web access without sacrific
 
 ---
 
+## 4b. Skool Community (EN + TR)
+
+**Title:** Pergel — Open-source privacy-first browser engine for AI agents
+
+**Body (EN):**
+Hey everyone! I built Pergel — a browser engine that AI agents use to read the web cheaply and privacy-respectingly.
+
+Why it matters for this community:
+→ If you build AI agents, you know the pain of token costs on messy DOM
+→ Pergel's engine ladder keeps cheap pages cheap (verified benchmarks in repo)
+→ Built-in ad blocking (113k+ rules), zero telemetry, BYOK
+→ MIT licensed, 773 tests, fully open source
+
+Not selling anything — just sharing what I built. Feedback welcome!
+
+🔗 https://github.com/sametatakan0000-netizen/pergel
+
+**Body (TR):**
+Merhaba! Pergel'i yaptım — AI ajanlarının webi ucuza ve gizliliğe saygılı şekilde okuması için bir tarayıcı motoru.
+
+Bu topluluk için neden önemli:
+→ AI ajanı geliştiriyorsanız, dağınık DOM üzerinde token maliyetini bilirsiniz
+→ Pergel'in motor merdiveni ucuz sayfayı ucuz tutar (repoda doğrulanmış benchmark'lar)
+→ 113k+ kurallı yerleşik reklam engelleme, sıfır telemetri, BYOK
+→ MIT lisanslı, 773 test, tamamen açık kaynak
+
+Satış yok — sadece yaptığım şeyi paylaşıyorum. Geri bildirimlerinize açığım!
+
+🔗 https://github.com/sametatakan0000-netizen/pergel
+
+---
+
 ## 5. Launch Checklist
 
 - [ ] Post to Show HN (best time: Tue-Thu 10am ET)
@@ -143,3 +175,5 @@ Built for developers and AI agents who need reliable web access without sacrific
 - [ ] Dev.to crosspost
 - [ ] LinkedIn post (EN + TR)
 - [ ] Share in relevant Discord/Telegram groups
+- [ ] Skool community post (relevant AI/dev communities)
+- [ ] Skool: create Pergel community page (free tier)
