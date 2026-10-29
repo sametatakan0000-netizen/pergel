@@ -30,7 +30,9 @@ Would love feedback on the architecture — especially the SSRF-guarded extracti
 
 ---
 
-## 2. Reddit r/opensource + r/privacy (English)
+## 2. Reddit r/privacy + r/SideProject (English)
+
+> ⚠️ r/opensource Ekim 2026'da AI projelerini yasakladı — POST ATMA
 
 **Title:** I built Pergel: an open-source, privacy-first browser engine with AI extraction (no telemetry, BYOK)
 
@@ -166,14 +168,17 @@ Satış yok — sadece yaptığım şeyi paylaşıyorum. Geri bildirimlerinize a
 
 ## 5. Launch Checklist
 
-- [ ] Post to Show HN (best time: Tue-Thu 10am ET)
-- [ ] Post to r/opensource (Tue/Wed)
-- [ ] Post to r/privacy (weekday)
-- [ ] Post to r/selfhosted (weekend)
+- [ ] Show HN (Tue-Thu, 8-10am ET) ← ana lansman
 - [ ] X/Twitter thread (same day as Show HN)
-- [ ] Product Hunt (Thu or Tue)
-- [ ] Dev.to crosspost
-- [ ] LinkedIn post (EN + TR)
-- [ ] Share in relevant Discord/Telegram groups
-- [ ] Skool community post (relevant AI/dev communities)
-- [ ] Skool: create Pergel community page (free tier)
+- [ ] r/privacy (weekday) — privacy-first mesaj
+- [ ] r/SideProject (weekly showcase thread)
+- [ ] r/selfhosted (self-hosting vurgusu ile)
+- [ ] r/IMadeThis (showcase)
+- [ ] Dev.to teknik blog post (How-we-built tarzı)
+- [ ] Product Hunt (12:01 AM PT, tam gün bağlılık)
+- [ ] Skool topluluklarına katkı + paylaşım
+- [ ] LinkedIn (EN + TR)
+- [ ] Discord/Telegram grupları
+
+⚠️ r/opensource AI projelerini yasakladı (Ekim 2026) — POST ATMA!
+📋 Detaylı platform araştırması: docs/marketing/platform-research-2026-10-29.md
