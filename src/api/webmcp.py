@@ -20,7 +20,7 @@ Endpoints (under /v1/mcp/):
 
 import json
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List
 
 MCP_VERSION = "0.1.0"
 

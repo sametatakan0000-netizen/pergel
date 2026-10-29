@@ -15,7 +15,7 @@ Action precedence (matching DNR semantics): ``allow`` beats ``block`` beats
 action class the higher ``priority`` wins.
 """
 
-from __future__ import annotations
+
 
 import re
 from dataclasses import dataclass, field

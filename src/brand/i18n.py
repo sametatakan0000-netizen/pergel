@@ -6,7 +6,7 @@ strings with ``data-i18n`` / ``data-i18n-ph`` hooks and ``i18n_js()`` swaps
 them at load based on ``localStorage.pergel_lang`` or ``navigator.language``.
 RTL scripts (ar/he/fa/ur) get ``dir="rtl"`` automatically.
 """
-from __future__ import annotations
+
 
 import json
 

@@ -17,12 +17,12 @@ Usage:
 """
 import hashlib
 import hmac
-import json
-import os
+
+
 import secrets as pysecrets
 import sqlite3
 import time
-from pathlib import Path
+
 
 try:
     from cryptography.fernet import Fernet, InvalidToken

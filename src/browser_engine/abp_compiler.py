@@ -5,7 +5,7 @@ Converts ABP network filters into rule dicts consumable by
 ``#@#``, ``#?#``) and unsupported options are skipped and counted, never
 silently mis-compiled. Pure function: no I/O, no network.
 """
-from __future__ import annotations
+
 
 from dataclasses import dataclass, field
 from typing import Iterable

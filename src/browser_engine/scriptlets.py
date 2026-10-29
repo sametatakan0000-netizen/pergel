@@ -8,7 +8,7 @@ page's own JS environment — never the network and never the browser shell.
 Rules whose scriptlet is not in the allowlist (``trusted-`` helpers that
 rewrite traffic, etc.) are skipped and counted, never guessed at.
 """
-from __future__ import annotations
+
 
 import json
 from typing import Iterable

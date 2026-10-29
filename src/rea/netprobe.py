@@ -4,14 +4,14 @@ Passive only: we read ESTABLISHED sockets of the browser's own process tree from
 resolve nothing on the wire. No traffic is injected, no TLS is intercepted, no other
 process is touched. The browser runs headless with a throw-away profile.
 """
-import os
+
 import shutil
 import socket
 import struct
 import subprocess
 import tempfile
 import time
-from typing import Dict, List, Set
+from typing import Dict, Set
 
 from src.bench.adapters import chromium_argv, free_port, kill_process_tree
 from src.bench.procmem import tree_pids

@@ -5,7 +5,7 @@ through an injected getter, and returns AdapterResult or None. None means
 "fall through to the generic engine ladder". Only allow-listed API hosts are
 ever requested (SSRF guard), and no credentials are read or logged here.
 """
-from __future__ import annotations
+
 
 import base64
 import json

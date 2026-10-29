@@ -4,7 +4,7 @@ Design direction (decided): "Mikro düzeyde minimalist optimize" — micro-level
 minimalist optimize. Deep graphite base, ONE mint accent, generous negative
 space. Any colour on any surface must come from here.
 """
-from __future__ import annotations
+
 
 NAME = "Pergel"
 TAGLINE = "Minimalist AI-native web browser"

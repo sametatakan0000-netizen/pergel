@@ -13,11 +13,11 @@ A7 is a global product feature (translation is core value, not an add-on), so
 the translator is a backend-independent callable: the caller wires the Nous
 model; this layer handles structure, caching and fail-safety.
 """
-from __future__ import annotations
+
 
 import base64
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, Iterable, List
 
 from .worker import html_to_clean_markdown
 

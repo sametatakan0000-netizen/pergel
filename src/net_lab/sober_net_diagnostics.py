@@ -1,6 +1,6 @@
 """Linux Oyun (Sober / Minecraft) Ağ Soket ve MTU/TLS Tanılama Modülü."""
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 def analyze_socket_trace_and_recommend_routing(trace_text: str) -> Dict[str, Any]:

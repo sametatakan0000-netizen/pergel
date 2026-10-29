@@ -3,12 +3,12 @@
 Reads only what the OS and the engine itself expose (version strings, /proc, listening
 sockets). No MITM, no page interception, no third-party calls.
 """
-import glob
+
 import os
-import socket
+
 import subprocess
 import time
-from typing import Dict, List
+from typing import List
 
 from src.bench.inspect import collect_live_info  # noqa: F401  (re-exported for tests)
 

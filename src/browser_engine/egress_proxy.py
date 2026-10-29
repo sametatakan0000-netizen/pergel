@@ -4,7 +4,7 @@ Principle: resolve the host ONCE, reject if ANY answer is non-public, and
 connect to the validated address. Redirects are validated per hop by calling
 ``check_url`` again. Pure logic, DNS is injected so tests stay hermetic.
 """
-from __future__ import annotations
+
 
 import http.client
 import ipaddress

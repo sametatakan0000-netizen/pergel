@@ -10,7 +10,7 @@ Security: reports carry COUNTS only — never titles from password rows and
 never secret values (red line in this project). Chrome epoch: µs since
 1601-01-01; Firefox places: µs since unix epoch.
 """
-from __future__ import annotations
+
 
 import csv
 import json

@@ -5,7 +5,7 @@ consistent: new-tab page, shield panel (live block counter), Chromium theme
 preferences and the freedesktop launcher entry. All HTML is a single inline
 document — zero external requests (micro-minimalist, offline-safe).
 """
-from __future__ import annotations
+
 
 import json
 import os

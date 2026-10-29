@@ -6,7 +6,7 @@
 
 The caller supplies the streams so tests can drive it with in-memory streams.
 """
-from __future__ import annotations
+
 
 import asyncio
 from typing import Optional

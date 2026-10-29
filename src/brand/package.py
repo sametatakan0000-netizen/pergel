@@ -9,7 +9,7 @@ Layout (the identity users see):
 
 The menu shows only "Pergel" — no python/Chromium traces in the launcher.
 """
-from __future__ import annotations
+
 
 import os
 import shutil

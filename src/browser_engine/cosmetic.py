@@ -6,7 +6,7 @@ renderer as CSS. ``cosmetic_css`` turns a compiled cosmetic rule set into one
 stylesheet for a single host: domain-scoped rules contribute only when the host
 is in scope, and a matching ``#@#`` exception removes the selector entirely.
 """
-from __future__ import annotations
+
 
 import re
 from typing import Iterable

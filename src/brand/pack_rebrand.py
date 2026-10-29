@@ -19,7 +19,7 @@ doğrulandı):
 Yeniden markalama yükleri değiştirip ofsetleri yeniden yazar; id sırası,
 sentinel ve alias tablosu korunur.
 """
-from __future__ import annotations
+
 
 import os
 import re

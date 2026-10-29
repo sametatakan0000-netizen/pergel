@@ -26,7 +26,7 @@ budget is the wrong knob):
 An absolute safety ceiling (``ABSOLUTE_TURN_CAP_USD``) is the only fixed number; it exists
 to stop runaway loops, not to be the policy.
 """
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from src.router.live_router import (QUALITY_TOLERANCE, LiveRouter, adjusted_quality,
                                     price_tier)

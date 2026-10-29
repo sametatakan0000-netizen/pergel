@@ -5,7 +5,7 @@ JS filter at document-start, not a stylesheet. The runtime is self-authored:
 a base-selector match, then small pure tests (``:has-text``, ``:has``,
 ``:contains``) evaluated on each match, hidden via an inline ``display:none``.
 """
-from __future__ import annotations
+
 
 import json
 from typing import Iterable

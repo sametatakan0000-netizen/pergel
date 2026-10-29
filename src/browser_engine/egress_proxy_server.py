@@ -11,7 +11,7 @@ Terminology:
               backstop for that (a tunnel can only reach public addresses).
   deny     -> policy refusal (EgressDenied or malformed input).
 """
-from __future__ import annotations
+
 
 from dataclasses import dataclass
 from typing import Optional

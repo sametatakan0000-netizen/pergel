@@ -5,7 +5,7 @@ process model, automation surface, idle network) plus what public docs say, and 
 invents a score. Every card carries its sources and, if the target could not be run on
 this host, the explicit label 'desk research — not run on this host'.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 def format_card(target_id: str, family: str, info: Dict, sources: List[str],

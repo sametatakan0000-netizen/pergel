@@ -6,7 +6,7 @@ geometry of the drawing instrument the browser is named after. Raster icons
 are rendered supersampled with PIL (no native deps) and downscaled with
 LANCZOS so every size keeps the exact accent in stroke interiors.
 """
-from __future__ import annotations
+
 
 import os
 from PIL import Image, ImageDraw

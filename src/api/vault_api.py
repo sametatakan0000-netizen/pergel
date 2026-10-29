@@ -13,9 +13,9 @@ Endpoints:
     GET  /v1/vault/audit           — audit log
     GET  /v1/vault/export          — export as .env
 """
-import json
+
 import os
-from pathlib import Path
+
 
 from src.api.vault import Vault, VaultError
 

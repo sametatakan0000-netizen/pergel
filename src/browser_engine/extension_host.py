@@ -15,7 +15,7 @@ Isolation guarantees (proven in tests):
 Decisions aggregate every enabled extension's rules through our existing rule
 engine, so enforcement reuses the proven path rather than a parallel one.
 """
-from __future__ import annotations
+
 
 import json
 import os

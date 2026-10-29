@@ -16,10 +16,10 @@ rules, so the surface just:
 Service-worker/background and messaging layers are the follow-on work; this is
 the parsing + network-rule core they hang off.
 """
-from __future__ import annotations
+
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Iterable, List, Tuple
 
 from .rule_engine import RuleEngine, compile_rules
 

@@ -40,7 +40,7 @@ from src.router.moa_exec import build_aggregator_payload, member_usage_summary, 
 from src.router.moa_plan import plan_moa
 from src.router.moa_policy import MoaPolicy
 from src.router.model_registry import fetch_profiles, load_snapshot, save_snapshot
-from src.search.query_fanout import decompose_query_llm, execute_fanout_and_ground, llm_decompose_prompt
+from src.search.query_fanout import decompose_query_llm, execute_fanout_and_ground
 
 # Upstream statuses that justify trying the next candidate (capacity / availability / not on plan).
 RETRYABLE_STATUSES = {404, 408, 429, 500, 502, 503, 504}

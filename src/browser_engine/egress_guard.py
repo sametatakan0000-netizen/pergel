@@ -4,15 +4,15 @@ Runs the policy-backed relay as a real proxy in a background thread, and
 (optionally) sets up the network namespace via sudo. This is what imports the
 policy/relay/netns layers into the actual serving path.
 """
-from __future__ import annotations
+
 
 import atexit
 import os
 import subprocess
 import threading
-from typing import Callable, Optional
+from typing import Optional
 
-from .egress_proxy import EgressPolicy, EgressDenied
+from .egress_proxy import EgressPolicy
 from .egress_relay import handle_client
 
 

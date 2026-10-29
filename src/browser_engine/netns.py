@@ -10,7 +10,7 @@ namespace drops everything except traffic to the proxy host:port, so the
 engine can only reach the proxy — which resolves/validates and connects to
 the validated IP. DNS cannot leak (nothing else is routable).
 """
-from __future__ import annotations
+
 
 
 def plan_netns(*, namespace: str, veth_host: str, veth_ns: str,

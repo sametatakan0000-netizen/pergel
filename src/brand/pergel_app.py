@@ -9,7 +9,7 @@ Wires the whole product together for the desktop user:
 
 No terminal knowledge required: launch icon -> browse.
 """
-from __future__ import annotations
+
 
 import argparse
 import asyncio

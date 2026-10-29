@@ -6,7 +6,7 @@ O(text + matches) after an O(sum of pattern lengths) build, instead of one
 filter bucket, where a real blocklist can carry thousands of unanchored
 substring filters that all have to be tested against every request URL.
 """
-from __future__ import annotations
+
 
 from typing import Iterable
 

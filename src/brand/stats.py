@@ -5,7 +5,7 @@ The shield panel polls ``/stats`` while the engine intercepts requests; the
 Endpoint is loopback-only and CORS-permissive so the panel can run from a
 local ``file://`` document.
 """
-from __future__ import annotations
+
 
 import json
 import threading

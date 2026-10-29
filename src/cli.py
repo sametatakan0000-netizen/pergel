@@ -5,7 +5,7 @@ import pathlib
 import json
 import sys
 import threading
-import urllib.error
+
 
 REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 from src.devtools.codebase_graph import build_codebase_knowledge_graph

@@ -5,7 +5,7 @@ Protocol. ``decide_cdp_response`` is pure: given a ``Fetch.requestPaused`` event
 payload it returns the JSON-RPC message the caller should send. No socket I/O
 here — the transport lives in the caller (``CDPBridge``).
 """
-from __future__ import annotations
+
 
 from typing import Callable, Optional
 

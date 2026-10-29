@@ -4,7 +4,7 @@ Counts what the engine decided and which rule fired, so an operator can see
 which filters actually matter on a real workload instead of guessing from the
 static list. No I/O, no timers — just counters the caller snapshots on demand.
 """
-from __future__ import annotations
+
 
 from collections import Counter
 from typing import Optional

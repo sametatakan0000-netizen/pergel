@@ -13,7 +13,7 @@ The extracted text is therefore the *enforced* page: hidden/removed ads do not
 appear in ``innerText``. Returns bodies matching the worker's driver contract
 (scrape body for ``fetch``, browse body with ``markdown`` for ``browse``).
 """
-from __future__ import annotations
+
 
 import asyncio
 import json
@@ -21,13 +21,13 @@ import os
 import subprocess
 import tempfile
 import urllib.request
-from typing import Optional
+from typing import Any, Callable, Optional
 from urllib.parse import urlparse
 
 from .extension_host import ExtensionHost  # noqa: F401 (type only)
 from .adblock_session import AdblockBundle, build_injection
 from .cdp_bridge import CDPBridge, _action_of, _rule_id_of, decide_cdp_response
-from .egress_proxy import EgressDenied, EgressPolicy
+from .egress_proxy import EgressDenied
 
 try:
     import websockets
@@ -249,7 +249,7 @@ class AdblockBrowserSession:
                 self._proc.wait(timeout=5)
 
     def _wait_ws(self) -> str:
-        import glob
+
         import time
         # --remote-debugging-port=0 writes the chosen port to DevToolsActivePort
         marker = self._tmp + "/DevToolsActivePort"

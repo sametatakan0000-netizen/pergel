@@ -17,7 +17,7 @@ single ``document-start`` JS source ready for
 Pure: no sockets, no browser. The live CDP fetch wiring is exercised in
 ``tests/test_adblock_live.py``.
 """
-from __future__ import annotations
+
 
 import json
 from dataclasses import dataclass, field
