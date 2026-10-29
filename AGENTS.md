@@ -24,6 +24,16 @@
   PYTHONPATH=$REPO python3 -m src.cli doctor
   ```
 
+## 2.5. Replika Competitive Rebuild Principle (Ekosistem Prensibi)
+Her ürün güncellemesinde uygulanır (sadece Pergel değil, tüm ürünler):
+1. **Competitive Mapping** — Rakip ürünün ekran/özellik haritasını çıkar
+2. **User Pain Mining** — App Store/Reddit/G2 yorumlarından nefret noktalarını bul
+3. **Screen-by-Screen Rebuild** — Ekran ekran yeniden inşa et, her adımda doğrula
+4. **Full Flow Test** — Tüm akışları uçtan uca test et
+5. **Brand Packaging** — Kendi markanla paketle
+
+Ayrıntılar: `replika-competitive-rebuild` skill.
+
 ## 3. Senior Engineering Rules (Karpathy + Ponytail + RTK + Graphify)
 1. **Graph-First Navigation:** Read `$REPO/CODEBASE_GRAPH.json` before opening individual source files to avoid burning context tokens.
 2. **YAGNI & Shortcut Debt Ledger (`ponytail`):** Write minimal, zero-bloat code. Any deliberate simplification MUST carry a comment `# shortcut: <current limit>, <when to upgrade>`.
