@@ -67,6 +67,7 @@ td a:hover { text-decoration: underline; }
   <button class="active" onclick="showTab('start',this)">▶ Start</button>
   <button onclick="showTab('history',this)">📋 History</button>
   <button onclick="showTab('settings',this)">⚙ Settings</button>
+  <button onclick="showTab('vault',this)">🔐 Vault</button>
 </nav>
 <main>
   <!-- START TAB -->
@@ -123,6 +124,39 @@ td a:hover { text-decoration: underline; }
     <div class="card">
       <h2>Security</h2>
       <div id="security-info"></div>
+    </div>
+  </div>
+
+  <!-- VAULT TAB -->
+  <div class="tab" id="tab-vault">
+    <div class="card">
+      <h2>🔐 Secrets Vault</h2>
+      <p class="hint">Encrypted at rest. Master password never stored.</p>
+      <div id="vault-status-msg" class="hint"></div>
+      <div id="vault-login">
+        <label>Master Password</label>
+        <input type="password" id="vault-master-pw" placeholder="Master password">
+        <div id="vault-init-fields" style="display:none">
+          <label>Confirm</label>
+          <input type="password" id="vault-master-pw2" placeholder="Confirm password">
+        </div>
+        <button class="primary" onclick="vaultLogin()" id="vault-login-btn">🔓 Unlock</button>
+      </div>
+      <div id="vault-content" style="display:none">
+        <div id="vault-secrets-list"></div>
+        <h2 style="margin-top:16px">Add / Update</h2>
+        <label>Name (ENV var)</label>
+        <input id="vault-name" placeholder="e.g. SUDO_PASSWORD">
+        <label>Value</label>
+        <input id="vault-value" type="password" placeholder="Secret value">
+        <label>Category</label>
+        <select id="vault-cat">
+          <option>system</option><option>api</option><option>telegram</option>
+          <option>github</option><option>browser</option><option>general</option>
+        </select>
+        <button class="primary" onclick="vaultSave()" style="margin-top:8px">💾 Save</button>
+        <button class="danger" onclick="vaultLock()" style="margin-top:8px;margin-left:8px">🔒 Lock</button>
+      </div>
     </div>
   </div>
 </main>

@@ -23,7 +23,7 @@ try:  # repo layout (python -m / pytest)
     from src.brand import i18n, migrate, render, stats as stats_mod, tokens
     from src.browser_engine.adblock_session import compile_adblock
     from src.browser_engine.cdp_adblock_driver import AdblockBrowserSession
-except ImportError:  # installed layout (/usr/lib/vane on sys.path)
+except ImportError:  # installed layout (/usr/lib/pergel on sys.path)
     from brand import i18n, migrate, render, stats as stats_mod, tokens
     from browser_engine.adblock_session import compile_adblock
     from browser_engine.cdp_adblock_driver import AdblockBrowserSession
@@ -44,10 +44,10 @@ DEMO = [
 
 def user_dirs() -> dict:
     """Per-user Pergel dirs (config profile + filters), with a one-time
-    migration of the legacy ``~/.config/vane`` layout."""
+    migration of the legacy ``~/.config/pergel`` layout."""
     home = os.path.expanduser("~")
     cfg = os.path.join(home, ".config", "pergel")
-    legacy = os.path.join(home, ".config", "vane")
+    legacy = os.path.join(home, ".config", "pergel")
     if not os.path.isdir(cfg) and os.path.isdir(legacy):
         shutil.copytree(legacy, cfg)
     dirs = {
@@ -105,10 +105,10 @@ def launch_flags(extension_dir: str) -> list:
 def ensure_extension() -> str:
     """Resolve (and materialise) the new-tab override extension.
 
-    Installed layout ships it under /usr/lib/vane/extension; repo/dev runs
+    Installed layout ships it under /usr/lib/pergel/extension; repo/dev runs
     build it into the user config dir instead.
     """
-    installed = os.path.join("/usr/lib/vane", "extension")
+    installed = os.path.join("/usr/lib/pergel", "extension")
     if os.path.isfile(os.path.join(installed, "manifest.json")):
         return installed
     return render.write_extension(
@@ -154,16 +154,16 @@ def prepare_profile(profile_dir: str, shield_port: int) -> str:
     lang = os.environ.get("LANG", "en").split(".")[0].split("_")[0].lower()
     if lang not in i18n.LOCALES:
         lang = "en"
-    ntp = os.path.join(profile_dir, "vane_ntp.html")
+    ntp = os.path.join(profile_dir, "pergel_ntp.html")
     with open(ntp, "w") as f:
         f.write(render.render_ntp(lang))
     for code in i18n.LOCALES:
-        with open(os.path.join(profile_dir, f"vane_ntp_{code}.html"), "w") as f:
+        with open(os.path.join(profile_dir, f"pergel_ntp_{code}.html"), "w") as f:
             f.write(render.render_ntp(code))
-    shield = os.path.join(profile_dir, "vane_shield.html")
+    shield = os.path.join(profile_dir, "pergel_shield.html")
     with open(shield, "w") as f:
         f.write(render.render_shield_panel(shield_port))
-    panel = os.path.join(profile_dir, "vane_panel.html")
+    panel = os.path.join(profile_dir, "pergel_panel.html")
     with open(panel, "w") as f:
         f.write(render.render_side_panel(shield_port))
     return ntp
@@ -199,12 +199,12 @@ async def run(filter_paths: Optional[list] = None,
 
 def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(
-        prog="vane",
+        prog="pergel",
         description=f"{tokens.NAME} — {tokens.TAGLINE}")
     ap.add_argument("filters", nargs="*",
                     help="adblock kural dosyalari (satir-bir-kural)")
     ap.add_argument("--profile-dir", default=None,
-                    help="Chromium profil dizini (varsayilan: ~/.config/vane/profile)")
+                    help="Chromium profil dizini (varsayilan: ~/.config/pergel/profile)")
     ap.add_argument("--migrate", action="store_true",
                     help="import data from other browsers (bookmarks, history)")
     ap.add_argument("--passwords-csv", default=None,

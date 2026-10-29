@@ -1,4 +1,4 @@
-"""Live shield stats for Vane — aggregation + loopback HTTP endpoint.
+"""Live shield stats for Pergel — aggregation + loopback HTTP endpoint.
 
 The shield panel polls ``/stats`` while the engine intercepts requests; the
 ``on_blocked`` callback of ``AdblockBrowserSession`` feeds :class:`ShieldStats`.

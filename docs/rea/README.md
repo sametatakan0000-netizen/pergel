@@ -189,7 +189,7 @@ disk `~/pergel — keep REA work dirs there, not `/tmp`.
 3. **Dynamic observation** (needs `dynamic-ok`) — clean profile, own traffic via
    mitmproxy (CA only in that profile), `strace`/Procmon/`fs_usage`, CDP
    `Network`/`Fetch`, record the **page representation sent to the model** —
-   that is what Vane's `browse_url` markdown competes with.
+   that is what Pergel's `browse_url` markdown competes with.
 4. **Agent surface & safety review** (AI browsers) — prompt-injection
    separation, confirmation gates, allowlists, logged-in-session handling;
    output = threat table (vector, impact, mitigation observed).
@@ -197,4 +197,4 @@ disk `~/pergel — keep REA work dirs there, not `/tmp`.
    endpoints, permissions, update mechanism, what we could **not** verify) and
    the cross-target `docs/rea/COMPARISON.md`.
 
-Naming note: the plan calls the extension "Vane" pending an A9 name check.
+Naming note: the plan calls the extension "Pergel" pending an A9 name check.

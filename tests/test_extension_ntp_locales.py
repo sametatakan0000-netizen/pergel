@@ -1,7 +1,7 @@
 """Extension NTP locale-variant regression: every language link must resolve.
 
-Bug: write_extension() wrote only vane_ntp.html (lang="en"), so the scriptless
-lang_links() footer pointed at vane_ntp_<code>.html files that didn't exist
+Bug: write_extension() wrote only pergel_ntp.html (lang="en"), so the scriptless
+lang_links() footer pointed at pergel_ntp_<code>.html files that didn't exist
 (ERR_FILE_NOT_FOUND), and new tabs showed English instead of the system language.
 """
 import os
@@ -16,9 +16,9 @@ class WriteExtensionLocaleVariants(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dest:
             render.write_extension(dest)
             for code in i18n.LOCALES:
-                path = os.path.join(dest, f"vane_ntp_{code}.html")
+                path = os.path.join(dest, f"pergel_ntp_{code}.html")
                 self.assertTrue(os.path.isfile(path),
-                                f"missing locale variant: vane_ntp_{code}.html")
+                                f"missing locale variant: pergel_ntp_{code}.html")
 
     def test_default_ntp_uses_system_language(self):
         old = os.environ.get("LANG")
@@ -26,7 +26,7 @@ class WriteExtensionLocaleVariants(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as dest:
                 render.write_extension(dest)
-                with open(os.path.join(dest, "vane_ntp.html")) as f:
+                with open(os.path.join(dest, "pergel_ntp.html")) as f:
                     html = f.read()
                 self.assertIn('lang="tr"', html)
                 self.assertIn("arayın veya URL yazın", html)  # tr search_ph

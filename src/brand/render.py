@@ -1,4 +1,4 @@
-"""Branded surface renderers for Vane.
+"""Branded surface renderers for Pergel.
 
 Every user-visible surface is rendered from ``tokens`` so the identity stays
 consistent: new-tab page, shield panel (live block counter), Chromium theme
@@ -18,7 +18,7 @@ def search_url(query: str, mode: str = "web") -> str:
     """Google search routing.
 
     ``web`` — plain results; ``ai`` — Google AI Mode. The base is Chromium,
-    so AI Mode (``udm=50``) works natively and free: Vane is an AI browser
+    so AI Mode (``udm=50``) works natively and free: Pergel is an AI browser
     without a model bill.
     """
     q = quote_plus(query)
@@ -47,7 +47,7 @@ def render_ntp(lang: str = "en") -> str:
     yeter", and the page stays **scriptless** (a hard product test). The box
     is a real GET form so it searches from file:// too.
 
-    Global-first and scriptless: pre-rendered per locale (``vane_ntp_<lang>.html``
+    Global-first and scriptless: pre-rendered per locale (``pergel_ntp_<lang>.html``
     variants written by the app), switched via plain links in the footer.
     RTL locales (ar/he/fa/ur) get ``dir="rtl"`` statically.
     """
@@ -114,7 +114,7 @@ chrome.omnibox.onInputEntered.addListener((text) => {
 
 // Alt+K: Arc-style command bar
 chrome.commands.onCommand.addListener((command) => {
-  if (command === "vane-command-bar") {
+  if (command === "pergel-command-bar") {
     chrome.windows.create({ url: "commandbar.html", type: "popup",
                             width: 560, height: 440 });
   }
@@ -132,13 +132,13 @@ def extension_manifest() -> dict:
         "short_name": tokens.NAME,
         "version": "0.1.0",
         "description": tokens.TAGLINE,
-        "chrome_url_overrides": {"newtab": "vane_ntp.html"},
+        "chrome_url_overrides": {"newtab": "pergel_ntp.html"},
         "background": {"service_worker": "background.js"},
         "side_panel": {"default_path": "panel.html"},
         "action": {"default_title": tokens.NAME},
         "omnibox": {"keyword": "ai"},
         "commands": {
-            "vane-command-bar": {
+            "pergel-command-bar": {
                 "suggested_key": {"default": "Alt+K"},
                 "description": "Command bar",
             }
@@ -312,8 +312,8 @@ def write_extension(dest: str) -> str:
     """Write the new-tab override extension (and its SOTA UX surfaces) into
     ``dest``.
 
-    Global-first: writes every ``vane_ntp_<lang>.html`` locale variant so the
-    scriptless ``lang_links()`` footer resolves, and the default ``vane_ntp.html``
+    Global-first: writes every ``pergel_ntp_<lang>.html`` locale variant so the
+    scriptless ``lang_links()`` footer resolves, and the default ``pergel_ntp.html``
     matches the system language (same logic as ``prepare_profile``).
     """
     os.makedirs(dest, exist_ok=True)
@@ -322,10 +322,10 @@ def write_extension(dest: str) -> str:
     lang = os.environ.get("LANG", "en").split(".")[0].split("_")[0].lower()
     if lang not in i18n.LOCALES:
         lang = "en"
-    with open(os.path.join(dest, "vane_ntp.html"), "w") as f:
+    with open(os.path.join(dest, "pergel_ntp.html"), "w") as f:
         f.write(render_ntp(lang))
     for code in i18n.LOCALES:
-        with open(os.path.join(dest, f"vane_ntp_{code}.html"), "w") as f:
+        with open(os.path.join(dest, f"pergel_ntp_{code}.html"), "w") as f:
             f.write(render_ntp(code))
     with open(os.path.join(dest, "background.js"), "w") as f:
         f.write(_BACKGROUND_JS)

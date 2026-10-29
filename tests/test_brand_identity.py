@@ -1,7 +1,7 @@
-"""RED: Vane brand identity — tokens and branded surface renderers.
+"""RED: Pergel brand identity — tokens and branded surface renderers.
 
 The product must stop looking like "stock Chromium + filters" and carry its
-own brand (decided name: **Vane**, direction: micro-level minimalist
+own brand (decided name: **Pergel**, direction: micro-level minimalist
 optimize). Three surfaces carry the identity and must render from ONE token
 source (no colour drift between surfaces):
 

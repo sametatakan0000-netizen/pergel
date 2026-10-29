@@ -1,4 +1,4 @@
-"""RED: Vane app wiring — branded profile, live shield feed, branded command.
+"""RED: Pergel app wiring — branded profile, live shield feed, branded command.
 
 The whole identity must ride the REAL serving path: the desktop launcher's
 ``main()`` must open the branded new-tab page in a persistent branded profile,
@@ -14,7 +14,7 @@ import unittest
 
 from src.brand import tokens
 from src.brand.stats import ShieldStats
-from src.brand.vane_app import make_on_blocked, prepare_profile
+from src.brand.pergel_app import make_on_blocked, prepare_profile
 from src.browser_engine.adblock_session import compile_adblock
 from src.browser_engine.cdp_adblock_driver import AdblockBrowserSession
 
@@ -37,15 +37,15 @@ class TestBrandedProfile(unittest.TestCase):
     def test_prepare_profile_writes_theme_and_surfaces(self):
         with tempfile.TemporaryDirectory() as td:
             ntp = prepare_profile(td, shield_port=41234)
-            self.assertEqual(ntp, os.path.join(td, "vane_ntp.html"))
+            self.assertEqual(ntp, os.path.join(td, "pergel_ntp.html"))
             with open(os.path.join(td, "Default/Preferences")) as f:
                 prefs = json.load(f)
             self.assertEqual(
                 prefs["theme"]["colors"]["frame"],
                 list(tokens.rgb(tokens.BG)))
-            with open(os.path.join(td, "vane_ntp.html")) as f:
+            with open(os.path.join(td, "pergel_ntp.html")) as f:
                 self.assertIn("Pergel", f.read())
-            with open(os.path.join(td, "vane_shield.html")) as f:
+            with open(os.path.join(td, "pergel_shield.html")) as f:
                 self.assertIn("41234", f.read())
 
     def test_prepare_profile_preserves_existing_prefs(self):
@@ -65,11 +65,11 @@ class TestBrandedCommand(unittest.TestCase):
         bundle = compile_adblock(["||ads.example.com^"])
         sess = AdblockBrowserSession(
             bundle, browser_path="/bin/true",
-            user_data_dir="/tmp/vane-profile",
-            start_url="file:///tmp/vane-profile/vane_ntp.html")
+            user_data_dir="/tmp/pergel-profile",
+            start_url="file:///tmp/pergel-profile/pergel_ntp.html")
         cmd = sess._build_command()
-        self.assertIn("--user-data-dir=/tmp/vane-profile", cmd)
-        self.assertEqual(cmd[-1], "file:///tmp/vane-profile/vane_ntp.html")
+        self.assertIn("--user-data-dir=/tmp/pergel-profile", cmd)
+        self.assertEqual(cmd[-1], "file:///tmp/pergel-profile/pergel_ntp.html")
 
 
 if __name__ == "__main__":

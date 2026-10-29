@@ -1,4 +1,4 @@
-"""Vane brand tokens — the single source of truth for every branded surface.
+"""Pergel brand tokens — the single source of truth for every branded surface.
 
 Design direction (decided): "Mikro düzeyde minimalist optimize" — micro-level
 minimalist optimize. Deep graphite base, ONE mint accent, generous negative

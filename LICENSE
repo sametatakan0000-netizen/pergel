@@ -1,13 +1,3 @@
-# Lisans / License
-
-Pergel tek bir lisans altında dağıtılmaz; farklı bileşenler farklı lisanslara tabidir.
-
-## Pergel'in kendi kodu
-
-`src/brand/`, `src/search/`, `src/router/`, `src/infra/`, `src/api/`, `src/devtools/`,
-`src/net_lab/`, `tests/` altındaki özgün proje kodu MIT lisanslıdır:
-
-```
 MIT License
 
 Copyright (c) 2026 Pergel contributors
@@ -29,28 +19,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
 
-## Üçüncü taraf bileşenler / Third-party components
+---
 
-- **Chromium (BSD-3-Clause):** Masaüstü kabuk Chromium tabanlıdır. Chromium'un
-  kendi lisansı ve telif bildirimleri geçerlidir; "Chromium" ve "Google Chrome"
-  Google LLC'nin ticari markalarıdır. Bu proje Google ile bağlantılı değildir.
-  Yeniden markalama yalnızca kaynak paket (`.pak`) düzenlemesidir, Chromium'un
-  orijinal lisans haklarını değiştirmez.
-- **lightpanda (AGPL-3.0):** Otomasyon/fetch katmanında kullanılan motor
-  `lightpanda-io/browser` projesine aittir ve GNU AGPL-3.0 altındadır. Bu depo
-  onun motoru olduğunu iddia etmez; yalnızca bir istemci olarak kullanır. AGPL
-  gereği bu motoru ağ üzerinden sunan servisler kaynak kodunu erişilebilir
-  kılmakla yükümlüdür.
-- **Diğer bağımlılıklar:** Ayrıntılı üçüncü taraf lisans listesi için `docs/rea/`
-  altındaki bileşen notlarına ve paket bağımlılıklarına bakın.
-
-## Marka notu
-
-"Pergel" bu projenin adıdır. Chromium/Google Chrome ile resmi bir bağlantı,
-sponsorluk ya da onay söz konusu değildir.
-
-## Katkı
-
-Depoya katkı gönderenler, yukarıdaki lisans koşullarını kabul etmiş sayılır.
+NOTE: This project includes third-party components under different licenses.
+See LICENSE-THIRD-PARTY.md for the full multi-license breakdown.

@@ -4,7 +4,7 @@
   switching, and a language selector persisted client-side.
 - Accessibility hooks on every branded surface (labels, focus rings).
 - The Pergel rebrand: tokens, manifest, desktop entry, icons, package
-  names, and one-time legacy config migration from ``~/.config/vane``.
+  names, and one-time legacy config migration from ``~/.config/pergel``.
 """
 import json
 import os
@@ -12,9 +12,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from src.brand import i18n, package, render, tokens, vane_app
+from src.brand import i18n, package, render, tokens, pergel_app
 from src.brand.icons import icon_svg
-from src.brand.vane_app import user_dirs
+from src.brand.pergel_app import user_dirs
 
 LANGS = {"tr", "en", "de", "es", "fr", "ru", "ar", "zh"}
 
@@ -36,7 +36,7 @@ class TestI18n(unittest.TestCase):
         self.assertIn('<html lang="en"', en)   # global default language
         self.assertIn("Search the web or type a URL", en)
         self.assertNotIn("<script", en)
-        self.assertIn("vane_ntp_tr.html", en)  # plain-link language switch
+        self.assertIn("pergel_ntp_tr.html", en)  # plain-link language switch
         tr = render.render_ntp("tr")
         self.assertIn('<html lang="tr"', tr)
         self.assertIn("arayın", tr)
@@ -46,12 +46,12 @@ class TestI18n(unittest.TestCase):
     def test_prepare_profile_writes_localized_variants(self):
         with tempfile.TemporaryDirectory() as td:
             with mock.patch.dict(os.environ, {"LANG": "tr_TR.UTF-8"}):
-                vane_app.prepare_profile(td, shield_port=41998)
-            with open(os.path.join(td, "vane_ntp.html")) as f:
+                pergel_app.prepare_profile(td, shield_port=41998)
+            with open(os.path.join(td, "pergel_ntp.html")) as f:
                 self.assertIn('<html lang="tr"', f.read())  # system language
             for code in LANGS:
                 self.assertTrue(
-                    os.path.isfile(os.path.join(td, f"vane_ntp_{code}.html")),
+                    os.path.isfile(os.path.join(td, f"pergel_ntp_{code}.html")),
                     code)
 
     def test_every_dynamic_surface_carries_i18n_hooks(self):
@@ -114,7 +114,7 @@ class TestPergelBrand(unittest.TestCase):
 
     def test_legacy_vane_config_migrates_once(self):
         with tempfile.TemporaryDirectory() as home:
-            legacy = os.path.join(home, ".config", "vane")
+            legacy = os.path.join(home, ".config", "pergel")
             os.makedirs(os.path.join(legacy, "profile", "Default"))
             with open(os.path.join(legacy, "vane.prefs"), "w") as f:
                 json.dump({"k": 1}, f)

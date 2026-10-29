@@ -278,7 +278,7 @@ Açık ve sürekli geliştirildi — gerçek iş, sırasıyla (tam liste: `git l
 - **Derin sertleştirme** — DNS-rebinding koruması, IP sabitleme, TLS doğrulama.
 - **Yapay zekâ modu** — fan-out + alıntılar, REST API, MCP sunucusu, LiveRouter + model kaydı.
 - **Küresel öncelik** — 8 dil, RTL, erişilebilirlik.
-- **Kimlik** — tam marka yenileme (Vane → Pergel), ikonlar, `.deb` masaüstü paketi.
+- **Kimlik** — tam marka yenileme (Pergel → Pergel), ikonlar, `.deb` masaüstü paketi.
 - **Web arayüzü** — `http://127.0.0.1:8871/ui/` kontrol paneli (Başlat / Geçmiş / Ayarlar sekmeleri).
 - **Oturum kayıt/tekrar** — HTTP trafiğini JSON'a kaydet, ağsız deterministik tekrar oynat.
 - **WebMCP** — browse/extract/crawl/search araçlarını MCP protokolü olarak sunar (`/v1/mcp/*`).

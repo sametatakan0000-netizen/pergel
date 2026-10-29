@@ -201,11 +201,11 @@ LANG_LABELS = (
 
 def lang_links(current: str = "en") -> str:
     """Scriptless language switcher for the NTP: plain anchors to the
-    pre-rendered ``vane_ntp_<code>.html`` variants."""
+    pre-rendered ``pergel_ntp_<code>.html`` variants."""
     out = []
     for code, label in LANG_LABELS:
         cur = ' aria-current="page"' if code == current else ""
-        out.append(f'<a href="vane_ntp_{code}.html"{cur}>{label}</a>')
+        out.append(f'<a href="pergel_ntp_{code}.html"{cur}>{label}</a>')
     return "".join(out)
 
 

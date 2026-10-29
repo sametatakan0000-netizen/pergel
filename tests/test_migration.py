@@ -1,6 +1,6 @@
 """RED: browser migration — bring data IN from other browsers, export OUT.
 
-The #1 barrier to switching browsers is data transfer. Vane must make it
+The #1 barrier to switching browsers is data transfer. Pergel must make it
 one command (and first-run automatic): bookmarks, history and passwords
 from Chrome/Chromium/Edge/Brave/Vivaldi/Firefox, plus universal
 Netscape HTML / JSON / CSV interchange.
@@ -196,25 +196,25 @@ class TestMigrate(unittest.TestCase):
         self.assertNotIn("cok-gizli", json.dumps(report))
 
 
-class TestVaneCliWiring(unittest.TestCase):
+class TestPergelCliWiring(unittest.TestCase):
     def test_migrate_flag_short_circuits_and_reports_counts(self):
-        from src.brand import vane_app
+        from src.brand import pergel_app
         root = tempfile.mkdtemp()
         os.makedirs(os.path.join(root, ".config"), exist_ok=True)
         make_chrome_profile(os.path.join(root, ".config", "google-chrome"))
         prof = tempfile.mkdtemp()
-        rc = vane_app.main(["--migrate", "--profile-dir", prof, "--home", root])
+        rc = pergel_app.main(["--migrate", "--profile-dir", prof, "--home", root])
         self.assertEqual(rc, 0)
 
     def test_auto_migration_runs_once(self):
-        from src.brand import vane_app
+        from src.brand import pergel_app
         root = tempfile.mkdtemp()
         os.makedirs(os.path.join(root, ".config"), exist_ok=True)
         make_chrome_profile(os.path.join(root, ".config", "google-chrome"))
         prof = tempfile.mkdtemp()
-        first = vane_app.maybe_auto_migrate(prof, home=root)
+        first = pergel_app.maybe_auto_migrate(prof, home=root)
         self.assertGreaterEqual(first.get("bookmarks", 0), 2)
-        second = vane_app.maybe_auto_migrate(prof, home=root)
+        second = pergel_app.maybe_auto_migrate(prof, home=root)
         self.assertEqual(second, {})  # marker: no re-import, no dupes
 
 

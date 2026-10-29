@@ -2,7 +2,7 @@
 
 Imports bookmarks, history and passwords from Chrome/Chromium/Edge/Brave/
 Vivaldi (Chromium family) and Firefox, and exports everything back out in
-universal formats (Netscape HTML, JSON, CSV, password CSV). Vane's own
+universal formats (Netscape HTML, JSON, CSV, password CSV). Pergel's own
 profile is standard Chromium, so writing INTO it is just writing the
 standard files (``Bookmarks`` JSON, ``History`` SQLite, ``Login Data`` SQLite).
 
@@ -34,7 +34,7 @@ FIREFOX_ROOT = "~/.mozilla/firefox"
 
 # Chromium password store (Linux, no keyring): v10 = AES-128-CBC, key from
 # PBKDF2-HMAC-SHA1("peanuts", "saltysalt", 1). This is Chromium's own
-# documented fallback format — Vane writes its own profile's store with it.
+# documented fallback format — Pergel writes its own profile's store with it.
 _V10_SALT = b"saltysalt"
 _V10_IV = b" " * 16
 
@@ -247,7 +247,7 @@ def export_passwords_csv(rows: list, path: str) -> str:
     return path
 
 
-# ---------- write into Vane's own Chromium profile ----------
+# ---------- write into Pergel's own Chromium profile ----------
 
 IMPORT_FOLDER = "İçe Aktarılanlar"
 
@@ -435,7 +435,7 @@ def detect_sources(home: Optional[str] = None) -> dict:
 def migrate(profile_dir: str, home: Optional[str] = None,
             passwords_csv: Optional[str] = None,
             extra_files: Optional[list] = None) -> dict:
-    """One-call migration into Vane's ``profile_dir`` (the Default dir's
+    """One-call migration into Pergel's ``profile_dir`` (the Default dir's
     parent, i.e. the Chromium user-data dir). Returns COUNTS only."""
     default_dir = os.path.join(profile_dir, "Default")
     os.makedirs(default_dir, exist_ok=True)

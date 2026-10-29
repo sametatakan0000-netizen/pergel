@@ -1,4 +1,4 @@
-"""Vane marka kabuğu: Chromium `.pak` kaynak paketlerini yeniden markala.
+"""Pergel marka kabuğu: Chromium `.pak` kaynak paketlerini yeniden markala.
 
 Chromium, ürün adı dizgelerini (``Google Chrome for Testing``, ``Chromium``)
 locales/*.pak içinde UTF-8 yüklerle tutar; pencere başlığı, Hakkında kutusu
@@ -44,7 +44,7 @@ BRAND_RULES = (
     (re.compile(rb"Chromium"), b"Pergel"),
     (re.compile(rb"\bChrome\b"), b"Pergel"),
     (b"Google LLC and The Pergel Authors", b"Pergel Authors"),
-    (b"Google LLC", b"Vane Authors"),
+    (b"Google LLC", b"Pergel Authors"),
     # Pencere başlığı biçimleri: sadece sekme adı.
     (b"$1 - $2", b"$1"),
 )

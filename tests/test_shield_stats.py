@@ -1,4 +1,4 @@
-"""RED: Vane shield stats — live blocked-counter backend for the shield panel.
+"""RED: Pergel shield stats — live blocked-counter backend for the shield panel.
 
 The shield panel polls a loopback endpoint while the user browses; it must
 receive JSON with the running total and top blocked rules. The panel may run

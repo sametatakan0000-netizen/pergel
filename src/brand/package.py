@@ -1,11 +1,11 @@
-"""Debian packaging for Vane — stage tree + dpkg-deb build.
+"""Debian packaging for Pergel — stage tree + dpkg-deb build.
 
 Layout (the identity users see):
 
-  /usr/bin/vane                       double-click entry point
-  /usr/share/applications/vane.desktop
+  /usr/bin/pergel                       double-click entry point
+  /usr/share/applications/pergel.desktop
   /usr/share/icons/hicolor/*/apps/pergel.png + scalable/pergel.svg
-  /usr/lib/pergel/{vane_app.py, brand/, browser_engine/}
+  /usr/lib/pergel/{pergel_app.py, brand/, browser_engine/}
 
 The menu shows only "Pergel" — no python/Chromium traces in the launcher.
 """
@@ -43,7 +43,7 @@ import os
 import sys
 
 sys.path.insert(0, "/usr/lib/pergel")
-from vane_app import main  # noqa: E402
+from pergel_app import main  # noqa: E402
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
@@ -90,7 +90,7 @@ def stage_tree(root: str) -> str:
         os.makedirs(svgdir, exist_ok=True)
         shutil.copy(out["svg"], os.path.join(svgdir, "pergel.svg"))
 
-    # --- engine + brand code under /usr/lib/vane
+    # --- engine + brand code under /usr/lib/pergel
     libdir = os.path.join(root, "usr/lib/pergel")
     os.makedirs(libdir, exist_ok=True)
     for pkg in ("brand", "browser_engine"):
@@ -98,8 +98,8 @@ def stage_tree(root: str) -> str:
                         os.path.join(libdir, pkg),
                         ignore=shutil.ignore_patterns("__pycache__", ".*"))
     # top-level entry module next to the packages
-    shutil.copy(os.path.join(_REPO_ROOT, "src/brand/vane_app.py"),
-                os.path.join(libdir, "vane_app.py"))
+    shutil.copy(os.path.join(_REPO_ROOT, "src/brand/pergel_app.py"),
+                os.path.join(libdir, "pergel_app.py"))
     # new-tab override extension (chrome_url_overrides.newtab)
     write_extension(os.path.join(libdir, "extension"))
     return root

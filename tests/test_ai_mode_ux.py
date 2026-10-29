@@ -74,7 +74,7 @@ class TestExtensionManifest(unittest.TestCase):
         self.assertEqual(self.m["side_panel"]["default_path"], "panel.html")
 
     def test_command_bar_shortcut_alt_k(self):
-        cmd = self.m["commands"]["vane-command-bar"]
+        cmd = self.m["commands"]["pergel-command-bar"]
         self.assertEqual(cmd["suggested_key"]["default"], "Alt+K")
 
     def test_permissions_cover_tabs_and_side_panel(self):
@@ -82,7 +82,7 @@ class TestExtensionManifest(unittest.TestCase):
         self.assertIn("sidePanel", self.m["permissions"])
 
     def test_newtab_override_survives(self):
-        self.assertEqual(self.m["chrome_url_overrides"]["newtab"], "vane_ntp.html")
+        self.assertEqual(self.m["chrome_url_overrides"]["newtab"], "pergel_ntp.html")
 
 
 class TestExtensionFiles(unittest.TestCase):
@@ -95,7 +95,7 @@ class TestExtensionFiles(unittest.TestCase):
             return f.read()
 
     def test_all_surfaces_written(self):
-        for name in ("manifest.json", "vane_ntp.html", "background.js",
+        for name in ("manifest.json", "pergel_ntp.html", "background.js",
                      "commandbar.html", "panel.html"):
             self.assertTrue(os.path.isfile(os.path.join(self.tmp, name)),
                             name + " missing")
@@ -140,9 +140,9 @@ class TestRenderingPerformance(unittest.TestCase):
 
 class TestPerformancePrefs(unittest.TestCase):
     def test_prepare_profile_enables_vertical_tabs_and_memory_saver(self):
-        from src.brand import vane_app
+        from src.brand import pergel_app
         tmp = tempfile.mkdtemp()
-        vane_app.prepare_profile(tmp, shield_port=41999)
+        pergel_app.prepare_profile(tmp, shield_port=41999)
         with open(os.path.join(tmp, "Default", "Preferences")) as f:
             prefs = json.load(f)
         self.assertTrue(prefs["vertical_tabs"]["enabled"])

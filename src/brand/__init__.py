@@ -1,1 +1,1 @@
-"""Vane brand identity package (name, palette, branded surfaces)."""
+"""Pergel brand identity package (name, palette, branded surfaces)."""

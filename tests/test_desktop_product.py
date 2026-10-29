@@ -1,14 +1,14 @@
 """RED: the desktop product must behave like a real browser, not a painted shell.
 
 User feedback on the live window: opening a new tab showed Google (Chromium's
-own NTP), the Vane page "smelled AI" (centered logo, tagline, clock, dead search
+own NTP), the Pergel page "smelled AI" (centered logo, tagline, clock, dead search
 box) and the window carried "Chrome for Testing" / --no-sandbox infobars with no
 own identity. Contract now:
 
 * NTP = bare wordmark + a search box that ACTUALLY searches. Nothing else.
-* Ctrl+T must land on the Vane NTP via a real ``chrome_url_overrides.newtab``
+* Ctrl+T must land on the Pergel NTP via a real ``chrome_url_overrides.newtab``
   extension — the mechanism branded browsers use.
-* Window identity: ``--class=Vane`` (+ StartupWMClass), infobars off.
+* Window identity: ``--class=Pergel`` (+ StartupWMClass), infobars off.
 * ``--no-sandbox`` only when running as root; the desktop user gets the real
   sandbox (AppArmor userns profile).
 """
@@ -19,14 +19,14 @@ import unittest
 from unittest import mock
 
 from src.browser_engine import cdp_adblock_driver as driver
-from src.brand import render, vane_app
+from src.brand import render, pergel_app
 
 
 class TestNewTabOverrideExtension(unittest.TestCase):
     def test_manifest_overrides_chromium_new_tab(self):
         m = render.extension_manifest()
         self.assertEqual(m["manifest_version"], 3)
-        self.assertEqual(m["chrome_url_overrides"]["newtab"], "vane_ntp.html")
+        self.assertEqual(m["chrome_url_overrides"]["newtab"], "pergel_ntp.html")
         self.assertEqual(m["name"], "Pergel")
 
     def test_write_extension_ships_manifest_and_page(self):
@@ -35,8 +35,8 @@ class TestNewTabOverrideExtension(unittest.TestCase):
             with open(os.path.join(d, "manifest.json")) as f:
                 m = json.load(f)
             self.assertEqual(m["chrome_url_overrides"]["newtab"],
-                             "vane_ntp.html")
-            with open(os.path.join(d, "vane_ntp.html")) as f:
+                             "pergel_ntp.html")
+            with open(os.path.join(d, "pergel_ntp.html")) as f:
                 page = f.read()
             self.assertIn("Pergel", page)
             self.assertIn('name="q"', page)
@@ -44,7 +44,7 @@ class TestNewTabOverrideExtension(unittest.TestCase):
 
 class TestWindowIdentity(unittest.TestCase):
     def test_launch_flags_brand_the_window(self):
-        flags = vane_app.launch_flags("/x/ext")
+        flags = pergel_app.launch_flags("/x/ext")
         for f in ("--class=Pergel", "--disable-infobars", "--test-type",
                   "--no-first-run", "--no-default-browser-check",
                   "--load-extension=/x/ext",

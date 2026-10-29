@@ -344,7 +344,7 @@ Built openly and continuously — real work, in order (full list: `git log`):
 - **AI mode** — query fan-out + citations, REST API, MCP server, and the LiveRouter + model
   registry (public data, deterministic policy).
 - **Global-first** — 8 languages, RTL, accessibility.
-- **Identity** — a full rebrand (Vane -> Pergel), icons, `.deb` desktop package.
+- **Identity** — a full rebrand (Pergel -> Pergel), icons, `.deb` desktop package.
 - **Web UI** — `http://127.0.0.1:8871/ui/` control panel (Start / History / Settings tabs).
 - **Session record/replay** — record HTTP traffic to JSON, replay deterministically without network.
 - **WebMCP** — MCP protocol handler exposing browse/extract/crawl/search as tools (`/v1/mcp/*`).

@@ -1,8 +1,8 @@
-"""RED: Vane packaging — icon set, deb staging tree, launcher.
+"""RED: Pergel packaging — icon set, deb staging tree, launcher.
 
 End users don't run scripts: they double-click a desktop icon. The .deb must
-ship the full Vane identity — hicolor icon set, freedesktop launcher, the
-engine under /usr/lib/vane, and a /usr/bin/vane entry point — with nothing
+ship the full Pergel identity — hicolor icon set, freedesktop launcher, the
+engine under /usr/lib/pergel, and a /usr/bin/pergel entry point — with nothing
 Chromium-ish visible in the menu. The deb must actually build with dpkg-deb.
 """
 import os
@@ -49,7 +49,7 @@ class TestIconSet(unittest.TestCase):
 class TestDebStaging(unittest.TestCase):
     def test_tree_ships_identity_and_launcher(self):
         with tempfile.TemporaryDirectory() as td:
-            root = os.path.join(td, "vane-browser_0.1.0_amd64")
+            root = os.path.join(td, "pergel-browser_0.1.0_amd64")
             stage_tree(root)
             self.assertTrue(os.access(os.path.join(root, "usr/bin/pergel"),
                                       os.X_OK))
@@ -65,11 +65,11 @@ class TestDebStaging(unittest.TestCase):
                 root, "usr/share/icons/hicolor/scalable/apps/pergel.svg")))
             # engine ships inside the package
             self.assertTrue(os.path.isfile(os.path.join(
-                root, "usr/lib/pergel/vane_app.py")))
+                root, "usr/lib/pergel/pergel_app.py")))
 
     def test_control_metadata(self):
         with tempfile.TemporaryDirectory() as td:
-            root = os.path.join(td, "vane-browser_0.1.0_amd64")
+            root = os.path.join(td, "pergel-browser_0.1.0_amd64")
             stage_tree(root)
             with open(os.path.join(root, "DEBIAN/control")) as f:
                 control = f.read()

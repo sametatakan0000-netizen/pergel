@@ -57,7 +57,7 @@ def browser_base_args(headless: bool = True) -> list:
 
     ``--disable-gpu`` is a headless-CI crutch ONLY: on a real desktop it
     forces software compositing and makes scrolling/navigation visibly
-    laggy, so a visible Vane window must get the GPU.
+    laggy, so a visible Pergel window must get the GPU.
     """
     args = ["--remote-debugging-port=0"]
     if headless:
