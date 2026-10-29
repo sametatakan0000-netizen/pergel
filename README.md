@@ -354,17 +354,19 @@ Built openly and continuously — real work, in order (full list: `git log`):
 Documented in `docs/product/market-landscape_2026-10-26.md` and
 `docs/product/human-face-review_2026-10-26.md` — we'd rather you know now than find out later:
 
-1. **Web UI / landing / settings panel** — not built yet. Today the "human face" is the desktop
-   app, the CLI, and the API.
-2. **Crawl / sitemap (`/crawl`, `/map`)** — not yet.
-3. **Schema-based JSON extraction (`/extract`)** — not yet.
-4. **Anti-bot / CAPTCHA / residential proxy** — deliberately out of scope. We do **not** build
+1. **Session record/replay, Live View** — not yet.
+2. **WebMCP** — not yet (needs Chromium 146+).
+3. **Anti-bot / CAPTCHA / residential proxy** — deliberately out of scope. We do **not** build
    stealth/anti-detection to bypass paywalls or bot walls; our security work is defence
    (SSRF/egress/privacy), never evasion.
-5. **Session record/replay, Live View** — not yet.
-6. **WebMCP** — not yet (needs Chromium 146+).
-7. **Error shape** — error codes are inconsistent and there's no `request_id` correlation yet.
-8. **Windows/macOS native packaging** — run from source works; installers not built.
+4. **Windows/macOS native packaging** — run from source works; installers not built.
+
+Recently shipped (previously listed here as gaps):
+- **Web UI** — `http://127.0.0.1:8871/ui/` with `/start`, `/history`, `/settings` tabs.
+- **Crawl / sitemap** — `/v1/crawl` (batch fetch + extract, max 50 parallel) and `/v1/map`
+  (sitemap-based URL discovery).
+- **Schema-based JSON extraction** — `/v1/extract` (JSON-LD, CSS selectors, regex).
+- **Structured error envelope** — `request_id` correlation on every API response.
 
 Roadmap: package + web UI first, then the launch push (Show HN, Reddit, product communities).
 
