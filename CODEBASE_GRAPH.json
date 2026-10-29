@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 85,
-    "total_classes": 65,
-    "total_functions": 586,
-    "total_loc": 11545
+    "total_files": 88,
+    "total_classes": 68,
+    "total_functions": 601,
+    "total_loc": 12163
   },
   "modules": [
     {
@@ -221,7 +221,7 @@
     {
       "module": "src.api.server",
       "path": "src/api/server.py",
-      "loc": 874,
+      "loc": 963,
       "classes": [
         "BrowserFarmSaaSServer",
         "RequestHandler"
@@ -274,6 +274,9 @@
         "socket",
         "src.api.extract",
         "src.api.job_store",
+        "src.api.session_replay",
+        "src.api.web_ui",
+        "src.api.webmcp",
         "src.browser_engine.adblock_session",
         "src.browser_engine.browser_orchestrator",
         "src.browser_engine.cdp_adblock_driver",
@@ -311,10 +314,12 @@
         "Request",
         "RuntimeError",
         "SelfHealingWatchdog",
+        "SessionRecorder",
         "StreamAccumulator",
         "Thread",
         "ThreadingHTTPServer",
         "ValueError",
+        "WebMCPHandler",
         "WebhookDispatcher",
         "_allow_request",
         "_apply_moa",
@@ -347,6 +352,8 @@
         "bool",
         "build_aggregator_payload",
         "cached_tokens_from",
+        "call_tool",
+        "capabilities",
         "choose",
         "clear_sticky",
         "commit_choice",
@@ -372,14 +379,17 @@
         "expanduser",
         "extract_fields",
         "feed",
+        "fetch",
         "fetch_profiles",
         "float",
         "flush",
         "get",
         "get_job",
         "get_text_fn",
+        "get_ui_html",
         "getaddrinfo",
         "getattr",
+        "glob",
         "html_to_clean_markdown",
         "int",
         "ip_address",
@@ -394,7 +404,9 @@
         "len",
         "list",
         "list_extensions",
+        "list_tools",
         "listdir",
+        "load",
         "load_adblock_bundle",
         "load_extensions_dir",
         "load_snapshot",
@@ -419,7 +431,9 @@
         "price_tier",
         "private_targets_allowed",
         "read",
+        "read_text",
         "readline",
+        "record",
         "record_upstream",
         "remember",
         "round",
@@ -428,6 +442,7 @@
         "run",
         "run_cycle",
         "run_members",
+        "save",
         "save_snapshot",
         "send_header",
         "send_response",
@@ -449,6 +464,7 @@
         "type",
         "update",
         "update_profiles",
+        "upper",
         "urlopen",
         "urlsplit",
         "uuid4",
@@ -458,6 +474,106 @@
         "write"
       ],
       "change_risk": 10.0
+    },
+    {
+      "module": "src.api.session_replay",
+      "path": "src/api/session_replay.py",
+      "loc": 147,
+      "classes": [
+        "SessionRecorder",
+        "SessionReplay"
+      ],
+      "functions": [
+        "__init__",
+        "_key",
+        "record",
+        "save",
+        "summary",
+        "__init__",
+        "load",
+        "fetch",
+        "urls",
+        "summary"
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "Path",
+        "SessionRecorder",
+        "__import__",
+        "_key",
+        "append",
+        "b64encode",
+        "cls",
+        "decode",
+        "dumps",
+        "encode",
+        "get",
+        "hexdigest",
+        "len",
+        "list",
+        "load",
+        "mkdir",
+        "open",
+        "round",
+        "set",
+        "sha256",
+        "str",
+        "time",
+        "write_text"
+      ],
+      "change_risk": 5.04
+    },
+    {
+      "module": "src.api.web_ui",
+      "path": "src/api/web_ui.py",
+      "loc": 247,
+      "classes": [],
+      "functions": [
+        "get_ui_html"
+      ],
+      "imports": [
+        "json"
+      ],
+      "calls": [],
+      "change_risk": 3.29
+    },
+    {
+      "module": "src.api.webmcp",
+      "path": "src/api/webmcp.py",
+      "loc": 135,
+      "classes": [
+        "WebMCPHandler"
+      ],
+      "functions": [
+        "__init__",
+        "list_tools",
+        "capabilities",
+        "call_tool"
+      ],
+      "imports": [
+        "json",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "_browse",
+        "_crawl",
+        "_extract",
+        "_search",
+        "dumps",
+        "get",
+        "round",
+        "str",
+        "time"
+      ],
+      "change_risk": 4.69
     },
     {
       "module": "src.bench",
@@ -4051,6 +4167,7 @@
     "src.api.server.do_POST",
     "src.api.server.log_message",
     "src.api.server.wrapped",
+    "src.api.session_replay.urls",
     "src.bench.adapters.root_pids",
     "src.bench.fixture_server.do_GET",
     "src.bench.fixture_server.log_message",
