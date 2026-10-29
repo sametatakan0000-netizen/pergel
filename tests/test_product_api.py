@@ -108,7 +108,7 @@ class TestSsrfFetchTimeGuard(_Base):
         with mock.patch("socket.getaddrinfo", deny):
             st, body = call(base, "/v1/jobs/browse", {"url": "http://no-such-host.invalid/x"})
         self.assertEqual(st, 400)
-        self.assertIn("resolve", body["error"])
+        self.assertIn("resolve", body["error"]["message"])
 
     def test_dns_rebinding_blocked_at_fetch_time(self):
         """Submit-time DNS is public, fetch-time DNS flips private -> policy block, no engine call."""

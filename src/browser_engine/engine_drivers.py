@@ -35,20 +35,28 @@ def _egress_enforce() -> bool:
     return os.environ.get("ORACLE_EGRESS_ENFORCE", "").strip().lower() in ("1", "true", "yes")
 
 
-def _chromium_launch_args() -> list:
-    """Chromium args pinning egress to the proxy; [] when enforcement is off.
+def _chromium_launch_args(need_relay=None) -> list:
+    """Chromium args pinning egress to the validating relay; [] when direct.
 
-    When on, the engine is also expected to run inside the netns whose only
-    route is the proxy (see netns.plan_netns) — these flags are defense in
-    depth for Chromium's raw-DNS paths.
+    ``need_relay``: a bool, an ``EgressPolicy`` (``_relay_required`` decides),
+    or ``None`` for the legacy env semantics (relay under
+    ORACLE_EGRESS_ENFORCE=1 only). Serving paths pass the request's policy so
+    strict requests are relay-pinned even without the global mode. When on, the
+    engine may also run inside the netns (see netns.plan_netns) — the proxy
+    flags are defense in depth for Chromium's raw-DNS paths.
     """
-    if not _egress_enforce():
+    if not _as_need_relay(need_relay):
         return []
-    _ensure_egress_guard()
-    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "10.255.255.1")
-    port = int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899"))
+    guard = _ensure_egress_guard()
+    host, port = _relay_endpoint(guard)
     from src.browser_engine.netns import chromium_proxy_args
-    return chromium_proxy_args(proxy_host=host, proxy_port=port)
+    args = chromium_proxy_args(proxy_host=host, proxy_port=port)
+    if not _netns_enabled():
+        # Without netns the relay is the ONLY enforcement: Chromium implicitly
+        # bypasses proxies for loopback literals, so a redirect to
+        # http://127.0.0.1/ would skip the relay. <-loopback> disables that.
+        args.append("--proxy-bypass-list=<-loopback>")
+    return args
 
 
 NETNS_NAME = "bf_engine"
@@ -93,15 +101,60 @@ def _launch_kwargs(chrome_bin: Optional[str] = None) -> dict:
     return kw
 
 
-def _ensure_egress_guard() -> None:
-    """Start the live egress proxy once per process (serving-path wiring)."""
+def _ensure_egress_guard(*, use_netns: Optional[bool] = None):
+    """Start the live egress proxy once per process and return the guard.
+
+    ``use_netns`` defaults to ``_netns_enabled()``: on under enforcement, off for
+    request-driven strict relaying (which must not require sudo).
+    """
     from src.browser_engine import egress_guard
     # Reuse a guard that is already live in this process (e.g. started by the
     # caller) instead of binding the same port a second time.
     if egress_guard._current_guard is None:
+        if use_netns is None:
+            use_netns = _netns_enabled()
         egress_guard.start_egress_guard(
-            use_netns=os.environ.get("ORACLE_EGRESS_NETNS", "1") == "1",
+            use_netns=use_netns,
             proxy_port=int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899")))
+    return egress_guard._current_guard
+
+
+def _netns_enabled() -> bool:
+    """netns isolation on? Explicit ORACLE_EGRESS_NETNS wins; default is on under
+    enforcement, off for request-driven relay (no sudo in serving threads)."""
+    return os.environ.get(
+        "ORACLE_EGRESS_NETNS", "1" if _egress_enforce() else "0") == "1"
+
+
+def _relay_endpoint(guard) -> tuple:
+    """Host:port the engines must proxy to: env override, else the guard's own
+    bind (netns 10.255.255.1 vs loopback), else the legacy netns default."""
+    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST")
+    port = os.environ.get("ORACLE_EGRESS_PROXY_PORT")
+    if guard is not None:
+        listen = getattr(guard, "listen_host", None)
+        if not host and isinstance(listen, str) and listen:
+            host = listen
+        gport = getattr(guard, "port", None)
+        if not port and isinstance(gport, int):
+            port = str(gport)
+    return host or "10.255.255.1", int(port or 8899)
+
+
+def _relay_required(policy: Optional[EgressPolicy] = None) -> bool:
+    """Must this request's engine traffic traverse the validating EgressRelay?
+
+    True under global enforcement, and for strict requests (no
+    ``private_targets_allowed()`` opt-in): sub-process engines resolve DNS and
+    follow redirects themselves, so only the relay validates every hop and pins
+    dial-outs to the validated IP. Private-allowed dev fetches stay direct —
+    the relay's strict policy would deny them.
+    """
+    if _egress_enforce():
+        return True
+    if policy is None:
+        policy = _egress_policy()
+    return not policy.allows_private
 
 
 class EngineUnavailable(RuntimeError):
@@ -115,28 +168,44 @@ def _lightpanda_bin() -> Optional[str]:
     return cand if cand and os.path.exists(cand) else None
 
 
-def _lightpanda_proxy_args() -> list:
-    """Lightpanda argv routing egress through the relay; [] when enforcement is off.
+def _as_need_relay(need_relay) -> bool:
+    """Normalize the relay-routing decision.
 
-    Lightpanda follows redirects itself (no CDP interception), so under
-    enforcement its traffic must traverse the validating EgressRelay — every
-    request, including redirect hops, is re-checked there (parity with
-    _chromium_launch_args).
+    Accepts a bool, an ``EgressPolicy`` (strict -> relay, private-allowed ->
+    direct), or ``None`` (legacy env semantics). Sub-process engines follow
+    redirects themselves, so a strict request must traverse the validating
+    relay to keep the SSRF guarantees on every hop.
     """
-    if not _egress_enforce():
+    if need_relay is None:
+        return _egress_enforce()
+    if isinstance(need_relay, EgressPolicy):
+        return _relay_required(need_relay)
+    return bool(need_relay)
+
+
+def _lightpanda_proxy_args(need_relay=None) -> list:
+    """Lightpanda argv routing egress through the relay; [] when direct.
+
+    Lightpanda follows redirects itself (no CDP interception), so when routing
+    is required its traffic must traverse the validating EgressRelay — every
+    request, including redirect hops, is re-checked there (parity with
+    _chromium_launch_args). ``need_relay`` may be a bool, an ``EgressPolicy``
+    (``_relay_required`` decides), or ``None`` for the legacy env semantics.
+    """
+    if not _as_need_relay(need_relay):
         return []
-    _ensure_egress_guard()
-    host = os.environ.get("ORACLE_EGRESS_PROXY_HOST", "10.255.255.1")
-    port = int(os.environ.get("ORACLE_EGRESS_PROXY_PORT", "8899"))
+    guard = _ensure_egress_guard()
+    host, port = _relay_endpoint(guard)
     return ["--http-proxy", f"http://{host}:{port}"]
 
 
-def _lightpanda_html(url: str, session_name: str) -> str:
+def _lightpanda_html(url: str, session_name: str,
+                     need_relay: Optional[bool] = None) -> str:
     binary = _lightpanda_bin()
     if not binary:
         raise EngineUnavailable("lightpanda binary not installed")
     proc = subprocess.run(
-        [binary, "fetch", url, "--dump", "html", *_lightpanda_proxy_args()],
+        [binary, "fetch", url, "--dump", "html", *_lightpanda_proxy_args(need_relay)],
         capture_output=True, timeout=LIGHTPANDA_TIMEOUT_S,
     )
     out = proc.stdout.decode("utf-8", errors="replace")
@@ -164,9 +233,13 @@ class _ChromiumWorker:
         self._pw = None
         self._browser = None
         self._abandoned = False
+        # Relay routing is a LAUNCH flag: record what this generation was
+        # launched with so a mode change can drop and relaunch it.
+        self._relay_mode: Optional[bool] = None
 
-    def fetch(self, url: str, user_agent: str, timeout_s: float) -> str:
-        future = self._exec.submit(self._fetch_on_worker, url, user_agent)
+    def fetch(self, url: str, user_agent: str, timeout_s: float,
+              need_relay: Optional[bool] = None) -> str:
+        future = self._exec.submit(self._fetch_on_worker, url, user_agent, need_relay)
         done, _ = futures_wait([future], timeout=timeout_s)
         if not done:
             raise _WorkerHung(f"chromium worker hung >{timeout_s}s on {url}")
@@ -198,25 +271,31 @@ class _ChromiumWorker:
         except Exception:
             pass
 
-    def _fetch_on_worker(self, url: str, user_agent: str) -> str:
+    def _fetch_on_worker(self, url: str, user_agent: str,
+                         need_relay: Optional[bool] = None) -> str:
         try:
-            return self._fetch_once(url, user_agent)
+            return self._fetch_once(url, user_agent, need_relay)
         finally:
             browser = self._browser
             if self._abandoned or (browser is not None and hasattr(browser, "is_connected") and not browser.is_connected()):
                 self._reset()  # dead/abandoned generation -> close own engine only
 
-    def _fetch_once(self, url: str, user_agent: str) -> str:
+    def _fetch_once(self, url: str, user_agent: str,
+                    need_relay: Optional[bool] = None) -> str:
+        wanted = _egress_enforce() if need_relay is None else bool(need_relay)
         browser = self._browser
         if browser is not None and hasattr(browser, "is_connected") and not browser.is_connected():
             self._reset()  # engine died between fetches -> fresh launch
+        if self._pw is not None and self._relay_mode != wanted:
+            self._reset()  # relay routing is a launch flag -> fresh generation
         if self._pw is None:
             try:
                 from playwright.sync_api import sync_playwright
             except ImportError as exc:  # shortcut: optional dep like trafilatura
                 raise EngineUnavailable("playwright not installed") from exc
             self._pw = sync_playwright().start()
-            launch_args = _chromium_launch_args()
+            self._relay_mode = wanted
+            launch_args = _chromium_launch_args(wanted)
             self._browser = (self._pw.chromium.launch(headless=True, args=launch_args)
                              if launch_args else self._pw.chromium.launch(headless=True))
         page = self._browser.new_page(user_agent=user_agent)
@@ -235,6 +314,7 @@ class _ChromiumWorker:
         except Exception:
             pass
         self._pw = None
+        self._relay_mode = None
         self._browser = None
 
 
@@ -249,13 +329,14 @@ class _ChromiumPool:
         self._worker = _ChromiumWorker()
         self._abandoned: list[_ChromiumWorker] = []
 
-    def fetch(self, url: str, user_agent: str, timeout_s: Optional[float] = None) -> str:
+    def fetch(self, url: str, user_agent: str, timeout_s: Optional[float] = None,
+              need_relay: Optional[bool] = None) -> str:
         if timeout_s is None:
             timeout_s = CHROMIUM_TIMEOUT_S + 30
         with self._lock:
             worker = self._worker
         try:
-            return worker.fetch(url, user_agent, timeout_s)
+            return worker.fetch(url, user_agent, timeout_s, need_relay)
         except _WorkerHung:
             with self._lock:
                 if self._worker is worker:
@@ -288,8 +369,11 @@ def shutdown_pools() -> None:
 atexit.register(shutdown_pools)
 
 
-def _chromium_html(url: str, session_name: str) -> str:
-    return chromium_pool.fetch(url, user_agent=f"{_UA_BASE} (chromium-browser-use; {session_name})")
+def _chromium_html(url: str, session_name: str,
+                   need_relay: Optional[bool] = None) -> str:
+    return chromium_pool.fetch(
+        url, user_agent=f"{_UA_BASE} (chromium-browser-use; {session_name})",
+        need_relay=need_relay)
 
 
 def engine_driver(engine: str, url: str, session_name: str,
@@ -308,20 +392,23 @@ def engine_driver(engine: str, url: str, session_name: str,
     if user_directed is None:
         user_directed = is_user_directed()
     policy = policy or _egress_policy()
+    # Sub-process engines resolve DNS and follow redirects themselves: route
+    # strict requests through the validating EgressRelay (every hop re-checked,
+    # dial-outs pinned to the validated IP) — private_targets_allowed() dev
+    # fetches stay direct (the relay's strict policy would deny them).
+    # shortcut: direct dev fetches trust the engine's own resolve (narrow
+    # rebinding window on private targets only); force the relay when exposing.
+    need_relay = _relay_required(policy)
     egress = None
     if engine in ("lightpanda", "chromium-browser-use"):
-        # Sub-process engines re-resolve DNS and follow redirects internally:
         # SSRF-pre-flight the target with the plain-HTTP fallback's rules.
-        # shortcut: validates the target only; the engine re-resolves (DNS
-        # rebinding window) and does not pin to this resolve. upgrade: pin per
-        # engine or force the EgressRelay when exposed publicly.
         egress = _check_hop(url, policy)
     if not user_directed and not _allowed_by_robots(url, "HermesBrowserFarm",
                                                     egress=egress, policy=policy):
         raise FetchBlocked(f"robots.txt disallows {url}", code="robots_disallowed")
     if engine == "lightpanda":
-        return _lightpanda_html(url, session_name)
+        return _lightpanda_html(url, session_name, need_relay=need_relay)
     if engine == "chromium-browser-use":
-        return _chromium_html(url, session_name)
+        return _chromium_html(url, session_name, need_relay=need_relay)
     # shortcut: camofox deferred (stealth opt-in + legal review), plain-HTTP until then
     return _default_url_driver(engine, url, session_name, policy=policy)

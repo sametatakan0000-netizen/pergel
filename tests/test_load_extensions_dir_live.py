@@ -69,9 +69,12 @@ class LoadExtensionsDirPageProofTests(unittest.TestCase):
             host = load_extensions_dir(root)
             self.assertIsNotNone(host)
 
+            from src.browser_engine.worker import private_targets_allowed
+
             def run(h):
                 drv = make_adblock_driver(AdblockBundle(), extensions=h)
-                return drv("chromium", url, "live")
+                with private_targets_allowed(True):
+                    return drv("chromium", url, "live")
 
             treated = run(host)
             control = run(None)

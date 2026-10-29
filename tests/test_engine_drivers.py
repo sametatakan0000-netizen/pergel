@@ -4,6 +4,7 @@ import os
 import shutil
 import threading
 import unittest
+from unittest import mock
 
 from src.browser_engine.egress_proxy import EgressPolicy
 from src.browser_engine.engine_drivers import (
@@ -78,7 +79,11 @@ class LightpandaStubTests(unittest.TestCase):
         os.chmod(stub, 0o755)
         os.environ["LIGHTPANDA_BIN"] = stub
         try:
-            out = engine_driver("lightpanda", "https://example.com/", "s", policy=PUBLIC_POLICY)
+            # PUBLIC_POLICY is strict -> the new SSRF model routes through the
+            # relay; stub the guard so this does not bind a real port.
+            with mock.patch("src.browser_engine.engine_drivers._ensure_egress_guard",
+                            return_value=mock.MagicMock()):
+                out = engine_driver("lightpanda", "https://example.com/", "s", policy=PUBLIC_POLICY)
         finally:
             del os.environ["LIGHTPANDA_BIN"]
         self.assertIn("STUB-HTML", out)

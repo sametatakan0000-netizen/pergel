@@ -294,6 +294,34 @@ class OEmbedAdapter:
         )
 
 
+def sitemap_urls(xml: str, limit: int = 1000) -> List[str]:
+    """Extract the URL list from a sitemap XML document (/v1/map logic).
+
+    Pure function over the XML text — no network. Returns [] for anything that
+    is not a sitemap (HTML, plain text, malformed XML). Both the namespaced
+    (``sm:url/sm:loc``) and bare (``url/loc``) forms are handled. Capped at
+    ``limit`` so a huge sitemap cannot blow up the caller.
+    """
+    import xml.etree.ElementTree as ET
+
+    if not isinstance(xml, str) or not xml.strip():
+        return []
+    try:
+        root = ET.fromstring(xml.strip())
+    except ET.ParseError:
+        return []
+    ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    locs = root.findall(".//sm:url/sm:loc", ns) or root.findall(".//url/loc")
+    out: List[str] = []
+    for node in locs:
+        text = (node.text or "").strip()
+        if text:
+            out.append(text)
+        if len(out) >= max(0, limit):
+            break
+    return out
+
+
 class RssSitemapAdapter:
     """Last-resort structured fetch: a site's own RSS/Atom feed or sitemap.
 

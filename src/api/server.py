@@ -15,15 +15,19 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 from src.api.job_store import JobStore
+from src.api.extract import extract_fields
 from src.browser_engine.browser_orchestrator import BrowserFarmOrchestrator
 from src.browser_engine.engine_drivers import engine_driver
 from src.browser_engine.cdp_adblock_driver import make_adblock_driver
 from src.browser_engine.adblock_session import load_adblock_bundle
+from src.browser_engine.platform_adapters import _http_get_text, sitemap_urls
 from src.browser_engine.worker import (
     BrowserWorker,
     FetchBlocked,
+    html_to_clean_markdown,
     private_targets_allowed,
 )
 from src.infra.self_healing_watchdog import SelfHealingWatchdog
@@ -52,6 +56,30 @@ ACCESS_BLOCK_HTTP_STATUS = {
     "target_private_address": 400,
 }
 
+# Stable machine-readable code for a generic HTTP error that did not carry its own
+# explicit code (the structured-error envelope contract).
+_STATUS_ERROR_CODES = {
+    400: "invalid_request",
+    401: "unauthorized",
+    402: "payment_required",
+    403: "forbidden",
+    404: "not_found",
+    405: "method_not_allowed",
+    409: "conflict",
+    413: "payload_too_large",
+    422: "unprocessable_entity",
+    429: "rate_limited",
+    500: "internal_error",
+    501: "not_implemented",
+    502: "bad_gateway",
+    503: "service_unavailable",
+    504: "gateway_timeout",
+}
+
+
+def _err_code_for_status(status: int) -> str:
+    return _STATUS_ERROR_CODES.get(status, "error")
+
 # ---- per-client rate limiting (SaaS surfaces only; router paths stay unthrottled) ----
 _RATE_BUCKETS: Dict[str, list] = {}
 _RATE_LOCK = threading.Lock()
@@ -77,6 +105,8 @@ def _allow_request(client_key: str) -> Tuple[bool, float]:
 
 _RATE_LIMITED_PREFIXES = ("/v1/jobs/",)
 _RATE_LIMITED_PATHS = {"/v1/jobs/browse", "/v1/search/fanout"}
+# Cap for /v1/crawl batch fan-out — never unbounded (SSRF/DoS guard).
+_CRAWL_MAX_URLS = 50
 # Amiral + subagent turns are governed per bucket by MoaPolicy (evidence from implicit
 # feedback). Opt-in (ORACLE_MOA=1): each member re-reads the whole 100K+ context, so N members
 # multiply the dominant cost, and moa_policy.db holds no evidence MoA beat a single model.
@@ -226,12 +256,15 @@ class BrowserFarmSaaSServer:
         explore_epsilon: Optional[float] = None,
         search_fn: Optional[Callable[[str], Any]] = None,
         allow_private_targets: bool = False,
+        get_text_fn: Optional[Callable[[str], Any]] = None,
     ) -> None:
         if host not in {"127.0.0.1", "::1", "localhost"}:
             raise ValueError("Unauthenticated router must bind to loopback only")
         self.host = host
         self.search_fn = search_fn  # None -> SearXNG default (ORACLE_SEARXNG_URL)
         self.allow_private_targets = allow_private_targets
+        # Raw text getter for /v1/map sitemap discovery (None -> SSRF-guarded HTTP GET).
+        self.get_text_fn = get_text_fn or (lambda u: _http_get_text(u))
         self.db_dir = db_dir
         self.nous_proxy_url = nous_proxy_url
         os.makedirs(self.db_dir, exist_ok=True)
@@ -251,6 +284,9 @@ class BrowserFarmSaaSServer:
             orchestrator=BrowserFarmOrchestrator(db_path=os.path.join(self.db_dir, "browser_memory.db")),
         )
         self.webhook_dispatcher = WebhookDispatcher(sender_fn=webhook_sender_fn)
+        # Kept unwrapped so /v1/extract and /v1/crawl can re-apply the SSRF guard
+        # per call (the worker's own driver is already guarded).
+        self._raw_driver_fn = driver_fn or _resolve_driver(adblock_list_paths)
         self._sessions_lock = threading.Lock()
         self.watchdog = SelfHealingWatchdog(
             health_probes={"job_store": lambda: True, "router_db": lambda: True},
@@ -267,14 +303,48 @@ class BrowserFarmSaaSServer:
 
             def _send_json(self, status: int, data: Dict[str, Any],
                            extra_headers: Optional[Dict[str, str]] = None) -> None:
+                data = self._envelope(data, status)
                 body = json.dumps(data, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
+                self.send_header("X-Request-Id", str(data.get("request_id", "")))
                 for name, value in (extra_headers or {}).items():
                     self.send_header(name, value)
                 self.end_headers()
                 self.wfile.write(body)
+
+            def _rid(self) -> str:
+                """Per-request correlation id: caller-supplied X-Request-Id or a fresh uuid4."""
+                rid = getattr(self, "_request_id", None)
+                if not rid:
+                    rid = self.headers.get("X-Request-Id") or str(uuid4())
+                    self._request_id = rid
+                return rid
+
+            def _envelope(self, data: Dict[str, Any], status: int) -> Dict[str, Any]:
+                """Normalise every response: top-level request_id + structured error.
+
+                Success: adds request_id (and never an error key).
+                Error:   error is a dict {code, message[, domain], request_id} — a bare
+                         string is lifted into that shape using the status code. request_id
+                         is correlated both at the top level and inside error (the latter
+                         matches the access-block contract in tests/test_access_block_codes.py).
+                """
+                rid = self._rid()
+                out = dict(data)
+                out["request_id"] = rid
+                if "error" in out:
+                    err = out["error"]
+                    if not isinstance(err, dict):
+                        err = {"code": _err_code_for_status(status), "message": str(err)}
+                    else:
+                        err = dict(err)
+                    err.setdefault("code", _err_code_for_status(status))
+                    err.setdefault("message", "request failed")
+                    err["request_id"] = err.get("request_id") or rid
+                    out["error"] = err
+                return out
 
             def _read_json(self) -> Dict[str, Any]:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -441,6 +511,74 @@ class BrowserFarmSaaSServer:
                         )
                         completed_job["webhook_delivery"] = wh_res
                     self._send_json(200, completed_job)
+                    return
+
+                if self.path == "/v1/map":
+                    # Deterministic site discovery: list a site's URLs from its sitemap.
+                    url = str(payload.get("url", "")).strip()
+                    if not url:
+                        self._send_json(400, {"error": "url is required"})
+                        return
+                    err = _validate_target(url, parent.allow_private_targets)
+                    if err:
+                        self._send_json(400, {"error": err})
+                        return
+                    sitemap_url = url if "sitemap" in url.rsplit("/", 1)[-1] else (
+                        url.rstrip("/") + "/sitemap.xml")
+                    xml = parent.get_text_fn(sitemap_url)
+                    urls = sitemap_urls(xml) if isinstance(xml, str) else []
+                    self._send_json(200, {"urls": urls, "source": sitemap_url, "count": len(urls)})
+                    return
+
+                if self.path == "/v1/extract":
+                    # Deterministic named-field extraction from a page (no LLM guesswork).
+                    url = str(payload.get("url", "")).strip()
+                    fields = payload.get("fields")
+                    if not url or not isinstance(fields, list) or not fields:
+                        self._send_json(400, {"error": "url and non-empty fields are required"})
+                        return
+                    err = _validate_target(url, parent.allow_private_targets)
+                    if err:
+                        self._send_json(400, {"error": err})
+                        return
+                    try:
+                        raw = _guarded_driver(parent._raw_driver_fn, parent.allow_private_targets)(
+                            "lightpanda", url, "extract")
+                    except FetchBlocked as blocked:
+                        self._send_json(ACCESS_BLOCK_HTTP_STATUS.get(blocked.code, 403),
+                                        {"error": {"code": blocked.code, "message": str(blocked)}})
+                        return
+                    self._send_json(200, {"fields": extract_fields(raw, fields),
+                                          "markdown": html_to_clean_markdown(raw)})
+                    return
+
+                if self.path == "/v1/crawl":
+                    # Batch extract across several URLs of one site (capped fan-out).
+                    urls = payload.get("urls")
+                    fields = payload.get("fields") or []
+                    if (not isinstance(urls, list) or not urls
+                            or not all(isinstance(u, str) and u.strip() for u in urls)):
+                        self._send_json(400, {"error": "urls must be a non-empty array of URLs"})
+                        return
+                    if len(urls) > _CRAWL_MAX_URLS:
+                        self._send_json(400, {"error": f"too many urls: {len(urls)} > {_CRAWL_MAX_URLS}"})
+                        return
+                    results = []
+                    for u in urls:
+                        u = u.strip()
+                        err = _validate_target(u, parent.allow_private_targets)
+                        if err:
+                            results.append({"url": u, "error": err})
+                            continue
+                        try:
+                            raw = _guarded_driver(parent._raw_driver_fn, parent.allow_private_targets)(
+                                "lightpanda", u, "crawl")
+                            results.append({"url": u,
+                                            "fields": extract_fields(raw, fields) if fields else {},
+                                            "markdown": html_to_clean_markdown(raw)})
+                        except FetchBlocked as blocked:
+                            results.append({"url": u, "error": str(blocked), "code": blocked.code})
+                    self._send_json(200, {"results": results, "count": len(results)})
                     return
 
                 if self.path == "/v1/search/fanout":

@@ -81,6 +81,13 @@ class EgressPolicy:
         self._resolver = resolver
         self._allow_literal = allow_literal
 
+    @property
+    def allows_private(self) -> bool:
+        """True when private/loopback targets are an explicit opt-in for this
+        request (``private_targets_allowed()`` sets it). Enforcement layers use
+        this to skip strict plumbing (relay pinning, pre-flight) for dev fetches."""
+        return self._allow_literal
+
     def check_url(self, url: str) -> Egress:
         parts = urlsplit(url)
         if parts.scheme not in ALLOWED_SCHEMES:

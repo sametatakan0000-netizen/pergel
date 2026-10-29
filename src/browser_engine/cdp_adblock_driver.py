@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 from .extension_host import ExtensionHost  # noqa: F401 (type only)
 from .adblock_session import AdblockBundle, build_injection
 from .cdp_bridge import CDPBridge, _action_of, _rule_id_of, decide_cdp_response
+from .egress_proxy import EgressDenied, EgressPolicy
 
 try:
     import websockets
@@ -66,6 +67,35 @@ def browser_base_args(headless: bool = True) -> list:
     return args
 
 
+def make_ssrf_guard(policy_factory: Optional[Callable[[], Any]] = None
+                    ) -> Callable[[str], bool]:
+    """Build the CDPBridge ``ssrf_guard`` bound to the request's egress policy.
+
+    True marks an SSRF-risk target: a private/loopback literal or a host that
+    resolves private (fail-closed on unresolvable). Non-network schemes
+    (data:, blob:, chrome-extension:, about:) are not SSRF-able hops and pass —
+    blocking them would break extension and startup resources. ``policy_factory``
+    defaults to the live per-request policy (``_egress_policy()``), so
+    ``private_targets_allowed()`` fetches are honoured. shortcut: the guard
+    resolves per request (same as the pre-flight); cache if profiling shows cost.
+    """
+    def _guard(url: str) -> bool:
+        parts = urlparse(url)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            return False  # non-network scheme: not an SSRF-able hop
+        from src.browser_engine.egress_proxy import EgressAddressError, EgressDenied
+        from src.browser_engine.worker import _egress_policy
+        factory = policy_factory or _egress_policy
+        try:
+            factory().check_url(url)
+            return False
+        except (EgressDenied, EgressAddressError):
+            return True
+        except Exception:
+            return True  # fail closed on unexpected guard errors
+    return _guard
+
+
 class AdblockBrowserSession:
     """One enforced Chromium session; async context manager."""
 
@@ -75,7 +105,8 @@ class AdblockBrowserSession:
                  on_blocked: Optional[Callable[[dict], None]] = None,
                  user_data_dir: Optional[str] = None,
                  start_url: str = "about:blank",
-                 extra_args: Optional[list] = None):
+                 extra_args: Optional[list] = None,
+                 ssrf_guard: Optional[Callable[[str], bool]] = None):
         self.bundle = bundle
         self._browser_path = browser_path or _chromium()
         self._headless = headless
@@ -98,7 +129,7 @@ class AdblockBrowserSession:
         # via CompositeEngine, so both decide on every request.
         source = (bundle.network, extensions) if extensions is not None \
             else bundle.network
-        self._bridge = CDPBridge(source, send=lambda m: None)
+        self._bridge = CDPBridge(source, send=lambda m: None, ssrf_guard=ssrf_guard)
 
     # --- lifecycle -------------------------------------------------------
     def _build_command(self) -> list:
@@ -277,6 +308,7 @@ class AdblockBrowserSession:
             url=params.get("request", {}).get("url", ""),
             resource_type=params.get("resourceType", "Other"),
             request_headers=dict(params.get("request", {}).get("headers", {})),
+            ssrf_guard=self._bridge._ssrf_guard,
         )
         payload = {"action": _action_of(msg),
                    "rule_id": _rule_id_of(msg),
@@ -343,18 +375,39 @@ class AdblockBrowserSession:
 
 
 def make_adblock_driver(bundle: AdblockBundle, browser_path: Optional[str] = None,
-                        extensions: Optional["ExtensionHost"] = None):
+                        extensions: Optional["ExtensionHost"] = None,
+                        ssrf_guard: Optional[Callable[[str], bool]] = None):
     """Sync ``driver_fn(engine, url, session_name) -> raw_html`` for ``BrowserWorker``.
 
     Fetches the URL through one enforced Chromium session and returns the
     cleaned rendered HTML (enforcement-hidden nodes removed), so the worker's
-    ``html_to_clean_markdown`` produces ad-free content.
+    ``html_to_clean_markdown`` produces ad-free content. The session also
+    enforces the request's egress policy: an SSRF guard on every intercepted
+    request (default ``make_ssrf_guard()``, honours ``private_targets_allowed()``)
+    and — for strict requests — the validating EgressRelay for the browser's
+    own egress (pins dial-outs to validated IPs, re-checks every redirect hop).
     """
 
     def driver(engine: str, url: str, session_name: str) -> str:
+        # Lazy import: engine_drivers must stay importable without a cycle.
+        from src.browser_engine.engine_drivers import (
+            _chromium_launch_args, _relay_required, _egress_policy,
+        )
+        guard = ssrf_guard if ssrf_guard is not None else make_ssrf_guard()
+        # Strict requests route the browser through the validating relay;
+        # private_targets_allowed() dev fetches stay direct (relay would deny).
+        # An explicit ssrf_guard means the caller owns the gate (custom policy,
+        # e.g. a loopback fixture) — don't second-guess it with relay routing.
+        # shortcut: explicit guard opts out of relay routing, add a policy
+        # param to make_adblock_driver if a caller ever needs both.
+        extra = ([] if ssrf_guard is not None
+                 else _chromium_launch_args(_relay_required(_egress_policy())))
+
         async def go():
             async with AdblockBrowserSession(bundle, browser_path,
-                                             extensions=extensions) as sess:
+                                             extensions=extensions,
+                                             extra_args=extra,
+                                             ssrf_guard=guard) as sess:
                 return await sess.fetch(url, host=None, timeout=30.0)
 
         body = asyncio.run(go())

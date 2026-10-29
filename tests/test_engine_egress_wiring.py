@@ -9,6 +9,7 @@ import os
 import unittest
 from unittest import mock
 from urllib.error import URLError
+from src.browser_engine.egress_proxy import EgressPolicy
 
 
 class LaunchArgsTests(unittest.TestCase):
@@ -47,7 +48,7 @@ class LightpandaLaunchArgsTests(unittest.TestCase):
     """Lightpanda is a subprocess without CDP interception: under enforcement
     its traffic MUST traverse the validating EgressRelay via --http-proxy."""
 
-    def _recorded_argv(self, enforce: bool) -> list:
+    def _recorded_argv(self, enforce: bool, allow_literal: bool = False) -> list:
         import src.browser_engine.engine_drivers as ed
         d = os.path.join(os.path.dirname(__file__), "_stubs")
         os.makedirs(d, exist_ok=True)
@@ -58,22 +59,25 @@ class LightpandaLaunchArgsTests(unittest.TestCase):
                      "echo '<html><body>STUB-HTML</body></html>'\n")
         os.chmod(stub, 0o755)
         env = {"LIGHTPANDA_BIN": stub, "ORACLE_EGRESS_ENFORCE": "1" if enforce else "0"}
+        policy = EgressPolicy(resolver=lambda host: ["93.184.216.34"], allow_literal=allow_literal)
         with mock.patch.dict(os.environ, env), \
                 mock.patch("src.browser_engine.engine_drivers._ensure_egress_guard") as guard:
             out = ed.engine_driver("lightpanda", "https://example.com/", "s",
-                                   user_directed=True, policy=_public_policy())
+                                   user_directed=True, policy=policy)
         self.assertIn("STUB-HTML", out)
-        self.assertEqual(guard.called, enforce)
+        self.assertEqual(guard.called, enforce or not allow_literal)
         with open(argv_path) as fh:
             return fh.read().splitlines()
 
     def test_lightpanda_argv_includes_http_proxy_when_enforcement_on(self):
-        argv = self._recorded_argv(enforce=True)
+        argv = self._recorded_argv(enforce=True, allow_literal=True)
         self.assertIn("--http-proxy", argv)
         self.assertIn("http://10.255.255.1:8899", argv)
 
     def test_lightpanda_argv_plain_when_enforcement_off(self):
-        argv = self._recorded_argv(enforce=False)
+        # Direct mode only when the request opts into private targets; a strict
+        # request is relay-pinned even with enforcement off (SSRF redirect safety).
+        argv = self._recorded_argv(enforce=False, allow_literal=True)
         self.assertNotIn("--http-proxy", argv)
 
 

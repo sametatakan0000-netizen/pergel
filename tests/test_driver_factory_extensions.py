@@ -18,7 +18,7 @@ class DriverFactoryExtensionTests(unittest.TestCase):
         seen = {}
 
         class Spy:
-            def __init__(self, bundle, browser_path=None, extensions=None):
+            def __init__(self, bundle, browser_path=None, extensions=None, **kw):
                 seen["extensions"] = extensions
             async def __aenter__(self):
                 return self
@@ -27,7 +27,9 @@ class DriverFactoryExtensionTests(unittest.TestCase):
             async def fetch(self, url, host=None, timeout=30.0):
                 return {"html": ["<p>ok</p>"]}
 
-        with mock.patch.object(drv, "AdblockBrowserSession", Spy):
+        with mock.patch.object(drv, "AdblockBrowserSession", Spy), \
+                mock.patch("src.browser_engine.engine_drivers._ensure_egress_guard",
+                           return_value=mock.MagicMock()):
             driver = drv.make_adblock_driver(AdblockBundle(), extensions=host)
             out = driver("engine", "https://example.com", "s")
         self.assertIs(seen["extensions"], host)
