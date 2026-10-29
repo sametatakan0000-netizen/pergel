@@ -148,6 +148,13 @@ class AdblockBrowserSession:
     async def __aenter__(self) -> "AdblockBrowserSession":
         if websockets is None or self._browser_path is None:
             raise RuntimeError("websockets lib or chromium binary unavailable")
+        # Clean stale lock files from a previous crashed instance —
+        # SingletonLock/Socket/Cookie block new Chromium from starting.
+        for lock in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
+            try:
+                os.remove(os.path.join(self._tmp, lock))
+            except OSError:
+                pass
         self._proc = subprocess.Popen(
             self._build_command(),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -246,7 +253,7 @@ class AdblockBrowserSession:
         import time
         # --remote-debugging-port=0 writes the chosen port to DevToolsActivePort
         marker = self._tmp + "/DevToolsActivePort"
-        for _ in range(120):
+        for _ in range(300):  # 30s: slow machines need more time
             try:
                 with open(marker) as f:
                     port = int(f.readline().strip())
