@@ -99,7 +99,6 @@ def launch_flags(extension_dir: str) -> list:
             "--no-first-run", "--no-default-browser-check",
             "--disable-search-engine-choice-screen",
             "--disable-blink-features=AutomationControlled",
-            "--disable-features=AutomationControlled",
             "--load-extension=" + extension_dir,
             "--disable-extensions-except=" + extension_dir]
 
@@ -157,16 +156,16 @@ def prepare_profile(profile_dir: str, shield_port: int) -> str:
     if lang not in i18n.LOCALES:
         lang = "en"
     ntp = os.path.join(profile_dir, "pergel_ntp.html")
-    with open(ntp, "w") as f:
+    with open(ntp, "w", encoding="utf-8") as f:
         f.write(render.render_ntp(lang))
     for code in i18n.LOCALES:
-        with open(os.path.join(profile_dir, f"pergel_ntp_{code}.html"), "w") as f:
+        with open(os.path.join(profile_dir, f"pergel_ntp_{code}.html"), "w", encoding="utf-8") as f:
             f.write(render.render_ntp(code))
     shield = os.path.join(profile_dir, "pergel_shield.html")
-    with open(shield, "w") as f:
+    with open(shield, "w", encoding="utf-8") as f:
         f.write(render.render_shield_panel(shield_port))
     panel = os.path.join(profile_dir, "pergel_panel.html")
-    with open(panel, "w") as f:
+    with open(panel, "w", encoding="utf-8") as f:
         f.write(render.render_side_panel(shield_port))
     return ntp
 

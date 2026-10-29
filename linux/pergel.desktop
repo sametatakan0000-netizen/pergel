@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Pergel
+GenericName=Web Browser
+Comment=AI-Native Browser Engine
+Exec=/usr/bin/env python3 /usr/lib/pergel/brand/pergel_app.py %U
+Terminal=false
+Type=Application
+Icon=pergel
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupWMClass=Pergel
+Keywords=Internet;WWW;Browser;Web;AI;

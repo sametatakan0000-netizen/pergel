@@ -3,7 +3,7 @@
     "total_files": 91,
     "total_classes": 71,
     "total_functions": 625,
-    "total_loc": 13030
+    "total_loc": 13029
   },
   "modules": [
     {
@@ -1724,7 +1724,7 @@
     {
       "module": "src.brand.pergel_app",
       "path": "src/brand/pergel_app.py",
-      "loc": 231,
+      "loc": 230,
       "classes": [],
       "functions": [
         "user_dirs",
