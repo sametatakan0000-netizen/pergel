@@ -47,7 +47,6 @@ class TestWindowIdentity(unittest.TestCase):
         flags = pergel_app.launch_flags("/x/ext")
         for f in ("--class=Pergel", "--disable-infobars",
                   "--no-first-run", "--no-default-browser-check",
-                  "--disable-blink-features=AutomationControlled",
                   "--load-extension=/x/ext",
                   "--disable-extensions-except=/x/ext"):
             self.assertIn(f, flags)
@@ -59,11 +58,9 @@ class TestWindowIdentity(unittest.TestCase):
         """Google blocks browsers that expose automation markers."""
         flags = driver.browser_base_args()
         self.assertIn("--disable-blink-features=AutomationControlled", flags)
-        # UA must look like standard Chrome, not HeadlessChrome/Playwright
-        ua_flag = [a for a in flags if a.startswith("--user-agent=")]
-        self.assertTrue(ua_flag, "must set a standard Chrome UA")
-        self.assertNotIn("Headless", ua_flag[0])
-        self.assertNotIn("Playwright", ua_flag[0])
+        # UA is set via CDP Network.setUserAgentOverride (more reliable
+        # than --user-agent flag which breaks extension loading)
+        self.assertFalse([a for a in flags if a.startswith("--user-agent=")])
 
     def test_sandbox_flag_only_for_root(self):
         with mock.patch.object(driver.os, "geteuid", return_value=0):

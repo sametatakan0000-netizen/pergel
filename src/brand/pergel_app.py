@@ -98,7 +98,6 @@ def launch_flags(extension_dir: str) -> list:
     return ["--class=Pergel", "--disable-infobars",
             "--no-first-run", "--no-default-browser-check",
             "--disable-search-engine-choice-screen",
-            "--disable-blink-features=AutomationControlled",
             "--load-extension=" + extension_dir,
             "--disable-extensions-except=" + extension_dir]
 

@@ -67,10 +67,6 @@ def browser_base_args(headless: bool = True) -> list:
     # Anti-detection: hide automation markers so sites like Google
     # don't block the browser as "insecure" (navigator.webdriver etc.)
     args.append("--disable-blink-features=AutomationControlled")
-    # Standard Chrome UA — Playwright's default UA contains "HeadlessChrome"
-    # or automation tokens that Google rejects at login
-    args.append("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
     return args
 
 
@@ -166,18 +162,33 @@ class AdblockBrowserSession:
         await self._call("Fetch.enable")
         await self._call("Page.enable")
         await self._call("Runtime.enable")
+        # Standard Chrome UA (Playwright's default has automation tokens
+        # that Google rejects at login). CDP is more reliable than the
+        # --user-agent flag which can break extension loading.
+        try:
+            await self._call("Network.enable")
+            await self._call("Network.setUserAgentOverride", {
+                "userAgent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
+                "acceptLanguage": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                "platform": "Linux x86_64"})
+        except Exception:
+            pass  # non-fatal
         # Anti-detection: override navigator.webdriver so sites don't
         # identify us as an automated browser (Google blocks on this).
-        await self._call("Page.addScriptToEvaluateOnNewDocument", {
-            "source": (
-                "Object.defineProperty(navigator, 'webdriver',"
-                " {get: () => undefined});"
-                " window.chrome = window.chrome || {runtime: {}};"
-                " Object.defineProperty(navigator, 'plugins',"
-                " {get: () => [1, 2, 3, 4, 5]});"
-                " Object.defineProperty(navigator, 'languages',"
-                " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
-            )})
+        try:
+            await self._call("Page.addScriptToEvaluateOnNewDocument", {
+                "source": (
+                    "Object.defineProperty(navigator, 'webdriver',"
+                    " {get: () => undefined});"
+                    " window.chrome = window.chrome || {runtime: {}};"
+                    " Object.defineProperty(navigator, 'plugins',"
+                    " {get: () => [1, 2, 3, 4, 5]});"
+                    " Object.defineProperty(navigator, 'languages',"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                )})
+        except Exception:
+            pass  # non-fatal: browser still works without anti-detection
         self.page_sessions[page["targetId"]] = self._sid
         # Every OTHER page target that already exists must be enforced too —
         # the startup attach race is exactly why the visible window once came
