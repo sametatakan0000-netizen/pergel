@@ -381,6 +381,16 @@ class BrowserFarmSaaSServer:
                     return
                 if self._throttled():
                     return
+                if self.path in ("/ui", "/ui/"):
+                    from src.api.web_ui import get_ui_html
+                    body = get_ui_html().encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if self.path == "/v1/health":
                     report = parent.watchdog.run_cycle()
                     try:
