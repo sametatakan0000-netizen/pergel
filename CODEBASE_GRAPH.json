@@ -3,7 +3,7 @@
     "total_files": 91,
     "total_classes": 71,
     "total_functions": 625,
-    "total_loc": 13009
+    "total_loc": 13030
   },
   "modules": [
     {
@@ -1724,7 +1724,7 @@
     {
       "module": "src.brand.pergel_app",
       "path": "src/brand/pergel_app.py",
-      "loc": 229,
+      "loc": 231,
       "classes": [],
       "functions": [
         "user_dirs",
@@ -2128,7 +2128,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 425,
+      "loc": 444,
       "classes": [
         "AdblockBrowserSession"
       ],

@@ -95,9 +95,11 @@ def launch_flags(extension_dir: str) -> list:
     ``--no-sandbox`` warning bar; the load-extension pair makes every new tab
     open the Pergel NTP instead of Chromium's Google page.
     """
-    return ["--class=Pergel", "--disable-infobars", "--test-type",
+    return ["--class=Pergel", "--disable-infobars",
             "--no-first-run", "--no-default-browser-check",
             "--disable-search-engine-choice-screen",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=AutomationControlled",
             "--load-extension=" + extension_dir,
             "--disable-extensions-except=" + extension_dir]
 

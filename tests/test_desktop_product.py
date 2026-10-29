@@ -45,11 +45,25 @@ class TestNewTabOverrideExtension(unittest.TestCase):
 class TestWindowIdentity(unittest.TestCase):
     def test_launch_flags_brand_the_window(self):
         flags = pergel_app.launch_flags("/x/ext")
-        for f in ("--class=Pergel", "--disable-infobars", "--test-type",
+        for f in ("--class=Pergel", "--disable-infobars",
                   "--no-first-run", "--no-default-browser-check",
+                  "--disable-blink-features=AutomationControlled",
                   "--load-extension=/x/ext",
                   "--disable-extensions-except=/x/ext"):
             self.assertIn(f, flags)
+        # --test-type is an automation marker that Google detects and blocks;
+        # it must NOT be in the flags (product fix for login failures)
+        self.assertNotIn("--test-type", flags)
+
+    def test_antiautomation_flags_present(self):
+        """Google blocks browsers that expose automation markers."""
+        flags = driver.browser_base_args()
+        self.assertIn("--disable-blink-features=AutomationControlled", flags)
+        # UA must look like standard Chrome, not HeadlessChrome/Playwright
+        ua_flag = [a for a in flags if a.startswith("--user-agent=")]
+        self.assertTrue(ua_flag, "must set a standard Chrome UA")
+        self.assertNotIn("Headless", ua_flag[0])
+        self.assertNotIn("Playwright", ua_flag[0])
 
     def test_sandbox_flag_only_for_root(self):
         with mock.patch.object(driver.os, "geteuid", return_value=0):
