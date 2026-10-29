@@ -346,14 +346,16 @@ Built openly and continuously — real work, in order (full list: `git log`):
 - **Global-first** — 8 languages, RTL, accessibility.
 - **Identity** — a full rebrand (Vane -> Pergel), icons, `.deb` desktop package.
 - **Web UI** — `http://127.0.0.1:8871/ui/` control panel (Start / History / Settings tabs).
+- **Session record/replay** — record HTTP traffic to JSON, replay deterministically without network.
+- **WebMCP** — MCP protocol handler exposing browse/extract/crawl/search as tools (`/v1/mcp/*`).
+- **Cross-platform packaging** — PyInstaller specs for Windows (.exe) and macOS (.app bundle).
 
 ---
 
 ## What Pergel does *not* have yet
 
-1. **Session record/replay, Live View** — not yet.
-2. **WebMCP** — not yet (needs Chromium 146+).
-3. **Windows/macOS native packaging** — run from source works; installers not built.
+1. **WebMCP browser-side activation** — protocol handler ready (`/v1/mcp/*`); activates when Chromium 146+ is available.
+2. **Windows/macOS installers** — PyInstaller specs ready (`packaging/pergel-win.spec`, `pergel-mac.spec`); need Windows/macOS to build.
 
 We do **not** build stealth/anti-detection to bypass paywalls or bot walls; our security
 work is defence (SSRF/egress/privacy), never evasion.

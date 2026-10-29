@@ -280,14 +280,16 @@ Açık ve sürekli geliştirildi — gerçek iş, sırasıyla (tam liste: `git l
 - **Küresel öncelik** — 8 dil, RTL, erişilebilirlik.
 - **Kimlik** — tam marka yenileme (Vane → Pergel), ikonlar, `.deb` masaüstü paketi.
 - **Web arayüzü** — `http://127.0.0.1:8871/ui/` kontrol paneli (Başlat / Geçmiş / Ayarlar sekmeleri).
+- **Oturum kayıt/tekrar** — HTTP trafiğini JSON'a kaydet, ağsız deterministik tekrar oynat.
+- **WebMCP** — browse/extract/crawl/search araçlarını MCP protokolü olarak sunar (`/v1/mcp/*`).
+- **Çapraz platform paketleme** — Windows (.exe) ve macOS (.app) için PyInstaller spec dosyaları.
 
 ---
 
 ## Pergel'de henüz olmayanlar
 
-1. **Oturum kayıt/tekrar, Canlı Görünüm** — henüz yok.
-2. **WebMCP** — henüz yok (Chromium 146+ gerektirir).
-3. **Windows/macOS yerel paketleme** — kaynaktan çalışır; yükleyici yok.
+1. **WebMCP tarayıcı tarafı aktivasyon** — protokol işleyicisi hazır (`/v1/mcp/*`); Chromium 146+ geldiğinde aktifleşir.
+2. **Windows/macOS yükleyiciler** — PyInstaller spec dosyaları hazır (`packaging/pergel-win.spec`, `pergel-mac.spec`); Windows/macOS'ta derlenmesi gerekir.
 
 Bot duvarlarını ve ödeme duvarlarını aşmak için gizlilik/dolandırıcılık önleme teknikleri
 geliştirmiyoruz; güvenlik çalışmalarımız savunma amaçlıdır (SSRF/egres/gizlilik).

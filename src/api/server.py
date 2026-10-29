@@ -268,6 +268,8 @@ class BrowserFarmSaaSServer:
         self.db_dir = db_dir
         self.nous_proxy_url = nous_proxy_url
         os.makedirs(self.db_dir, exist_ok=True)
+        self.sessions_dir = os.path.join(self.db_dir, "sessions")
+        os.makedirs(self.sessions_dir, exist_ok=True)
         self.job_store = JobStore(os.path.join(self.db_dir, "jobs.db"))
         self.registry_path = registry_path or os.path.join(self.db_dir, "model_registry.json")
         self.registry_fetched_at: Optional[str] = None
@@ -589,6 +591,83 @@ class BrowserFarmSaaSServer:
                         except FetchBlocked as blocked:
                             results.append({"url": u, "error": str(blocked), "code": blocked.code})
                     self._send_json(200, {"results": results, "count": len(results)})
+                    return
+
+                if self.path == "/v1/session/record":
+                    from src.api.session_replay import SessionRecorder
+                    session_id = str(payload.get("session_id", "")).strip() or "default"
+                    method = str(payload.get("method", "GET")).upper()
+                    url = str(payload.get("url", "")).strip()
+                    if not url:
+                        self._send_json(400, {"error": "url is required"})
+                        return
+                    recorder = SessionRecorder(session_id, sessions_dir=str(parent.sessions_dir))
+                    recorder.record(
+                        method=method, url=url,
+                        req_headers=payload.get("request_headers"),
+                        req_body=payload.get("request_body", "").encode() if payload.get("request_body") else None,
+                        status=int(payload.get("status", 200)),
+                        resp_headers=payload.get("response_headers"),
+                        resp_body=payload.get("response_body", "").encode() if payload.get("response_body") else None,
+                        duration_ms=float(payload.get("duration_ms", 0)),
+                    )
+                    path = recorder.save()
+                    self._send_json(200, {"recorded": True, "path": path, "summary": recorder.summary})
+                    return
+
+                if self.path == "/v1/session/replay":
+                    from src.api.session_replay import SessionReplay
+                    session_id = str(payload.get("session_id", "")).strip()
+                    url = str(payload.get("url", "")).strip()
+                    if not session_id or not url:
+                        self._send_json(400, {"error": "session_id and url are required"})
+                        return
+                    spath = str(parent.sessions_dir / f"{session_id}.json")
+                    try:
+                        replay = SessionReplay.load(spath)
+                    except FileNotFoundError:
+                        self._send_json(404, {"error": f"session not found: {session_id}"})
+                        return
+                    result = replay.fetch(url, method=payload.get("method", "GET"))
+                    if result is None:
+                        self._send_json(404, {"error": f"url not in session: {url}"})
+                        return
+                    self._send_json(200, {"replay": True, "response": result})
+                    return
+
+                if self.path == "/v1/session/list":
+                    sessions_dir = parent.sessions_dir
+                    sessions = []
+                    if sessions_dir.exists():
+                        for f in sorted(sessions_dir.glob("*.json")):
+                            import json as _json
+                            try:
+                                d = _json.loads(f.read_text())
+                                sessions.append({"session_id": d.get("session_id"), "entries": d.get("entry_count", 0), "file": f.name})
+                            except Exception:
+                                pass
+                    self._send_json(200, {"sessions": sessions, "count": len(sessions)})
+                    return
+
+                if self.path == "/v1/mcp/tools":
+                    from src.api.webmcp import WebMCPHandler
+                    handler = WebMCPHandler()
+                    self._send_json(200, handler.list_tools())
+                    return
+
+                if self.path == "/v1/mcp/capabilities":
+                    from src.api.webmcp import WebMCPHandler
+                    handler = WebMCPHandler()
+                    self._send_json(200, handler.capabilities())
+                    return
+
+                if self.path == "/v1/mcp/call":
+                    from src.api.webmcp import WebMCPHandler
+                    tool_name = str(payload.get("name", "")).strip()
+                    arguments = payload.get("arguments", {})
+                    handler = WebMCPHandler()
+                    result = handler.call_tool(tool_name, arguments)
+                    self._send_json(200 if not result.get("isError") else 400, result)
                     return
 
                 if self.path == "/v1/search/fanout":
