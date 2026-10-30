@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 93,
-    "total_classes": 73,
-    "total_functions": 639,
-    "total_loc": 13250
+    "total_files": 100,
+    "total_classes": 91,
+    "total_functions": 691,
+    "total_loc": 14027
   },
   "modules": [
     {
@@ -3567,6 +3567,290 @@
       "change_risk": 3.35
     },
     {
+      "module": "src.mahoraga",
+      "path": "src/mahoraga/__init__.py",
+      "loc": 23,
+      "classes": [],
+      "functions": [],
+      "imports": [],
+      "calls": [],
+      "change_risk": 0.29
+    },
+    {
+      "module": "src.mahoraga.component_merger",
+      "path": "src/mahoraga/component_merger.py",
+      "loc": 88,
+      "classes": [
+        "MergeExperiment",
+        "ComponentMerger"
+      ],
+      "functions": [
+        "improvement",
+        "__init__",
+        "merge",
+        "experiments",
+        "successful_merges",
+        "status"
+      ],
+      "imports": [
+        "dataclasses",
+        "logging",
+        "typing"
+      ],
+      "calls": [
+        "MergeExperiment",
+        "append",
+        "field",
+        "getLogger",
+        "info",
+        "len",
+        "list",
+        "max",
+        "sum",
+        "values"
+      ],
+      "change_risk": 2.5
+    },
+    {
+      "module": "src.mahoraga.filter_detector",
+      "path": "src/mahoraga/filter_detector.py",
+      "loc": 94,
+      "classes": [
+        "FilterMap",
+        "FilterDetector"
+      ],
+      "functions": [
+        "hidden_potential",
+        "__init__",
+        "detect_filters",
+        "apply_removal",
+        "get_map",
+        "analyzed_models",
+        "status"
+      ],
+      "imports": [
+        "dataclasses",
+        "logging",
+        "typing"
+      ],
+      "calls": [
+        "FilterMap",
+        "append",
+        "detect_filters",
+        "field",
+        "get",
+        "getLogger",
+        "info",
+        "keys",
+        "len",
+        "list",
+        "max",
+        "sum",
+        "values"
+      ],
+      "change_risk": 2.98
+    },
+    {
+      "module": "src.mahoraga.self_evolution",
+      "path": "src/mahoraga/self_evolution.py",
+      "loc": 150,
+      "classes": [
+        "EvolutionIteration",
+        "ExternalVerifier",
+        "RewardHackDetector",
+        "SelfEvolutionLoop"
+      ],
+      "functions": [
+        "improvement",
+        "__init__",
+        "verify",
+        "_default_verify",
+        "__init__",
+        "check",
+        "__init__",
+        "evolve_once",
+        "iterations",
+        "verified_improvements",
+        "status"
+      ],
+      "imports": [
+        "dataclasses",
+        "logging",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "EvolutionIteration",
+        "ExternalVerifier",
+        "RewardHackDetector",
+        "_verify_fn",
+        "append",
+        "benchmark_fn",
+        "check",
+        "field",
+        "get",
+        "getLogger",
+        "info",
+        "len",
+        "list",
+        "modify_fn",
+        "sum",
+        "verify",
+        "warning"
+      ],
+      "change_risk": 4.28
+    },
+    {
+      "module": "src.mahoraga.synapse_profiler",
+      "path": "src/mahoraga/synapse_profiler.py",
+      "loc": 182,
+      "classes": [
+        "FeatureMap",
+        "SynapseMap",
+        "LogitLensResult",
+        "PatchingResult",
+        "SynapseProfiler"
+      ],
+      "functions": [
+        "refusal_features",
+        "reasoning_features",
+        "__init__",
+        "load_model",
+        "logit_lens",
+        "activation_patching",
+        "profile_model",
+        "get_map",
+        "profiled_models",
+        "loaded_models",
+        "status",
+        "patch_hook"
+      ],
+      "imports": [
+        "dataclasses",
+        "logging",
+        "time",
+        "transformer_lens",
+        "typing"
+      ],
+      "calls": [
+        "LogitLensResult",
+        "PatchingResult",
+        "RuntimeError",
+        "SynapseMap",
+        "append",
+        "argmax",
+        "field",
+        "from_pretrained",
+        "get",
+        "getLogger",
+        "info",
+        "item",
+        "keys",
+        "len",
+        "list",
+        "ln_final",
+        "load_model",
+        "monotonic",
+        "range",
+        "run_with_cache",
+        "run_with_hooks",
+        "softmax",
+        "sum",
+        "to_string",
+        "to_tokens",
+        "unembed",
+        "values"
+      ],
+      "change_risk": 5.68
+    },
+    {
+      "module": "src.mahoraga.vessel",
+      "path": "src/mahoraga/vessel.py",
+      "loc": 118,
+      "classes": [
+        "ModuleState",
+        "ModuleInfo",
+        "Vessel"
+      ],
+      "functions": [
+        "__init__",
+        "uptime_ms",
+        "register_module",
+        "get_module",
+        "_load_module",
+        "log_action",
+        "action_log",
+        "module_states",
+        "status"
+      ],
+      "imports": [
+        "dataclasses",
+        "enum",
+        "logging",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "KeyError",
+        "ModuleInfo",
+        "RuntimeError",
+        "ValueError",
+        "_load_module",
+        "append",
+        "debug",
+        "error",
+        "getLogger",
+        "info",
+        "items",
+        "len",
+        "list",
+        "load_fn",
+        "monotonic",
+        "str",
+        "time"
+      ],
+      "change_risk": 4.47
+    },
+    {
+      "module": "src.mahoraga.websurf_oracle",
+      "path": "src/mahoraga/websurf_oracle.py",
+      "loc": 122,
+      "classes": [
+        "OracleResponse",
+        "WebsurfOracle"
+      ],
+      "functions": [
+        "__init__",
+        "register_tool",
+        "call_tool",
+        "fetch_model_metadata",
+        "search",
+        "tool_names",
+        "status"
+      ],
+      "imports": [
+        "dataclasses",
+        "logging",
+        "time",
+        "typing"
+      ],
+      "calls": [
+        "KeyError",
+        "OracleResponse",
+        "debug",
+        "field",
+        "get",
+        "getLogger",
+        "info",
+        "keys",
+        "len",
+        "list",
+        "monotonic",
+        "time"
+      ],
+      "change_risk": 4.33
+    },
+    {
       "module": "src.net_lab",
       "path": "src/net_lab/__init__.py",
       "loc": 0,
@@ -4432,6 +4716,42 @@
     "src.devtools.self_evolution_engine.evaluate_silent_watchdog",
     "src.devtools.token_and_debt_hygiene.compress_cli_output",
     "src.infra.hermes_config_builder.generate_hermes_cli_commands",
+    "src.mahoraga.component_merger.experiments",
+    "src.mahoraga.component_merger.improvement",
+    "src.mahoraga.component_merger.merge",
+    "src.mahoraga.component_merger.status",
+    "src.mahoraga.component_merger.successful_merges",
+    "src.mahoraga.filter_detector.analyzed_models",
+    "src.mahoraga.filter_detector.apply_removal",
+    "src.mahoraga.filter_detector.get_map",
+    "src.mahoraga.filter_detector.hidden_potential",
+    "src.mahoraga.filter_detector.status",
+    "src.mahoraga.self_evolution.evolve_once",
+    "src.mahoraga.self_evolution.improvement",
+    "src.mahoraga.self_evolution.iterations",
+    "src.mahoraga.self_evolution.status",
+    "src.mahoraga.self_evolution.verified_improvements",
+    "src.mahoraga.synapse_profiler.activation_patching",
+    "src.mahoraga.synapse_profiler.get_map",
+    "src.mahoraga.synapse_profiler.loaded_models",
+    "src.mahoraga.synapse_profiler.logit_lens",
+    "src.mahoraga.synapse_profiler.patch_hook",
+    "src.mahoraga.synapse_profiler.profile_model",
+    "src.mahoraga.synapse_profiler.profiled_models",
+    "src.mahoraga.synapse_profiler.reasoning_features",
+    "src.mahoraga.synapse_profiler.refusal_features",
+    "src.mahoraga.synapse_profiler.status",
+    "src.mahoraga.vessel.action_log",
+    "src.mahoraga.vessel.get_module",
+    "src.mahoraga.vessel.log_action",
+    "src.mahoraga.vessel.module_states",
+    "src.mahoraga.vessel.register_module",
+    "src.mahoraga.vessel.status",
+    "src.mahoraga.vessel.uptime_ms",
+    "src.mahoraga.websurf_oracle.fetch_model_metadata",
+    "src.mahoraga.websurf_oracle.register_tool",
+    "src.mahoraga.websurf_oracle.status",
+    "src.mahoraga.websurf_oracle.tool_names",
     "src.mcp_server.browse_url",
     "src.mcp_server.list_models",
     "src.mcp_server.router_health",

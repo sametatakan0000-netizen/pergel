@@ -272,3 +272,46 @@ class TestSelfEvolution(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSynapseProfilerIntegration(unittest.TestCase):
+    """Integration tests for real interpretability tools (GPU required)."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Load model once for all tests."""
+        import torch
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest("CUDA not available")
+        from src.mahoraga.synapse_profiler import SynapseProfiler
+        cls.profiler = SynapseProfiler()
+        cls.model_name = "gpt2"
+        try:
+            cls.profiler.load_model(cls.model_name, device="cuda")
+        except Exception as e:
+            raise unittest.SkipTest(f"Model loading failed: {e}")
+
+    def test_model_loaded(self):
+        self.assertIn(self.model_name, self.profiler.loaded_models)
+        model = self.profiler._models[self.model_name]
+        self.assertEqual(model.cfg.n_layers, 12)  # GPT-2 Small has 12 layers
+
+    def test_logit_lens(self):
+        results = self.profiler.logit_lens(self.model_name, "The capital of France is")
+        self.assertEqual(len(results), 12)  # 12 layers
+        self.assertTrue(all(r.predicted_token != "" for r in results))
+        self.assertTrue(all(0 <= r.confidence <= 1 for r in results))
+
+    def test_activation_patching(self):
+        results = self.profiler.activation_patching(
+            self.model_name,
+            clean_text="The Eiffel Tower is in Paris",
+            corrupted_text="The Eiffel Tower is in Berlin",
+        )
+        self.assertEqual(len(results), 12)
+        self.assertTrue(all(isinstance(r.matches_clean, bool) for r in results))
+
+    def test_loaded_models_tracking(self):
+        self.assertIn(self.model_name, self.profiler.loaded_models)
+        status = self.profiler.status()
+        self.assertGreaterEqual(status["models_loaded"], 1)
