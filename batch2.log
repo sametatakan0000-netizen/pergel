@@ -1,0 +1,31 @@
+Open targets available: 38
+  huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF
+  Qwen/Qwen3.8-27B
+  0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF
+  Qwen/Qwen2.5-32B-Instruct
+  Qwen/Qwen3-32B
+  Qwen/QwQ-32B
+  Qwen/Qwen2.5-Coder-32B-Instruct
+  Qwen/Qwen2.5-32B
+  mistralai/Codestral-22B-v0.1
+  Qwen/Qwen2.5-14B-Instruct
+
+Surgery batch: ['huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF', 'Qwen/Qwen3.8-27B', '0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF']
+[01:48:31] 
+MODEL 1/3
+[01:48:31] 
+============================================================
+[01:48:31] 🔪 AMELİYAT: huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF
+[01:48:31]   📥 İndiriliyor: huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:  50%|█████     | 1/2 [00:00<00:00,  2.22it/s]Fetching 2 files: 100%|██████████| 2/2 [00:00<00:00,  3.82it/s]
+[01:48:32]   ✅ İndirildi: /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm/surgery_work/huihui-ai_Huihui-Qwen3_8-27B-abliterated-GGUF
+[01:48:32]   🔬 Sinaps çıkarımı başlıyor...
+[01:48:32]   ❌ HATA: No safetensors found in /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm/surgery_work/huihui-ai_Huihui-Qwen3_8-27B-abliterated-GGUF
+[01:48:32] 
+MODEL 2/3
+[01:48:32] 
+============================================================
+[01:48:32] 🔪 AMELİYAT: Qwen/Qwen3.8-27B
+[01:48:32]   📥 İndiriliyor: Qwen/Qwen3.8-27B
+Fetching 28 files:   0%|          | 0/28 [00:00<?, ?it/s]Fetching 28 files:   4%|▎         | 1/28 [00:00<00:05,  5.29it/s]Fetching 28 files:  14%|█▍        | 4/28 [00:00<00:01, 14.22it/s]Fetching 28 files:  14%|█▍        | 4/28 [00:19<00:01, 14.22it/s]

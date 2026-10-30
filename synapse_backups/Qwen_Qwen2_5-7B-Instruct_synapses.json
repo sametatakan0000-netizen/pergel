@@ -1,0 +1,3287 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "total_synapses": 7615616512,
+  "n_layers": 28,
+  "layer_synapses": {
+    "0": 233057792,
+    "1": 233057792,
+    "2": 233057792,
+    "3": 233057792,
+    "4": 233057792,
+    "5": 233057792,
+    "6": 233057792,
+    "14": 233057792,
+    "15": 233057792,
+    "16": 233057792,
+    "17": 233057792,
+    "18": 233057792,
+    "19": 233057792,
+    "20": 233057792,
+    "21": 233057792,
+    "22": 233057792,
+    "23": 233057792,
+    "24": 233057792,
+    "25": 233057792,
+    "26": 233057792,
+    "27": 233057792,
+    "10": 233057792,
+    "11": 233057792,
+    "12": 233057792,
+    "13": 233057792,
+    "7": 233057792,
+    "8": 233057792,
+    "9": 233057792
+  },
+  "tensors": [
+    {
+      "key": "model.embed_tokens.weight",
+      "shape": [
+        152064,
+        3584
+      ],
+      "n_synapses": 544997376,
+      "hash": "251b464e6dcb5ea0",
+      "magnitude": 0.01053027156740427
+    },
+    {
+      "key": "model.layers.0.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "08a4df1393e98e8a",
+      "magnitude": 0.28355103731155396
+    },
+    {
+      "key": "model.layers.0.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "ee48136391b2cf84",
+      "magnitude": 0.010052808560431004
+    },
+    {
+      "key": "model.layers.0.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "663c6aa4ebc907d6",
+      "magnitude": 0.010411789640784264
+    },
+    {
+      "key": "model.layers.0.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "68221fb34000932a",
+      "magnitude": 0.009650054387748241
+    },
+    {
+      "key": "model.layers.0.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "941b0f6093fd1c2f",
+      "magnitude": 0.27271753549575806
+    },
+    {
+      "key": "model.layers.0.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "4801260ef610deab",
+      "magnitude": 8.471227645874023
+    },
+    {
+      "key": "model.layers.0.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "50c3a6fdf76cd7c4",
+      "magnitude": 0.021046532317996025
+    },
+    {
+      "key": "model.layers.0.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "ca180025a7fea576",
+      "magnitude": 0.009426203556358814
+    },
+    {
+      "key": "model.layers.0.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "e29a23707692fa85",
+      "magnitude": 0.8922950029373169
+    },
+    {
+      "key": "model.layers.0.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "6625cfcb09e70e1c",
+      "magnitude": 0.0153976920992136
+    },
+    {
+      "key": "model.layers.0.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "ae649554492b1dbc",
+      "magnitude": 0.059088993817567825
+    },
+    {
+      "key": "model.layers.0.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "775b1c7a44140669",
+      "magnitude": 0.007115517742931843
+    },
+    {
+      "key": "model.layers.1.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "03e0c59c5d53cc98",
+      "magnitude": 0.13447758555412292
+    },
+    {
+      "key": "model.layers.1.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "302acce913e5bf09",
+      "magnitude": 0.008087724447250366
+    },
+    {
+      "key": "model.layers.1.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "2c91161e09638bed",
+      "magnitude": 0.009594080038368702
+    },
+    {
+      "key": "model.layers.1.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "bb6d11646b883fef",
+      "magnitude": 0.007850938476622105
+    },
+    {
+      "key": "model.layers.1.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c2a74f0e9c4d3bc1",
+      "magnitude": 0.7200708389282227
+    },
+    {
+      "key": "model.layers.1.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "3fee26b0e962fe36",
+      "magnitude": 3.150068521499634
+    },
+    {
+      "key": "model.layers.1.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "d97ae43e94f5e91e",
+      "magnitude": 0.014962153509259224
+    },
+    {
+      "key": "model.layers.1.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "50d68c78bd313f21",
+      "magnitude": 0.011199131608009338
+    },
+    {
+      "key": "model.layers.1.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "9d7e7068a0fc7f38",
+      "magnitude": 0.6031582951545715
+    },
+    {
+      "key": "model.layers.1.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "59fdca0239a61de6",
+      "magnitude": 0.01091974601149559
+    },
+    {
+      "key": "model.layers.1.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "a60486cfc918efb1",
+      "magnitude": 0.059858836233615875
+    },
+    {
+      "key": "model.layers.1.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "6fad0e877153d015",
+      "magnitude": 0.010128295980393887
+    },
+    {
+      "key": "model.layers.2.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "5a332c6fd53bd534",
+      "magnitude": 0.38551807403564453
+    },
+    {
+      "key": "model.layers.2.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "0d01939edb38d2a6",
+      "magnitude": 0.01025962270796299
+    },
+    {
+      "key": "model.layers.2.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "caf9010c7d45659a",
+      "magnitude": 0.012097658589482307
+    },
+    {
+      "key": "model.layers.2.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "b692ef72484b18cc",
+      "magnitude": 0.009912130422890186
+    },
+    {
+      "key": "model.layers.2.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "301ef69fd8651f28",
+      "magnitude": 0.7603852152824402
+    },
+    {
+      "key": "model.layers.2.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d897535125656796",
+      "magnitude": 1.323073387145996
+    },
+    {
+      "key": "model.layers.2.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "2055f3bad194eb81",
+      "magnitude": 0.017288705334067345
+    },
+    {
+      "key": "model.layers.2.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "09cc5c02b315d8c8",
+      "magnitude": 0.011042666621506214
+    },
+    {
+      "key": "model.layers.2.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "d7f4ae06a100ed90",
+      "magnitude": 0.47205689549446106
+    },
+    {
+      "key": "model.layers.2.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "74935f831561aad2",
+      "magnitude": 0.01370459794998169
+    },
+    {
+      "key": "model.layers.2.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d316cb8f5d91da96",
+      "magnitude": 0.02131098508834839
+    },
+    {
+      "key": "model.layers.2.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "1e9a3e263c389441",
+      "magnitude": 0.008378147147595882
+    },
+    {
+      "key": "model.layers.3.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "ee8f5328cb214410",
+      "magnitude": 0.3489673435688019
+    },
+    {
+      "key": "model.layers.3.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "a6da0e0be913eaf8",
+      "magnitude": 0.012400173582136631
+    },
+    {
+      "key": "model.layers.3.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "8ee31a97c1a6b4bd",
+      "magnitude": 0.014769514091312885
+    },
+    {
+      "key": "model.layers.3.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "978df42b00288f9a",
+      "magnitude": 0.012589721009135246
+    },
+    {
+      "key": "model.layers.3.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "8f98055c62194c6e",
+      "magnitude": 1.0766541957855225
+    },
+    {
+      "key": "model.layers.3.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "27b7923bcb2c07f9",
+      "magnitude": 1.8783295154571533
+    },
+    {
+      "key": "model.layers.3.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "f8c908316c096677",
+      "magnitude": 0.018064754083752632
+    },
+    {
+      "key": "model.layers.3.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "c50c22417b88c5b7",
+      "magnitude": 0.011310343630611897
+    },
+    {
+      "key": "model.layers.3.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "1b1b5c0cd0bf7458",
+      "magnitude": 0.6746706962585449
+    },
+    {
+      "key": "model.layers.3.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "15891e50d4df95c8",
+      "magnitude": 0.014464625157415867
+    },
+    {
+      "key": "model.layers.3.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "7f2d93a993f9c6d9",
+      "magnitude": 0.1241946667432785
+    },
+    {
+      "key": "model.layers.3.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "7f3d149308745a39",
+      "magnitude": 0.00979343056678772
+    },
+    {
+      "key": "model.layers.4.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "b95a6c7d0a0634ec",
+      "magnitude": 0.4140966832637787
+    },
+    {
+      "key": "model.layers.4.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "5164de523ab0656c",
+      "magnitude": 0.012229814194142818
+    },
+    {
+      "key": "model.layers.4.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "616db02676efa766",
+      "magnitude": 0.015057280659675598
+    },
+    {
+      "key": "model.layers.4.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f67dea874d0a788d",
+      "magnitude": 0.012311327271163464
+    },
+    {
+      "key": "model.layers.4.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "7a2c2ee7d02b059c",
+      "magnitude": 1.0473583936691284
+    },
+    {
+      "key": "model.layers.4.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "704815be25bc72ab",
+      "magnitude": 0.2675142288208008
+    },
+    {
+      "key": "model.layers.4.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "e41c7d0a108a2fa5",
+      "magnitude": 0.015856502577662468
+    },
+    {
+      "key": "model.layers.4.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "46f0f87cfe1c2e55",
+      "magnitude": 0.011512655764818192
+    },
+    {
+      "key": "model.layers.4.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "89290c69e9871831",
+      "magnitude": 0.8104199767112732
+    },
+    {
+      "key": "model.layers.4.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "6259622e8a950e08",
+      "magnitude": 0.013622844591736794
+    },
+    {
+      "key": "model.layers.4.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "550302a6eb871a94",
+      "magnitude": 0.03034341335296631
+    },
+    {
+      "key": "model.layers.4.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "95c90b5f8fad044c",
+      "magnitude": 0.011811984702944756
+    },
+    {
+      "key": "model.layers.5.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "f23ffd6e61402c2a",
+      "magnitude": 0.5431328415870667
+    },
+    {
+      "key": "model.layers.5.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "5f3a7025fd64ab05",
+      "magnitude": 0.012599069625139236
+    },
+    {
+      "key": "model.layers.5.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "c2b3e6a80b406c8a",
+      "magnitude": 0.014329702593386173
+    },
+    {
+      "key": "model.layers.5.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "337965fb37f85df6",
+      "magnitude": 0.012770624831318855
+    },
+    {
+      "key": "model.layers.5.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "be43626c4c464063",
+      "magnitude": 1.2240965366363525
+    },
+    {
+      "key": "model.layers.5.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "b676337c34519617",
+      "magnitude": 0.354831337928772
+    },
+    {
+      "key": "model.layers.5.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "d0f97da3574db863",
+      "magnitude": 0.01460378896445036
+    },
+    {
+      "key": "model.layers.5.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "9e2168defe51002b",
+      "magnitude": 0.01156677771359682
+    },
+    {
+      "key": "model.layers.5.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "7202a2f1861943e4",
+      "magnitude": 0.742400586605072
+    },
+    {
+      "key": "model.layers.5.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "006a09077cd20a10",
+      "magnitude": 0.013398411683738232
+    },
+    {
+      "key": "model.layers.5.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "4c6ec7d1dadde057",
+      "magnitude": 0.046117670834064484
+    },
+    {
+      "key": "model.layers.5.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "ae309d9d53fcfbda",
+      "magnitude": 0.011413204483687878
+    },
+    {
+      "key": "model.layers.6.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "7df4f9edc379d2f0",
+      "magnitude": 0.48172998428344727
+    },
+    {
+      "key": "model.layers.6.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "ace6455494d4d1a5",
+      "magnitude": 0.697982132434845
+    },
+    {
+      "key": "model.layers.6.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f25e36df6d4a54ec",
+      "magnitude": 0.4730096757411957
+    },
+    {
+      "key": "model.layers.6.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "49e4aef51d70f1ac",
+      "magnitude": 0.015888402238488197
+    },
+    {
+      "key": "model.layers.6.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "9a2d3f29d794fbeb",
+      "magnitude": 0.011770963668823242
+    },
+    {
+      "key": "model.layers.6.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "aea19b2f70b86bdc",
+      "magnitude": 0.7963687181472778
+    },
+    {
+      "key": "model.layers.6.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e65e66fc81a3c40b",
+      "magnitude": 0.01377728022634983
+    },
+    {
+      "key": "model.layers.6.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "dbee93ad485fc601",
+      "magnitude": 0.04904228076338768
+    },
+    {
+      "key": "model.layers.6.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "f5169a86bed97825",
+      "magnitude": 0.011963418684899807
+    },
+    {
+      "key": "model.layers.14.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "4200de6ab7dfae0c",
+      "magnitude": 0.012787429615855217
+    },
+    {
+      "key": "model.layers.14.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "56c992d69c96be03",
+      "magnitude": 0.012970036827027798
+    },
+    {
+      "key": "model.layers.15.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "4cceb1095c037c76",
+      "magnitude": 0.7596419453620911
+    },
+    {
+      "key": "model.layers.15.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "c4d4e8a8e6f4661a",
+      "magnitude": 0.012911355122923851
+    },
+    {
+      "key": "model.layers.15.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "33668c7f0c2a0d69",
+      "magnitude": 0.012819141149520874
+    },
+    {
+      "key": "model.layers.15.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "60c98e2abd5cf7c1",
+      "magnitude": 0.01311790943145752
+    },
+    {
+      "key": "model.layers.15.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c17d93ca1fc7c4a6",
+      "magnitude": 0.7993548512458801
+    },
+    {
+      "key": "model.layers.15.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "76661b31fe92a105",
+      "magnitude": 0.48458513617515564
+    },
+    {
+      "key": "model.layers.15.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "334599350bc0a428",
+      "magnitude": 0.014225565828382969
+    },
+    {
+      "key": "model.layers.15.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e9d1d95e686f1d75",
+      "magnitude": 0.011814403347671032
+    },
+    {
+      "key": "model.layers.15.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "92fe3a6ad44ba3b2",
+      "magnitude": 0.5811561942100525
+    },
+    {
+      "key": "model.layers.15.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "fe54d6f8d236e49e",
+      "magnitude": 0.01298354472965002
+    },
+    {
+      "key": "model.layers.15.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "4244f5a17a39cb54",
+      "magnitude": 0.0327514111995697
+    },
+    {
+      "key": "model.layers.15.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "4dad14bd100c11e4",
+      "magnitude": 0.012002721428871155
+    },
+    {
+      "key": "model.layers.16.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2b895f6f009bbf3c",
+      "magnitude": 0.9459730386734009
+    },
+    {
+      "key": "model.layers.16.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "329d66b885c73a15",
+      "magnitude": 0.012855598703026772
+    },
+    {
+      "key": "model.layers.16.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "23f09fd23f543fe3",
+      "magnitude": 0.012849509716033936
+    },
+    {
+      "key": "model.layers.16.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "cf62313d880a0a7e",
+      "magnitude": 0.013134660199284554
+    },
+    {
+      "key": "model.layers.16.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c56831116aea1057",
+      "magnitude": 0.8222679495811462
+    },
+    {
+      "key": "model.layers.16.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "6cb78e8fd8ab7862",
+      "magnitude": 0.5609420537948608
+    },
+    {
+      "key": "model.layers.16.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "9f4fdf90ef9ac7be",
+      "magnitude": 0.012854029424488544
+    },
+    {
+      "key": "model.layers.16.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "72a0032234de1568",
+      "magnitude": 0.012173371389508247
+    },
+    {
+      "key": "model.layers.16.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "dea27a7d2aff086e",
+      "magnitude": 0.43848538398742676
+    },
+    {
+      "key": "model.layers.16.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "a63f1c535ea5fcaf",
+      "magnitude": 0.012611523270606995
+    },
+    {
+      "key": "model.layers.16.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f603a7b799694e4e",
+      "magnitude": 0.029253626242280006
+    },
+    {
+      "key": "model.layers.16.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "65b9e60ce8c60655",
+      "magnitude": 0.012897486798465252
+    },
+    {
+      "key": "model.layers.17.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c8ba0ee73ad902f9",
+      "magnitude": 0.9767361283302307
+    },
+    {
+      "key": "model.layers.17.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "062e9e5fe24fb303",
+      "magnitude": 0.012837262824177742
+    },
+    {
+      "key": "model.layers.17.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "6417f9acd3dc33f7",
+      "magnitude": 0.012694153934717178
+    },
+    {
+      "key": "model.layers.17.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "e078aad1910a7855",
+      "magnitude": 0.013178564608097076
+    },
+    {
+      "key": "model.layers.17.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "174d4627cfe5a449",
+      "magnitude": 0.8506396412849426
+    },
+    {
+      "key": "model.layers.17.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f1f6eb81a7e937d5",
+      "magnitude": 0.4712204337120056
+    },
+    {
+      "key": "model.layers.17.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "4058c6a7995b2efc",
+      "magnitude": 0.013304031454026699
+    },
+    {
+      "key": "model.layers.17.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "7e4bd018b463c777",
+      "magnitude": 0.012123619206249714
+    },
+    {
+      "key": "model.layers.17.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0988887071978694",
+      "magnitude": 0.4592449367046356
+    },
+    {
+      "key": "model.layers.17.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "8a60f9f86489e69b",
+      "magnitude": 0.012802031822502613
+    },
+    {
+      "key": "model.layers.17.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "5f3ff2a536866712",
+      "magnitude": 0.03280234336853027
+    },
+    {
+      "key": "model.layers.17.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "3b251c4d3160884b",
+      "magnitude": 0.012559509836137295
+    },
+    {
+      "key": "model.layers.18.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c25ac131b1c7e8f8",
+      "magnitude": 0.9300813674926758
+    },
+    {
+      "key": "model.layers.18.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "0ab3308d502a5740",
+      "magnitude": 0.013081598095595837
+    },
+    {
+      "key": "model.layers.18.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "a246122973be9135",
+      "magnitude": 0.01259642280638218
+    },
+    {
+      "key": "model.layers.18.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f79617f043cc63a6",
+      "magnitude": 0.013377330265939236
+    },
+    {
+      "key": "model.layers.18.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "a2a8c58afceb3911",
+      "magnitude": 0.8704376220703125
+    },
+    {
+      "key": "model.layers.18.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "944f870844bdbbdd",
+      "magnitude": 0.49685510993003845
+    },
+    {
+      "key": "model.layers.18.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "6a356ce736441920",
+      "magnitude": 0.012880632653832436
+    },
+    {
+      "key": "model.layers.18.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "29e1c381155ef07f",
+      "magnitude": 0.01283709704875946
+    },
+    {
+      "key": "model.layers.18.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2d6f92e81105aec7",
+      "magnitude": 0.7041932344436646
+    },
+    {
+      "key": "model.layers.18.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "f3b78e905177f645",
+      "magnitude": 0.012152555398643017
+    },
+    {
+      "key": "model.layers.18.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "14fd3b2ebb0c7715",
+      "magnitude": 0.04240705072879791
+    },
+    {
+      "key": "model.layers.18.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "08f0736076c1f61c",
+      "magnitude": 0.014197533950209618
+    },
+    {
+      "key": "model.layers.19.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "077b2769105e8423",
+      "magnitude": 0.9897500276565552
+    },
+    {
+      "key": "model.layers.19.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "244710ed2ffeacf1",
+      "magnitude": 0.013052534312009811
+    },
+    {
+      "key": "model.layers.19.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "6925a1e0db60c72e",
+      "magnitude": 0.012789993546903133
+    },
+    {
+      "key": "model.layers.19.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f45b264cd4d64875",
+      "magnitude": 0.013403119519352913
+    },
+    {
+      "key": "model.layers.19.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "50b049da7a8c2615",
+      "magnitude": 0.9278932213783264
+    },
+    {
+      "key": "model.layers.19.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "1e461ad0cdf783c2",
+      "magnitude": 0.6616188287734985
+    },
+    {
+      "key": "model.layers.19.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "b1b9a258532edc95",
+      "magnitude": 0.011596782132983208
+    },
+    {
+      "key": "model.layers.19.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "878a9806501cb941",
+      "magnitude": 0.012783878482878208
+    },
+    {
+      "key": "model.layers.19.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "544498d21a463c9c",
+      "magnitude": 0.7607585191726685
+    },
+    {
+      "key": "model.layers.19.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "2cd84bb2b4c1c8dd",
+      "magnitude": 0.012145177461206913
+    },
+    {
+      "key": "model.layers.19.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "23e757ea28ca1261",
+      "magnitude": 0.07930761575698853
+    },
+    {
+      "key": "model.layers.19.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "bf73cda0d92e8843",
+      "magnitude": 0.014207654632627964
+    },
+    {
+      "key": "model.layers.20.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "6547c4bb0cf13204",
+      "magnitude": 0.9843793511390686
+    },
+    {
+      "key": "model.layers.20.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "2c3e9988280434b4",
+      "magnitude": 0.013094986788928509
+    },
+    {
+      "key": "model.layers.20.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "0c81250504854819",
+      "magnitude": 0.012714048847556114
+    },
+    {
+      "key": "model.layers.20.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f360e37e693dd776",
+      "magnitude": 0.013450815342366695
+    },
+    {
+      "key": "model.layers.20.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "4752f404705d4785",
+      "magnitude": 0.9842095971107483
+    },
+    {
+      "key": "model.layers.20.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "99c50125a049980c",
+      "magnitude": 0.41396379470825195
+    },
+    {
+      "key": "model.layers.20.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "407267dc705493b0",
+      "magnitude": 0.012466751970350742
+    },
+    {
+      "key": "model.layers.20.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "629763515db94417",
+      "magnitude": 0.013058794662356377
+    },
+    {
+      "key": "model.layers.20.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "e59d3502bd72c733",
+      "magnitude": 0.4952450096607208
+    },
+    {
+      "key": "model.layers.20.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "f183cb62c65de11e",
+      "magnitude": 0.012544265016913414
+    },
+    {
+      "key": "model.layers.20.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "3b12daa111e57ce7",
+      "magnitude": 0.06221823766827583
+    },
+    {
+      "key": "model.layers.20.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "581137f9af3a303d",
+      "magnitude": 0.014706303365528584
+    },
+    {
+      "key": "model.layers.21.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0c593fa2d731f415",
+      "magnitude": 0.9652343988418579
+    },
+    {
+      "key": "model.layers.21.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "7f7bce7ee6292a22",
+      "magnitude": 0.013124912977218628
+    },
+    {
+      "key": "model.layers.21.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "69a40959ea6fe866",
+      "magnitude": 0.012942329049110413
+    },
+    {
+      "key": "model.layers.21.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "dc3cdc90fc8c3ddf",
+      "magnitude": 0.013488121330738068
+    },
+    {
+      "key": "model.layers.21.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "007d91fac64e266d",
+      "magnitude": 1.0899410247802734
+    },
+    {
+      "key": "model.layers.21.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "39cec8cdc52020e1",
+      "magnitude": 0.3738487660884857
+    },
+    {
+      "key": "model.layers.21.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "5edf149f119e45fa",
+      "magnitude": 0.01103882398456335
+    },
+    {
+      "key": "model.layers.21.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "b2e00ddc5af9db43",
+      "magnitude": 0.013391817919909954
+    },
+    {
+      "key": "model.layers.21.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "f5c0e6c2331255ae",
+      "magnitude": 0.5273882150650024
+    },
+    {
+      "key": "model.layers.21.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "c0bccbd75b9cfd32",
+      "magnitude": 0.011951940134167671
+    },
+    {
+      "key": "model.layers.21.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "5c564675fda31f9e",
+      "magnitude": 0.054775938391685486
+    },
+    {
+      "key": "model.layers.21.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "27727a66680661df",
+      "magnitude": 0.015499942936003208
+    },
+    {
+      "key": "model.layers.22.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "dbbcd44f9895a7f3",
+      "magnitude": 1.0077619552612305
+    },
+    {
+      "key": "model.layers.22.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f74df18c0e292a0a",
+      "magnitude": 0.012999488972127438
+    },
+    {
+      "key": "model.layers.22.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "b5bb945434ad6eee",
+      "magnitude": 0.013571024872362614
+    },
+    {
+      "key": "model.layers.22.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2698a44f28690651",
+      "magnitude": 1.2069547176361084
+    },
+    {
+      "key": "model.layers.22.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "388fde046a22343b",
+      "magnitude": 0.37084197998046875
+    },
+    {
+      "key": "model.layers.22.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "a59e3fcb6fb7a0a2",
+      "magnitude": 0.010498800314962864
+    },
+    {
+      "key": "model.layers.22.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "b70cdfef87d113b4",
+      "magnitude": 0.013730188831686974
+    },
+    {
+      "key": "model.layers.22.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "996237e9187d1227",
+      "magnitude": 0.47949346899986267
+    },
+    {
+      "key": "model.layers.22.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "914ae85f19412855",
+      "magnitude": 0.012062733061611652
+    },
+    {
+      "key": "model.layers.22.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "ab413442d7c59bcb",
+      "magnitude": 0.05799508094787598
+    },
+    {
+      "key": "model.layers.22.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "1a87cb26c82b2057",
+      "magnitude": 0.01487823761999607
+    },
+    {
+      "key": "lm_head.weight",
+      "shape": [
+        152064,
+        3584
+      ],
+      "n_synapses": 544997376,
+      "hash": "d0211d55da9b0917",
+      "magnitude": 0.009075998328626156
+    },
+    {
+      "key": "model.layers.22.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "e0411b6f85198da8",
+      "magnitude": 0.01322909165173769
+    },
+    {
+      "key": "model.layers.23.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c8832635bafc0829",
+      "magnitude": 0.9269628524780273
+    },
+    {
+      "key": "model.layers.23.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "c560c989080830fa",
+      "magnitude": 0.013268695212900639
+    },
+    {
+      "key": "model.layers.23.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "7047bf0fb6305669",
+      "magnitude": 0.013212225399911404
+    },
+    {
+      "key": "model.layers.23.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f78a335f6ee93dc3",
+      "magnitude": 0.013591834343969822
+    },
+    {
+      "key": "model.layers.23.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0566a13d3199bef5",
+      "magnitude": 1.4001439809799194
+    },
+    {
+      "key": "model.layers.23.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "39b52a17ecf8ccf7",
+      "magnitude": 0.3802613615989685
+    },
+    {
+      "key": "model.layers.23.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "7bffd02c5088b4e2",
+      "magnitude": 0.011341317556798458
+    },
+    {
+      "key": "model.layers.23.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "a77f3f51893c2b25",
+      "magnitude": 0.013963849283754826
+    },
+    {
+      "key": "model.layers.23.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "385049e2975d4b15",
+      "magnitude": 0.5552175641059875
+    },
+    {
+      "key": "model.layers.23.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "5449d31152226733",
+      "magnitude": 0.012623030692338943
+    },
+    {
+      "key": "model.layers.23.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "714fd42829e0f7cf",
+      "magnitude": 0.0990220159292221
+    },
+    {
+      "key": "model.layers.23.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "cc8000b7b60b9dc2",
+      "magnitude": 0.014992221258580685
+    },
+    {
+      "key": "model.layers.24.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "869d8422515dbb9a",
+      "magnitude": 0.9879215955734253
+    },
+    {
+      "key": "model.layers.24.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "4b1c6db9e558cc93",
+      "magnitude": 0.013477033004164696
+    },
+    {
+      "key": "model.layers.24.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "73590dd9f0b3c048",
+      "magnitude": 0.01301838830113411
+    },
+    {
+      "key": "model.layers.24.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "7f19a426e6475ad0",
+      "magnitude": 0.013740588910877705
+    },
+    {
+      "key": "model.layers.24.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "9c293529ffa838a4",
+      "magnitude": 1.4558002948760986
+    },
+    {
+      "key": "model.layers.24.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "1297f0e05fa01d9f",
+      "magnitude": 0.4102531969547272
+    },
+    {
+      "key": "model.layers.24.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "d8b2164153513fd9",
+      "magnitude": 0.010638827458024025
+    },
+    {
+      "key": "model.layers.24.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "8d714379e2033c58",
+      "magnitude": 0.014255878515541553
+    },
+    {
+      "key": "model.layers.24.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "3d7af53d48e89d2c",
+      "magnitude": 0.667888343334198
+    },
+    {
+      "key": "model.layers.24.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "16de90c89ea3409e",
+      "magnitude": 0.012144829146564007
+    },
+    {
+      "key": "model.layers.24.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f4c4e925f43e2db5",
+      "magnitude": 0.12395172566175461
+    },
+    {
+      "key": "model.layers.24.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "643da1c08b409502",
+      "magnitude": 0.017425457015633583
+    },
+    {
+      "key": "model.layers.25.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "b0cdd3f62c6387d9",
+      "magnitude": 0.9589328765869141
+    },
+    {
+      "key": "model.layers.25.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "2a79302f501ba3bc",
+      "magnitude": 0.013713059946894646
+    },
+    {
+      "key": "model.layers.25.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "0cc3c1a680b31b12",
+      "magnitude": 0.012873450294137001
+    },
+    {
+      "key": "model.layers.25.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "e6995229f9d21831",
+      "magnitude": 0.013874389231204987
+    },
+    {
+      "key": "model.layers.25.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2788a9de5ebdcced",
+      "magnitude": 1.5999088287353516
+    },
+    {
+      "key": "model.layers.25.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "64ee4a9e78c0bd18",
+      "magnitude": 0.3593260645866394
+    },
+    {
+      "key": "model.layers.25.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "98cff01ff219af25",
+      "magnitude": 0.009553811512887478
+    },
+    {
+      "key": "model.layers.25.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "c7e4e5a86f7efc19",
+      "magnitude": 0.015042304061353207
+    },
+    {
+      "key": "model.layers.25.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2f93a57125e373cf",
+      "magnitude": 0.5691054463386536
+    },
+    {
+      "key": "model.layers.25.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "634672fb58667b0b",
+      "magnitude": 0.011770983226597309
+    },
+    {
+      "key": "model.layers.25.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "0a1aaa5e6cc2fa32",
+      "magnitude": 0.154959037899971
+    },
+    {
+      "key": "model.layers.25.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "90479971ad045ce6",
+      "magnitude": 0.01863466016948223
+    },
+    {
+      "key": "model.layers.26.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "9e904cac26683ecb",
+      "magnitude": 0.923273503780365
+    },
+    {
+      "key": "model.layers.26.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "35f210707bfcde49",
+      "magnitude": 0.013729400932788849
+    },
+    {
+      "key": "model.layers.26.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "d8cdf66f7080d700",
+      "magnitude": 0.012861899100244045
+    },
+    {
+      "key": "model.layers.26.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "2c76cf14e3a234fc",
+      "magnitude": 0.013990756124258041
+    },
+    {
+      "key": "model.layers.26.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "271389f4303db43b",
+      "magnitude": 1.5960055589675903
+    },
+    {
+      "key": "model.layers.26.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "ed0d8dd791cd278f",
+      "magnitude": 0.3632875680923462
+    },
+    {
+      "key": "model.layers.26.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "5a380817fc8b9c8a",
+      "magnitude": 0.009074727073311806
+    },
+    {
+      "key": "model.layers.26.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "1031b1928fe1de38",
+      "magnitude": 0.015505063347518444
+    },
+    {
+      "key": "model.layers.26.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "64724c8019732a1e",
+      "magnitude": 0.6008635759353638
+    },
+    {
+      "key": "model.layers.26.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e0d20c6899050e71",
+      "magnitude": 0.010771350003778934
+    },
+    {
+      "key": "model.layers.26.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "0489c9b1a6571aa0",
+      "magnitude": 0.20085836946964264
+    },
+    {
+      "key": "model.layers.26.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "f78d6e04394814ab",
+      "magnitude": 0.022197721526026726
+    },
+    {
+      "key": "model.layers.27.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c4926dd6b206808f",
+      "magnitude": 0.89614337682724
+    },
+    {
+      "key": "model.layers.27.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "e6fb87fb64e8dfce",
+      "magnitude": 0.012593536637723446
+    },
+    {
+      "key": "model.layers.27.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "acf0dc55155a688a",
+      "magnitude": 0.013377867639064789
+    },
+    {
+      "key": "model.layers.27.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "fad566aa0c8c466e",
+      "magnitude": 0.013918171636760235
+    },
+    {
+      "key": "model.layers.27.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "65b1c139b27dc53c",
+      "magnitude": 2.1323864459991455
+    },
+    {
+      "key": "model.layers.27.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d066cce8d87f5892",
+      "magnitude": 7.128019332885742
+    },
+    {
+      "key": "model.layers.27.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "6c0f691a697438a1",
+      "magnitude": 0.009650715626776218
+    },
+    {
+      "key": "model.layers.27.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "096f08bac08a131e",
+      "magnitude": 0.013818626292049885
+    },
+    {
+      "key": "model.layers.27.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "f81b5d2af2bf4504",
+      "magnitude": 0.9434032440185547
+    },
+    {
+      "key": "model.layers.27.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "0b1333356c443950",
+      "magnitude": 0.0117812380194664
+    },
+    {
+      "key": "model.layers.27.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "e144c596834db2a0",
+      "magnitude": 0.743614912033081
+    },
+    {
+      "key": "model.layers.27.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "64077e4945f81c37",
+      "magnitude": 0.020430630072951317
+    },
+    {
+      "key": "model.norm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "882e91014f79b992",
+      "magnitude": 3.838880777359009
+    },
+    {
+      "key": "model.layers.10.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "f3f51b15187c5787",
+      "magnitude": 0.6458762884140015
+    },
+    {
+      "key": "model.layers.10.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "4736d15a5c78e1cc",
+      "magnitude": 0.012623941525816917
+    },
+    {
+      "key": "model.layers.10.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "c540651defb6960b",
+      "magnitude": 0.013539106585085392
+    },
+    {
+      "key": "model.layers.10.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "b27ebd3a107b21cd",
+      "magnitude": 0.012745295651257038
+    },
+    {
+      "key": "model.layers.10.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "e12376c1be1ade48",
+      "magnitude": 0.7836775183677673
+    },
+    {
+      "key": "model.layers.10.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d33f3dc433047656",
+      "magnitude": 0.33735257387161255
+    },
+    {
+      "key": "model.layers.10.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "1192b88299dd424b",
+      "magnitude": 0.015182041563093662
+    },
+    {
+      "key": "model.layers.10.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e6eda44eb88ce0fd",
+      "magnitude": 0.012232891283929348
+    },
+    {
+      "key": "model.layers.10.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2c35a459eac152a8",
+      "magnitude": 0.6377827525138855
+    },
+    {
+      "key": "model.layers.10.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e8ec7a11ad365a01",
+      "magnitude": 0.013553252443671227
+    },
+    {
+      "key": "model.layers.10.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "b5eb375fb045aaf6",
+      "magnitude": 0.060775987803936005
+    },
+    {
+      "key": "model.layers.10.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "a4f79861f636096b",
+      "magnitude": 0.01281543169170618
+    },
+    {
+      "key": "model.layers.11.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0df7aba5e7171a35",
+      "magnitude": 0.6919805407524109
+    },
+    {
+      "key": "model.layers.11.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "db1cd487a8e641bc",
+      "magnitude": 0.012781433761119843
+    },
+    {
+      "key": "model.layers.11.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "84f88fec789a6924",
+      "magnitude": 0.013299391604959965
+    },
+    {
+      "key": "model.layers.11.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "1bee2f93a0373ee7",
+      "magnitude": 0.012970438227057457
+    },
+    {
+      "key": "model.layers.11.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "e2677a684294bed4",
+      "magnitude": 0.7841987013816833
+    },
+    {
+      "key": "model.layers.11.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "0727ef6b06805f67",
+      "magnitude": 0.3117745816707611
+    },
+    {
+      "key": "model.layers.11.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "9e7390999a59dded",
+      "magnitude": 0.015313662588596344
+    },
+    {
+      "key": "model.layers.11.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "b1eee54e613a0043",
+      "magnitude": 0.011906071566045284
+    },
+    {
+      "key": "model.layers.11.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0e87152d75e1125f",
+      "magnitude": 0.5634139776229858
+    },
+    {
+      "key": "model.layers.11.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "c7829ef30c5b1d1b",
+      "magnitude": 0.013646148145198822
+    },
+    {
+      "key": "model.layers.11.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "c0530bbfbcf73ae4",
+      "magnitude": 0.0428457036614418
+    },
+    {
+      "key": "model.layers.11.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "115d5ce4629e5f59",
+      "magnitude": 0.011396670714020729
+    },
+    {
+      "key": "model.layers.12.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "244bf278afbd44a7",
+      "magnitude": 0.7780173420906067
+    },
+    {
+      "key": "model.layers.12.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "f8e9ad06b07d8e50",
+      "magnitude": 0.012873354367911816
+    },
+    {
+      "key": "model.layers.12.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "d2511e70d16a4a91",
+      "magnitude": 0.013006865978240967
+    },
+    {
+      "key": "model.layers.12.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "481b3a49b14ac41b",
+      "magnitude": 0.01305852085351944
+    },
+    {
+      "key": "model.layers.12.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "1a6869c8912a2524",
+      "magnitude": 0.766819417476654
+    },
+    {
+      "key": "model.layers.12.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "01396e87d86dccf1",
+      "magnitude": 0.4337470233440399
+    },
+    {
+      "key": "model.layers.12.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "7e3b2f0d2d63e01f",
+      "magnitude": 0.01457949448376894
+    },
+    {
+      "key": "model.layers.12.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "38bad9e3202629d2",
+      "magnitude": 0.011983145028352737
+    },
+    {
+      "key": "model.layers.12.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "b1891faf49522359",
+      "magnitude": 0.5070369839668274
+    },
+    {
+      "key": "model.layers.12.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "990188c9d979bc54",
+      "magnitude": 0.013250811025500298
+    },
+    {
+      "key": "model.layers.12.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "697dd6c221b8afe8",
+      "magnitude": 0.04689229279756546
+    },
+    {
+      "key": "model.layers.12.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "c40dc3ea2eafe721",
+      "magnitude": 0.011775503866374493
+    },
+    {
+      "key": "model.layers.13.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "c2795d7d49116dac",
+      "magnitude": 0.8344227075576782
+    },
+    {
+      "key": "model.layers.13.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "c8fbc937306d01cf",
+      "magnitude": 0.01270562969148159
+    },
+    {
+      "key": "model.layers.13.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "4aa3bb407e5c5623",
+      "magnitude": 0.013240300118923187
+    },
+    {
+      "key": "model.layers.13.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "d4d0416cdf197465",
+      "magnitude": 0.012915986590087414
+    },
+    {
+      "key": "model.layers.13.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "48fcfee326dfc205",
+      "magnitude": 0.7689042687416077
+    },
+    {
+      "key": "model.layers.13.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f6e76147b867dc9a",
+      "magnitude": 0.8224366903305054
+    },
+    {
+      "key": "model.layers.13.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "0bbbf6d3f91edc16",
+      "magnitude": 0.014118812046945095
+    },
+    {
+      "key": "model.layers.13.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "5219428541765ee9",
+      "magnitude": 0.012156101875007153
+    },
+    {
+      "key": "model.layers.13.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "6faa52221f8074e4",
+      "magnitude": 0.47683486342430115
+    },
+    {
+      "key": "model.layers.13.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "a1f2725d5fe6c00a",
+      "magnitude": 0.013026556000113487
+    },
+    {
+      "key": "model.layers.13.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "f0b0742b1fb7f5e9",
+      "magnitude": 0.02190437912940979
+    },
+    {
+      "key": "model.layers.13.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "b32ac492720a2f11",
+      "magnitude": 0.012766486965119839
+    },
+    {
+      "key": "model.layers.14.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "4935ce522601afb1",
+      "magnitude": 0.8989558815956116
+    },
+    {
+      "key": "model.layers.14.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "6ad7fe65ed5b1e06",
+      "magnitude": 0.012947830371558666
+    },
+    {
+      "key": "model.layers.14.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "cf2be1466ee7130f",
+      "magnitude": 0.7950349450111389
+    },
+    {
+      "key": "model.layers.14.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "2ac31a7f2cb0682d",
+      "magnitude": 0.420490562915802
+    },
+    {
+      "key": "model.layers.14.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "8d9e714f567d60ab",
+      "magnitude": 0.01325579546391964
+    },
+    {
+      "key": "model.layers.14.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "ecdcfab965c8b382",
+      "magnitude": 0.011585286818444729
+    },
+    {
+      "key": "model.layers.14.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "389d0fcaeff14e89",
+      "magnitude": 0.4826594889163971
+    },
+    {
+      "key": "model.layers.14.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "a70f964fbcf79a17",
+      "magnitude": 0.012438285164535046
+    },
+    {
+      "key": "model.layers.14.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "0091427051faf886",
+      "magnitude": 0.04122272878885269
+    },
+    {
+      "key": "model.layers.14.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "3122a169c3edd61f",
+      "magnitude": 0.011166460812091827
+    },
+    {
+      "key": "model.layers.6.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "edb20e5a034cd3a9",
+      "magnitude": 0.012155845761299133
+    },
+    {
+      "key": "model.layers.6.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "658ee712df9b6489",
+      "magnitude": 0.014322008937597275
+    },
+    {
+      "key": "model.layers.6.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "69d5e4be1b38d6fb",
+      "magnitude": 0.012395148165524006
+    },
+    {
+      "key": "model.layers.7.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "02e3627939b1eb53",
+      "magnitude": 0.5864753723144531
+    },
+    {
+      "key": "model.layers.7.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "c2d5c3d99074d946",
+      "magnitude": 0.012597108259797096
+    },
+    {
+      "key": "model.layers.7.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "cbda56a8b79278ca",
+      "magnitude": 0.013509789481759071
+    },
+    {
+      "key": "model.layers.7.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "f0ed3913381ce0d4",
+      "magnitude": 0.012729275040328503
+    },
+    {
+      "key": "model.layers.7.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "80c64c97f5723666",
+      "magnitude": 0.6502463221549988
+    },
+    {
+      "key": "model.layers.7.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "01f17e308a924fa8",
+      "magnitude": 0.4935948848724365
+    },
+    {
+      "key": "model.layers.7.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "257ed7ee172b8f1f",
+      "magnitude": 0.013340138830244541
+    },
+    {
+      "key": "model.layers.7.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "9e520d7afd217087",
+      "magnitude": 0.013015219010412693
+    },
+    {
+      "key": "model.layers.7.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "2ea8423a71cbbdfd",
+      "magnitude": 0.49863481521606445
+    },
+    {
+      "key": "model.layers.7.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "547ff9e0948a3c5d",
+      "magnitude": 0.013035917654633522
+    },
+    {
+      "key": "model.layers.7.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d778a246d8d6dbfe",
+      "magnitude": 0.032298870384693146
+    },
+    {
+      "key": "model.layers.7.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "402c3bfb8df7f11f",
+      "magnitude": 0.01403302513062954
+    },
+    {
+      "key": "model.layers.8.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "eedfa4cd02b6419a",
+      "magnitude": 0.6216241121292114
+    },
+    {
+      "key": "model.layers.8.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "ddbe7ebd0b59dcbc",
+      "magnitude": 0.01278303936123848
+    },
+    {
+      "key": "model.layers.8.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "b226c23121e26c65",
+      "magnitude": 0.013321817852556705
+    },
+    {
+      "key": "model.layers.8.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "442b948664029130",
+      "magnitude": 0.012996668927371502
+    },
+    {
+      "key": "model.layers.8.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "ac5c030e05c7050b",
+      "magnitude": 0.6963653564453125
+    },
+    {
+      "key": "model.layers.8.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "a2a8dca896403e00",
+      "magnitude": 0.28135597705841064
+    },
+    {
+      "key": "model.layers.8.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "9fe794c888f81a2c",
+      "magnitude": 0.014691973105072975
+    },
+    {
+      "key": "model.layers.8.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "a68a57859ec6c51a",
+      "magnitude": 0.01185782253742218
+    },
+    {
+      "key": "model.layers.8.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "0509383d7ee66321",
+      "magnitude": 0.6057899594306946
+    },
+    {
+      "key": "model.layers.8.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "e65f12804f2b5ea3",
+      "magnitude": 0.013397922739386559
+    },
+    {
+      "key": "model.layers.8.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "0a703b46ebdcb84e",
+      "magnitude": 0.0358399972319603
+    },
+    {
+      "key": "model.layers.8.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "37a6246a6a42c52e",
+      "magnitude": 0.011884097941219807
+    },
+    {
+      "key": "model.layers.9.input_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "a3eb7d49038b13eb",
+      "magnitude": 0.6988812685012817
+    },
+    {
+      "key": "model.layers.9.mlp.down_proj.weight",
+      "shape": [
+        3584,
+        18944
+      ],
+      "n_synapses": 67895296,
+      "hash": "343468cfeffffa65",
+      "magnitude": 0.011705733835697174
+    },
+    {
+      "key": "model.layers.9.mlp.gate_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "cc1e6c149c2b198d",
+      "magnitude": 0.014513814821839333
+    },
+    {
+      "key": "model.layers.9.mlp.up_proj.weight",
+      "shape": [
+        18944,
+        3584
+      ],
+      "n_synapses": 67895296,
+      "hash": "033beacd4c252258",
+      "magnitude": 0.011930962093174458
+    },
+    {
+      "key": "model.layers.9.post_attention_layernorm.weight",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "5a6b2fbd7ec13347",
+      "magnitude": 1.0424875020980835
+    },
+    {
+      "key": "model.layers.9.self_attn.k_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "233792f09ff56187",
+      "magnitude": 0.44479596614837646
+    },
+    {
+      "key": "model.layers.9.self_attn.k_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "1d8b72737ebb2370",
+      "magnitude": 0.012721993960440159
+    },
+    {
+      "key": "model.layers.9.self_attn.o_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "f72ac0b5348cb805",
+      "magnitude": 0.012932750396430492
+    },
+    {
+      "key": "model.layers.9.self_attn.q_proj.bias",
+      "shape": [
+        3584
+      ],
+      "n_synapses": 3584,
+      "hash": "9cf4afa3efea6051",
+      "magnitude": 0.5717288255691528
+    },
+    {
+      "key": "model.layers.9.self_attn.q_proj.weight",
+      "shape": [
+        3584,
+        3584
+      ],
+      "n_synapses": 12845056,
+      "hash": "43525112f9c6fa13",
+      "magnitude": 0.01242138259112835
+    },
+    {
+      "key": "model.layers.9.self_attn.v_proj.bias",
+      "shape": [
+        512
+      ],
+      "n_synapses": 512,
+      "hash": "d5192f374920d2cd",
+      "magnitude": 0.05630003660917282
+    },
+    {
+      "key": "model.layers.9.self_attn.v_proj.weight",
+      "shape": [
+        512,
+        3584
+      ],
+      "n_synapses": 1835008,
+      "hash": "cc1dfb72bc6a64d6",
+      "magnitude": 0.014172157272696495
+    }
+  ],
+  "golden_red_rule": "NEVER DELETE - ALWAYS BACKUP"
+}

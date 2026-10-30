@@ -4,4 +4,59 @@ MODEL 1/3
 ============================================================
 [01:17:20] 🔪 AMELİYAT: Qwen/Qwen2.5-7B-Instruct
 [01:17:20]   📥 İndiriliyor: Qwen/Qwen2.5-7B-Instruct
-Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files:  73%|███████▎  | 8/11 [02:28<00:55, 18.62s/it]Fetching 11 files:  82%|████████▏ | 9/11 [02:32<00:32, 16.27s/it]Fetching 11 files:  91%|█████████ | 10/11 [02:33<00:13, 13.67s/it]Fetching 11 files: 100%|██████████| 11/11 [03:29<00:00, 22.18s/it]Fetching 11 files: 100%|██████████| 11/11 [03:29<00:00, 19.04s/it]
+[01:20:55]   ✅ İndirildi: /home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm/surgery_work/Qwen_Qwen2_5-7B-Instruct
+[01:20:55]   🔬 Sinaps çıkarımı başlıyor...
+[01:20:55]     📄 İşleniyor: model-00001-of-00004.safetensors
+[01:21:01]     📄 İşleniyor: model-00003-of-00004.safetensors
+[01:21:06]     📄 İşleniyor: model-00004-of-00004.safetensors
+[01:21:10]     📄 İşleniyor: model-00002-of-00004.safetensors
+[01:21:17]   ✅ 7,615,616,512 sinaps çıkarıldı, 28 katman
+[01:21:17]   💾 Yedeklendi: synapse_backups/Qwen_Qwen2_5-7B-Instruct_synapses.json
+[01:21:17]   🗑️ Gövde silindi (15.2 GB freed)
+[01:21:17]   ✅ AMELİYAT TAMAM: 7,615,616,512 sinaps
+[01:21:17] 
+MODEL 2/3
+[01:21:17] 
+============================================================
+[01:21:17] 🔪 AMELİYAT: google/gemma-2-9b-it
+[01:21:17]   📥 İndiriliyor: google/gemma-2-9b-it
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]
+[01:21:18]   ❌ İndirme hatası: 401 Client Error. (Request ID: Root=1-6ae5185e-2027185a5cc3da8f7361661c;362bcf96-8be0-4dac-8bb3-f7ddc25a0d56)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-2-9b-it/resolve/11c9b309abf73637e4b6f9a3fa1e92e615547819/model.safetensors.index.json.
+Access to model google/gemma-2-9b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+[01:21:18]   ❌ HATA: 401 Client Error. (Request ID: Root=1-6ae5185e-2027185a5cc3da8f7361661c;362bcf96-8be0-4dac-8bb3-f7ddc25a0d56)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-2-9b-it/resolve/11c9b309abf73637e4b6f9a3fa1e92e615547819/model.safetensors.index.json.
+Access to model google/gemma-2-9b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+[01:21:18] 
+MODEL 3/3
+[01:21:18] 
+============================================================
+[01:21:18] 🔪 AMELİYAT: google/gemma-3-12b-it
+[01:21:18]   📥 İndiriliyor: google/gemma-3-12b-it
+Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]
+[01:21:18]   ❌ İndirme hatası: 401 Client Error. (Request ID: Root=1-6ae5185e-04d759df45126eae2a432351;f725953c-4440-4775-b8ab-d62e8e4dbd2b)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-3-12b-it/resolve/96b6f1eccf38110c56df3a15bffe176da04bfd80/model-00004-of-00005.safetensors.
+Access to model google/gemma-3-12b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+[01:21:18]   ❌ HATA: 401 Client Error. (Request ID: Root=1-6ae5185e-04d759df45126eae2a432351;f725953c-4440-4775-b8ab-d62e8e4dbd2b)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-3-12b-it/resolve/96b6f1eccf38110c56df3a15bffe176da04bfd80/model-00004-of-00005.safetensors.
+Access to model google/gemma-3-12b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+
+============================================================
+TOPLU AMELİYAT SONUÇLARI
+============================================================
+✅ Qwen/Qwen2.5-7B-Instruct                        7,615,616,512 sinaps  completed
+❌ google/gemma-2-9b-it                                        0 sinaps  failed: 401 Client Error. (Request ID: Root=1-6ae5185e-2027185a5cc3da8f7361661c;362bcf96-8be0-4dac-8bb3-f7ddc25a0d56)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-2-9b-it/resolve/11c9b309abf73637e4b6f9a3fa1e92e615547819/model.safetensors.index.json.
+Access to model google/gemma-2-9b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+❌ google/gemma-3-12b-it                                       0 sinaps  failed: 401 Client Error. (Request ID: Root=1-6ae5185e-04d759df45126eae2a432351;f725953c-4440-4775-b8ab-d62e8e4dbd2b)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-3-12b-it/resolve/96b6f1eccf38110c56df3a15bffe176da04bfd80/model-00004-of-00005.safetensors.
+Access to model google/gemma-3-12b-it is restricted. You must have access to it and be authenticated to access it. Please log in.
+
+🔥 TOPLAM: 7,615,616,512 sinaps çıkarıldı

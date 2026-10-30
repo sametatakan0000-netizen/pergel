@@ -1,0 +1,5 @@
+token_embd\.weight=BF16
+output\.weight=BF16
+.*ffn_down\.weight=BF16
+.*ssm_out\.weight=BF16
+.*attn_output\.weight=BF16

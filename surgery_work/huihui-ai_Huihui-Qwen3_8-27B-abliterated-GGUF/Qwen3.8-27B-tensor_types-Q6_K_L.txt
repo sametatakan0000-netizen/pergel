@@ -1,0 +1,5 @@
+token_embd\.weight=q8_0
+output\.weight=q8_0
+.*ffn_down\.weight=q8_0
+.*ssm_out\.weight=q8_0
+.*attn_output\.weight=q8_0
