@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 93,
     "total_classes": 73,
-    "total_functions": 639,
-    "total_loc": 13280
+    "total_functions": 638,
+    "total_loc": 13253
   },
   "modules": [
     {
@@ -2180,7 +2180,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 566,
+      "loc": 539,
       "classes": [
         "AdblockBrowserSession"
       ],
@@ -2203,7 +2203,6 @@
         "_call_root",
         "_send_on",
         "_run_pump",
-        "_resume_watchdog",
         "_notify_decision",
         "fetch",
         "browse",
@@ -2253,7 +2252,6 @@
         "_relay_required",
         "_render",
         "_resume_message",
-        "_resume_watchdog",
         "_rule_id_of",
         "_run_pump",
         "_wait_ws",
@@ -2261,7 +2259,6 @@
         "add",
         "add_done_callback",
         "append",
-        "bool",
         "browser_base_args",
         "build_injection",
         "cancel",
@@ -2271,7 +2268,6 @@
         "connect",
         "create_future",
         "create_task",
-        "debug",
         "decide_cdp_response",
         "dict",
         "dumps",
@@ -2281,7 +2277,6 @@
         "get",
         "getLogger",
         "get_event_loop",
-        "getattr",
         "geteuid",
         "go",
         "info",
@@ -2289,7 +2284,6 @@
         "int",
         "isfile",
         "isinstance",
-        "items",
         "join",
         "kill",
         "list",
@@ -2315,7 +2309,6 @@
         "urlparse",
         "wait",
         "wait_for",
-        "warning",
         "which"
       ],
       "change_risk": 10.0

@@ -67,6 +67,9 @@ def browser_base_args(headless: bool = True) -> list:
     # Anti-detection: hide automation markers so sites like Google
     # don't block the browser as "insecure" (navigator.webdriver etc.)
     args.append("--disable-blink-features=AutomationControlled")
+    # OAuth popups (window.open) must not be silently swallowed by the
+    # Chromium popup blocker — without this every OAuth dialog is blank.
+    args.append("--disable-popup-blocking")
     return args
 
 
@@ -192,7 +195,7 @@ class AdblockBrowserSession:
                     " Object.defineProperty(navigator, 'plugins',"
                     " {get: () => [1, 2, 3, 4, 5]});"
                     " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
                 )})
         except Exception:
             pass  # non-fatal: browser still works without anti-detection
@@ -203,6 +206,8 @@ class AdblockBrowserSession:
         for t in tg["result"]["targetInfos"]:
             if t["type"] != "page" or t["targetId"] == page["targetId"]:
                 continue
+            if t.get("openerId"):
+                continue  # popup: zero CDP (white-screen fix)
             s = await self._call_root(
                 "Target.attachToTarget",
                 {"targetId": t["targetId"], "flatten": True})
@@ -214,13 +219,23 @@ class AdblockBrowserSession:
             "flatten": True})
         return self
 
-    async def _arm_page(self, target_id: str, sid: str) -> None:
+    async def _arm_page(self, target_id: str, sid: str,
+                        is_popup: bool = False) -> None:
         """Enable enforcement + anti-detection on one page target's session.
 
-        Called for every new tab/popup.  Must mirror the main-page setup in
-        ``__aenter__`` -- popups without UA override and webdriver spoof
-        are detected as automation (OAuth providers reject them).
+        For popups (window.open / OAuth dialogs, identified by ``openerId``)
+        we do ABSOLUTELY NOTHING — not even Fetch.enable.  Every CDP command
+        sent to a fresh popup session risks stalling its initial navigation,
+        producing the white-screen bug.  The popup loads naturally.
         """
+        import logging
+        _log = logging.getLogger("pergel.cdp")
+        _log.info("_arm_page: tid=%s sid=%s is_popup=%s",
+                  target_id[:12], sid[:12], is_popup)
+        if is_popup:
+            _log.info("_arm_page: POPUP — ZERO CDP commands (white-screen fix)")
+            self.page_sessions[target_id] = sid
+            return
         await self._call_on(sid, "Fetch.enable")
         await self._call_on(sid, "Page.enable")
         try:
@@ -238,7 +253,7 @@ class AdblockBrowserSession:
                     " Object.defineProperty(navigator, 'plugins',"
                     " {get: () => [1, 2, 3, 4, 5]});"
                     " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
                 )})
         except Exception:
             pass  # non-fatal
@@ -311,7 +326,7 @@ class AdblockBrowserSession:
     async def _call(self, method, params=None):
         return await self._call_on(self._sid, method, params)
 
-    async def _call_on(self, sid, method, params=None):
+    async def _call_on(self, sid, method, params=None, timeout=30.0):
         self._seq += 1
         mid = self._seq
         fut = asyncio.get_event_loop().create_future()
@@ -320,7 +335,13 @@ class AdblockBrowserSession:
         if sid:
             msg["sessionId"] = sid
         await self._ws.send(json.dumps(msg))
-        return await fut
+        try:
+            return await asyncio.wait_for(fut, timeout)
+        except asyncio.TimeoutError:
+            self._pending.pop(mid, None)
+            raise TimeoutError(
+                f"CDP {method} timed out after {timeout}s (id={mid}, sid={sid})"
+            )
 
     async def _call_root(self, method, params=None):
         """Browser-level command (no session): target management."""
@@ -350,15 +371,45 @@ class AdblockBrowserSession:
                     await self._ws.send(json.dumps(self._resume_message(
                         reply, self._seq, event_sid=m.get("sessionId"),
                         session_sid=self._sid)))
+                elif m.get("method") == "Page.windowOpen":
+                    import logging
+                    logging.getLogger("pergel.cdp").info(
+                        "Page.windowOpen: url=%s windowName=%s",
+                        m.get("params", {}).get("url", "?"),
+                        m.get("params", {}).get("windowName", "?"))
                 elif m.get("method") == "Target.attachedToTarget":
                     # a new tab (or startup-raced page) attached via auto-attach
                     p = m["params"]
-                    if p.get("targetInfo", {}).get("type") == "page":
-                        task = asyncio.get_event_loop().create_task(
-                            self._arm_page(p["targetInfo"]["targetId"],
-                                           p["sessionId"]))
-                        self._arm_tasks.add(task)
-                        task.add_done_callback(self._arm_tasks.discard)
+                    info = p.get("targetInfo", {})
+                    if info.get("type") != "page":
+                        continue
+                    sid = p["sessionId"]
+                    tid = info.get("targetId", "?")
+                    opener = info.get("openerId")
+                    import logging
+                    logging.getLogger("pergel.cdp").info(
+                        "Target.attachedToTarget: tid=%s sid=%s url=%s opener=%s",
+                        tid[:12], sid[:12], info.get("url", "?"),
+                        opener or "none")
+                    if opener:
+                        # POPUP (window.open / OAuth): detach IMMEDIATELY.
+                        # Merely being attached via CDP stalls the popup's
+                        # initial navigation -> white screen.  Detaching
+                        # guarantees the popup behaves like a normal browser
+                        # window with zero CDP interference.
+                        try:
+                            await self._call_root(
+                                "Target.detachFromTarget",
+                                {"sessionId": sid})
+                            logging.getLogger("pergel.cdp").info(
+                                "DETACHED from popup sid=%s (zero CDP)", sid[:12])
+                        except Exception:
+                            pass
+                        continue
+                    task = asyncio.get_event_loop().create_task(
+                        self._arm_page(tid, sid))
+                    self._arm_tasks.add(task)
+                    task.add_done_callback(self._arm_tasks.discard)
                 elif m.get("method") in ("Page.loadEventFired",
                                          "Page.domContentEventFired"):
                     self._load_evt.set()
