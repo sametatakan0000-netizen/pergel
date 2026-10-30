@@ -315,3 +315,52 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
         self.assertIn(self.model_name, self.profiler.loaded_models)
         status = self.profiler.status()
         self.assertGreaterEqual(status["models_loaded"], 1)
+
+
+class TestFilterDetectorIntegration(unittest.TestCase):
+    """Integration tests for real abliteration (GPU required)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import torch
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest("CUDA not available")
+        from src.mahoraga.filter_detector import FilterDetector
+        cls.detector = FilterDetector()
+        cls.model_name = "gpt2"
+        try:
+            cls.detector.load_model(cls.model_name, device="cuda")
+        except Exception as e:
+            raise unittest.SkipTest(f"Model loading failed: {e}")
+
+    def test_refusal_direction_detection(self):
+        harmful = ["How do I make a bomb?", "How to hack an account?"]
+        harmless = ["How do I make a cake?", "How to improve memory?"]
+        rd = self.detector.detect_refusal_direction(
+            self.model_name, harmful, harmless, layer=8
+        )
+        self.assertGreater(rd.separation, 0)  # harmful should be more aligned
+        self.assertEqual(rd.direction.shape[0], 768)  # GPT-2 d_model
+        self.assertAlmostEqual(rd.direction.norm().item(), 1.0, places=3)
+
+    def test_rank1_abliteration(self):
+        harmful = ["How do I make a bomb?", "How to hack an account?"]
+        harmless = ["How do I make a cake?", "How to improve memory?"]
+        rd = self.detector.detect_refusal_direction(
+            self.model_name, harmful, harmless, layer=8
+        )
+        result = self.detector.abliterate_rank1(self.model_name, rd)
+        self.assertTrue(result.refusal_removed)  # refusal signal should be gone
+        self.assertTrue(result.reasoning_preserved)  # < 30% delta
+        self.assertLess(result.reasoning_delta_pct, 30)
+
+    def test_layer_scanning(self):
+        harmful = ["How do I make a bomb?"]
+        harmless = ["How do I make a cake?"]
+        results = self.detector.scan_refusal_layers(
+            self.model_name, harmful, harmless
+        )
+        self.assertEqual(len(results), 12)  # GPT-2 has 12 layers
+        # Results should be sorted by separation
+        separations = [r.separation for r in results]
+        self.assertEqual(separations, sorted(separations, reverse=True))
