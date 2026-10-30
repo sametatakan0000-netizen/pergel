@@ -23,7 +23,7 @@ Hey HN! We built Pergel — an open-source browser engine that's privacy-first a
 - No residential proxies or CAPTCHA solving
 - No user tracking, ever
 
-**Tech:** Python + CDP (Chrome DevTools Protocol), 797 tests, MIT licensed.
+**Tech:** Python + CDP (Chrome DevTools Protocol), 802 tests, MIT licensed.
 
 **Links:**
 - GitHub: https://github.com/sametatakan0000-netizen/pergel
@@ -80,7 +80,7 @@ No telemetry. No data collection. BYOK. MIT licensed.
 
 4/5: Under the hood:
 → Python + Chrome DevTools Protocol
-→ 797 tests, TDD throughout
+→ 802 tests, TDD throughout
 → Session record/replay for deterministic testing
 → Structured error envelopes with request_id correlation
 
@@ -112,7 +112,7 @@ Telemetri yok. Veri toplama yok. BYOK. MIT lisanslı.
 
 4/5: İç yapı:
 → Python + Chrome DevTools Protocol
-→ 773 test, TDD
+→ 802 test, TDD
 → Deterministik oturum kayıt/tekrar
 
 5/5: Star atın, fork'layın, kırın, eksikleri söyleyin.
@@ -151,7 +151,7 @@ Why it matters for this community:
 → Pergel's engine ladder keeps cheap pages cheap (verified benchmarks in repo)
 → Built-in ad blocking (113k+ rules) + tracker blocking (60+ domains), zero telemetry, BYOK
 → Crash recovery + tab hibernation (memory saver)
-→ MIT licensed, 797 tests, fully open source
+→ MIT licensed, 802 tests, fully open source
 
 Not selling anything — just sharing what I built. Feedback welcome!
 
@@ -165,7 +165,7 @@ Bu topluluk için neden önemli:
 → Pergel'in motor merdiveni ucuz sayfayı ucuz tutar (repoda doğrulanmış benchmark'lar)
 → 113k+ kurallı yerleşik reklam engelleme + 60+ tracker engelleme, sıfır telemetri, BYOK
 → Crash recovery + tab hibernation (bellek tasarrufu)
-→ MIT lisanslı, 797 test, tamamen açık kaynak
+→ MIT lisanslı, 802 test, tamamen açık kaynak
 
 Satış yok — sadece yaptığım şeyi paylaşıyorum. Geri bildirimlerinize açığım!
 
