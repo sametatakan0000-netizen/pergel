@@ -171,7 +171,8 @@ class AdblockBrowserSession:
         self._sid = sess["result"]["sessionId"]
         await self._call("Fetch.enable")
         await self._call("Page.enable")
-        await self._call("Runtime.enable")
+        # NOTE: NO Runtime.enable — it triggers Chromium's "debugger paused"
+        # banner and halts JavaScript in popups (OAuth white-screen root cause).
         # Standard Chrome UA (Playwright's default has automation tokens
         # that Google rejects at login). CDP is more reliable than the
         # --user-agent flag which can break extension loading.
