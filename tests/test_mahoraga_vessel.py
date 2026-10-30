@@ -364,3 +364,46 @@ class TestFilterDetectorIntegration(unittest.TestCase):
         # Results should be sorted by separation
         separations = [r.separation for r in results]
         self.assertEqual(separations, sorted(separations, reverse=True))
+
+
+class TestComponentMergerIntegration(unittest.TestCase):
+    """Integration tests for real MergeKit merging."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from src.mahoraga.component_merger import ComponentMerger
+            cls.merger = ComponentMerger()
+        except Exception as e:
+            raise unittest.SkipTest(f"ComponentMerger init failed: {e}")
+
+    def test_supported_methods(self):
+        self.assertIn("ties", self.merger.SUPPORTED_METHODS)
+        self.assertIn("dare", self.merger.SUPPORTED_METHODS)
+        self.assertIn("slerp", self.merger.SUPPORTED_METHODS)
+
+    def test_unsupported_method_rejected(self):
+        with self.assertRaises(ValueError):
+            self.merger.merge(["a", "b"], method="nonexistent")
+
+    def test_merge_config_creation(self):
+        exp = self.merger.merge(["gpt2", "distilgpt2"], method="ties", density=0.5)
+        self.assertEqual(exp.technique, "ties")
+        self.assertEqual(exp.source_models, ["gpt2", "distilgpt2"])
+        self.assertIn("Config validated", exp.notes)
+
+    def test_merge_config_validation(self):
+        exp = self.merger.merge(["gpt2", "distilgpt2"], method="dare")
+        config = self.merger.create_merge_config(exp)
+        self.assertEqual(config.merge_method, "dare")
+
+    def test_experiment_tracking(self):
+        self.merger.merge(["gpt2", "distilgpt2"], method="ties")
+        self.merger.merge(["gpt2", "distilgpt2"], method="slerp")
+        self.assertEqual(len(self.merger.experiments), 2)
+
+    def test_improvement_calculation(self):
+        exp = self.merger.merge(["a", "b"])
+        exp.benchmark_before = {"mmlu": 80.0, "gsm8k": 70.0}
+        exp.benchmark_after = {"mmlu": 84.0, "gsm8k": 73.0}
+        self.assertAlmostEqual(exp.improvement, 4.667, places=1)
