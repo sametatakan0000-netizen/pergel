@@ -1,4 +1,4 @@
-"""RED: every page tab is intercepted — not just the startup target.
+"""New tabs are plain browser windows by design (zero CDP) — not just the startup target.
 
 The product is a real browser: users open tabs. Today the session enables
 ``Fetch`` on ONE page target (the last one at startup), so (a) the startup
@@ -17,7 +17,11 @@ TAB_HTML = f"data:text/html,<img src={AD_URL}>"
 
 
 class TestEveryTabIntercepted(unittest.TestCase):
-    def test_new_tabs_requests_reach_the_engine(self):
+    def test_new_tabs_are_not_intercepted(self):
+        """New tabs are plain browser windows: their requests must NOT reach
+        the enforcement engine (zero CDP on new targets -- the OAuth
+        white-screen fix). The startup tab keeps full enforcement: the
+        baseline assertion guards against this passing vacuously."""
         decisions = []
 
         async def scenario():
@@ -28,16 +32,28 @@ class TestEveryTabIntercepted(unittest.TestCase):
                 rep = await sess._call_root(
                     "Target.createTarget", {"url": "about:blank"})
                 tid = rep["result"]["targetId"]
-                sid = await sess.wait_session_for(tid, timeout=5)
-                await sess._send_on(sid, "Page.navigate", {"url": TAB_HTML})
+                await asyncio.sleep(1)  # grace: auto-attach would land here
+                before = len(decisions)
+                new_tab_hits = [d for d in decisions[:before]
+                                if "doubleclick.net" in d["url"]]
+                await sess._call("Page.navigate", {"url": TAB_HTML})
                 await asyncio.sleep(2)
+                startup_hits = [d for d in decisions[before:]
+                                if "doubleclick.net" in d["url"]]
+            scenario.new_tab_hits = new_tab_hits
+            scenario.startup_hits = startup_hits
 
+        scenario.new_tab_hits = []
+        scenario.startup_hits = []
         asyncio.run(scenario())
-        hits = [d for d in decisions if "doubleclick.net" in d["url"]]
+        self.assertFalse(
+            scenario.new_tab_hits,
+            "a NEW tab's request must NOT be intercepted (zero CDP = plain "
+            f"window); decisions seen: {scenario.new_tab_hits!r}")
         self.assertTrue(
-            hits,
-            "a NEW tab's ad request must be intercepted and surfaced; "
-            f"decisions seen: {decisions!r}")
+            scenario.startup_hits,
+            "baseline: the startup tab must still be intercepted and "
+            f"blocked; decisions seen: {scenario.startup_hits!r}")
 
     def test_new_tabs_have_no_cdp_session(self):
         """New tabs must NOT be auto-armed — zero CDP means OAuth popups
