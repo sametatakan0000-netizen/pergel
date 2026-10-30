@@ -10,6 +10,7 @@ Her yön ayrı ayrı saklanır (altın-kırmızı kural).
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import struct
 from dataclasses import dataclass, field
@@ -26,6 +27,10 @@ class DirectionVector:
     n_dims: int
     separation_score: float  # iki yön arasındaki ayrım
     hash: str
+
+def _sanitize_model_name(name: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+
 
 @dataclass
 class MultiDirectionResult:
@@ -110,7 +115,7 @@ class MultiDirectionExtractor:
 
     def backup_directions(self, result: MultiDirectionResult) -> str:
         """Altın-kırmızı kural: Tüm yönleri yedekle."""
-        backup_file = self.backup_dir / f"{result.model_name}_multi_directions.json"
+        backup_file = self.backup_dir / f"{_sanitize_model_name(result.model_name)}_multi_directions.json"
         data = {
             "model": result.model_name,
             "golden_red_rule": "NEVER DELETE - ALWAYS BACKUP",

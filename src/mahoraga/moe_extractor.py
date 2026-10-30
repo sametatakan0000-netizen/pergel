@@ -9,6 +9,7 @@ Altın-kırmızı kural: Çıkarılan her sinaps kalıcı olarak saklanır.
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import struct
 from dataclasses import dataclass, field
@@ -25,6 +26,10 @@ class ExpertSynapse:
     direction: str  # "refusal" or "helpful"
     magnitude: float
     hash: str  # yedekleme için
+
+def _sanitize_model_name(name: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+
 
 @dataclass  
 class RouterProfile:
@@ -118,7 +123,7 @@ class MoEExpertExtractor:
 
     def backup_synapses(self, synapses: list[ExpertSynapse], model_name: str) -> str:
         """Altın-kırmızı kural: Tüm sinapsları yedekle."""
-        backup_file = self.backup_dir / f"{model_name}_moe_synapses.json"
+        backup_file = self.backup_dir / f"{_sanitize_model_name(model_name)}_moe_synapses.json"
         data = {
             "model": model_name,
             "golden_red_rule": "NEVER DELETE - ALWAYS BACKUP",

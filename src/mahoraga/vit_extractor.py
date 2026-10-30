@@ -9,6 +9,7 @@ Altın-kırmızı kural: Çıkarılan her sinaps kalıcı olarak saklanır.
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import struct
 from dataclasses import dataclass, field
@@ -24,6 +25,10 @@ class PatchEmbedding:
     n_synapses: int
     magnitude: float
     hash: str
+
+def _sanitize_model_name(name: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+
 
 @dataclass
 class CrossAttentionSynapse:
@@ -95,7 +100,7 @@ class VisionSynapseExtractor:
 
     def backup_synapses(self, result: VisionExtractionResult) -> str:
         """Altın-kırmızı kural: Tüm sinapsları yedekle."""
-        backup_file = self.backup_dir / f"{result.model_name}_vision_synapses.json"
+        backup_file = self.backup_dir / f"{_sanitize_model_name(result.model_name)}_vision_synapses.json"
         data = {
             "model": result.model_name,
             "golden_red_rule": "NEVER DELETE - ALWAYS BACKUP",
