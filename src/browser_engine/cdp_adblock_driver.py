@@ -192,11 +192,6 @@ class AdblockBrowserSession:
                 "source": (
                     "Object.defineProperty(navigator, 'webdriver',"
                     " {get: () => undefined});"
-                    " window.chrome = window.chrome || {runtime: {}};"
-                    " Object.defineProperty(navigator, 'plugins',"
-                    " {get: () => [1, 2, 3, 4, 5]});"
-                    " Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']});"
                 )})
         except Exception:
             pass  # non-fatal: browser still works without anti-detection
