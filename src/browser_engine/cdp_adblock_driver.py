@@ -208,13 +208,11 @@ class AdblockBrowserSession:
                 "Target.attachToTarget",
                 {"targetId": t["targetId"], "flatten": True})
             await self._arm_page(t["targetId"], s["result"]["sessionId"])
-        # and every page target created later (new tabs) is discovered via
-        # Target.targetCreated and manually attached (NON-popup only).
-        # We deliberately avoid Target.setAutoAttach: even with
-        # waitForDebuggerOnStart=False, Chromium pauses new targets when
-        # auto-attach fires -> "debugger paused" banner + white-screen OAuth.
-        await self._call_root("Target.setDiscoverTargets",
-                              {"discover": True})
+        # NOTE: We do NOT discover or auto-attach to new targets.
+        # Any CDP interaction with a target (even Target.setDiscoverTargets)
+        # can trigger Chromium's debugger-pause and stall OAuth popups.
+        # Only the initial tab(s) get enforcement; popups and new tabs
+        # behave as plain browser windows (zero CDP).
         return self
 
     async def _attach_and_arm(self, target_id: str) -> None:

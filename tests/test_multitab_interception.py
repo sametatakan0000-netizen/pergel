@@ -39,7 +39,9 @@ class TestEveryTabIntercepted(unittest.TestCase):
             "a NEW tab's ad request must be intercepted and surfaced; "
             f"decisions seen: {decisions!r}")
 
-    def test_page_sessions_are_tracked_per_target(self):
+    def test_new_tabs_have_no_cdp_session(self):
+        """New tabs must NOT be auto-armed — zero CDP means OAuth popups
+        work as plain browser windows (no debugger-pause)."""
         seen = {}
 
         async def scenario():
@@ -48,15 +50,14 @@ class TestEveryTabIntercepted(unittest.TestCase):
                 rep = await sess._call_root(
                     "Target.createTarget", {"url": "about:blank"})
                 tid = rep["result"]["targetId"]
-                sid = await sess.wait_session_for(tid, timeout=5)
                 seen["tid"] = tid
-                seen["sid"] = sid
                 seen["tracked"] = sess.page_sessions.get(tid)
 
         asyncio.run(scenario())
-        self.assertEqual(seen["tracked"], seen["sid"],
-                         "each page target's enforcement session must be "
-                         "tracked in page_sessions")
+        self.assertIsNone(
+            seen["tracked"],
+            "new tab targets must NOT have CDP enforcement sessions "
+            "(zero CDP = OAuth popups work correctly)")
 
 
 if __name__ == "__main__":
