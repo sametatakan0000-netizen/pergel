@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 93,
     "total_classes": 73,
-    "total_functions": 638,
-    "total_loc": 13254
+    "total_functions": 639,
+    "total_loc": 13257
   },
   "modules": [
     {
@@ -2180,7 +2180,7 @@
     {
       "module": "src.browser_engine.cdp_adblock_driver",
       "path": "src/browser_engine/cdp_adblock_driver.py",
-      "loc": 540,
+      "loc": 543,
       "classes": [
         "AdblockBrowserSession"
       ],
@@ -2193,6 +2193,7 @@
         "__init__",
         "_build_command",
         "__aenter__",
+        "_attach_and_arm",
         "_arm_page",
         "wait_session_for",
         "__aexit__",
@@ -2240,6 +2241,7 @@
         "TimeoutError",
         "_action_of",
         "_arm_page",
+        "_attach_and_arm",
         "_build_command",
         "_call",
         "_call_on",

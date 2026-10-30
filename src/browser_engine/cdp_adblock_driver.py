@@ -213,12 +213,24 @@ class AdblockBrowserSession:
                 "Target.attachToTarget",
                 {"targetId": t["targetId"], "flatten": True})
             await self._arm_page(t["targetId"], s["result"]["sessionId"])
-        # and every page target created later (new tabs) auto-attaches and is
-        # armed by the pump's Target.attachedToTarget handler
-        await self._call_root("Target.setAutoAttach", {
-            "autoAttach": True, "waitForDebuggerOnStart": False,
-            "flatten": True})
+        # and every page target created later (new tabs) is discovered via
+        # Target.targetCreated and manually attached (NON-popup only).
+        # We deliberately avoid Target.setAutoAttach: even with
+        # waitForDebuggerOnStart=False, Chromium pauses new targets when
+        # auto-attach fires -> "debugger paused" banner + white-screen OAuth.
+        await self._call_root("Target.setDiscoverTargets",
+                              {"discover": True})
         return self
+
+    async def _attach_and_arm(self, target_id: str) -> None:
+        """Attach to a NON-popup target and arm it for enforcement."""
+        try:
+            s = await self._call_root(
+                "Target.attachToTarget",
+                {"targetId": target_id, "flatten": True})
+            await self._arm_page(target_id, s["result"]["sessionId"])
+        except Exception:
+            pass  # non-fatal: target may have closed
 
     async def _arm_page(self, target_id: str, sid: str,
                         is_popup: bool = False) -> None:
@@ -378,37 +390,28 @@ class AdblockBrowserSession:
                         "Page.windowOpen: url=%s windowName=%s",
                         m.get("params", {}).get("url", "?"),
                         m.get("params", {}).get("windowName", "?"))
-                elif m.get("method") == "Target.attachedToTarget":
-                    # a new tab (or startup-raced page) attached via auto-attach
+                elif m.get("method") == "Target.targetCreated":
+                    # New tab discovered via Target.setDiscoverTargets.
+                    # Manual attach — only NON-popup targets get CDP.
                     p = m["params"]
                     info = p.get("targetInfo", {})
                     if info.get("type") != "page":
                         continue
-                    sid = p["sessionId"]
                     tid = info.get("targetId", "?")
                     opener = info.get("openerId")
                     import logging
                     logging.getLogger("pergel.cdp").info(
-                        "Target.attachedToTarget: tid=%s sid=%s url=%s opener=%s",
-                        tid[:12], sid[:12], info.get("url", "?"),
-                        opener or "none")
+                        "Target.targetCreated: tid=%s url=%s opener=%s",
+                        tid[:12], info.get("url", "?"), opener or "none")
                     if opener:
-                        # POPUP (window.open / OAuth): detach IMMEDIATELY.
-                        # Merely being attached via CDP stalls the popup's
-                        # initial navigation -> white screen.  Detaching
-                        # guarantees the popup behaves like a normal browser
-                        # window with zero CDP interference.
-                        try:
-                            await self._call_root(
-                                "Target.detachFromTarget",
-                                {"sessionId": sid})
-                            logging.getLogger("pergel.cdp").info(
-                                "DETACHED from popup sid=%s (zero CDP)", sid[:12])
-                        except Exception:
-                            pass
+                        # POPUP (window.open / OAuth): do NOT attach at all.
+                        # No CDP session = zero interference = popup loads.
+                        logging.getLogger("pergel.cdp").info(
+                            "SKIP popup tid=%s (zero CDP — white-screen fix)",
+                            tid[:12])
                         continue
                     task = asyncio.get_event_loop().create_task(
-                        self._arm_page(tid, sid))
+                        self._attach_and_arm(tid))
                     self._arm_tasks.add(task)
                     task.add_done_callback(self._arm_tasks.discard)
                 elif m.get("method") in ("Page.loadEventFired",
