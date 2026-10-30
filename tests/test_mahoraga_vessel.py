@@ -424,3 +424,37 @@ class TestComponentMergerIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAGIAssembly(unittest.TestCase):
+    """AGI Assembly pipeline tests."""
+
+    def test_initialization(self):
+        from src.mahoraga.agi_assembly import AGIAssembly
+        assembly = AGIAssembly()
+        self.assertEqual(assembly.status()["pipelines_run"], 0)
+
+    def test_pipeline_result_report(self):
+        from src.mahoraga.agi_assembly import PipelineResult
+        result = PipelineResult(model_id="test")
+        result.stage_times = {"profile": 1.5, "filter": 2.0}
+        result.notes.append("Test note")
+        report = result.report()
+        self.assertIn("test", report)
+        self.assertIn("profile: 1.50s", report)
+        self.assertIn("Test note", report)
+
+    def test_stages_completed(self):
+        from src.mahoraga.agi_assembly import PipelineResult
+        result = PipelineResult(model_id="test")
+        result.stage_times = {"profile": 1.0, "filter": -1.0}
+        self.assertEqual(result.stages_completed, ["profile"])
+
+    def test_full_pipeline_without_gpu(self):
+        from src.mahoraga.agi_assembly import AGIAssembly
+        assembly = AGIAssembly()
+        # Pipeline runs without GPU (will use CPU or skip stages)
+        result = assembly.run_pipeline("gpt2", merge_targets=None, device="cpu")
+        self.assertIsNotNone(result)
+        self.assertGreater(result.total_time_s, 0)
+        self.assertIn("profile", result.stage_times)
