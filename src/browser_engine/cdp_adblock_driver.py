@@ -128,7 +128,6 @@ class AdblockBrowserSession:
         self._pending: dict[int, asyncio.Future] = {}
         self._pump: Optional[asyncio.Task] = None
         self._load_evt = asyncio.Event() if websockets else None
-        self._paused_requests: dict = {}  # rid -> (sid, ts) for watchdog
         # Extension rules join the ad-block network rules at enforcement time
         # via CompositeEngine, so both decide on every request.
         source = (bundle.network, extensions) if extensions is not None \
@@ -162,7 +161,6 @@ class AdblockBrowserSession:
         ws_url = self._wait_ws()
         self._ws = await websockets.connect(ws_url, max_size=2**24)
         self._pump = asyncio.create_task(self._run_pump())
-        self._watchdog = asyncio.create_task(self._resume_watchdog())
         tg = await self._call("Target.getTargets")
         page = [t for t in tg["result"]["targetInfos"] if t["type"] == "page"][-1]
         sess = await self._call("Target.attachToTarget",
@@ -188,13 +186,13 @@ class AdblockBrowserSession:
         try:
             await self._call("Page.addScriptToEvaluateOnNewDocument", {
                 "source": (
-                    "try { Object.defineProperty(navigator, 'webdriver',"
-                    " {get: () => undefined}); } catch(e) {}"
-                    " try { window.chrome = window.chrome || {runtime: {}}; } catch(e) {}"
-                    " try { Object.defineProperty(navigator, 'plugins',"
-                    " {get: () => [1, 2, 3, 4, 5]}); } catch(e) {}"
-                    " try { Object.defineProperty(navigator, 'languages',"
-                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']}); } catch(e) {}"
+                    "Object.defineProperty(navigator, 'webdriver',"
+                    " {get: () => undefined});"
+                    " window.chrome = window.chrome || {runtime: {}};"
+                    " Object.defineProperty(navigator, 'plugins',"
+                    " {get: () => [1, 2, 3, 4, 5]});"
+                    " Object.defineProperty(navigator, 'languages',"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
                 )})
         except Exception:
             pass  # non-fatal: browser still works without anti-detection
@@ -216,28 +214,14 @@ class AdblockBrowserSession:
             "flatten": True})
         return self
 
-    async def _arm_page(self, target_id: str, sid: str,
-                        is_popup: bool = False) -> None:
+    async def _arm_page(self, target_id: str, sid: str) -> None:
         """Enable enforcement + anti-detection on one page target's session.
 
-        Called for every new tab/popup.  Mirrors the main-page setup in
-        ``__aenter__`` so popups (OAuth dialogs etc.) are neither blocked by
-        the adblock engine nor fingerprinted as automation.
-
-        For popups (opened via window.open, identified by openerId),
-        ``Fetch.enable`` is SKIPPED: request interception on a fresh popup
-        session can stall the initial navigation, causing a white screen.
-        The popup loads normally without interception.
+        Called for every new tab/popup.  Must mirror the main-page setup in
+        ``__aenter__`` -- popups without UA override and webdriver spoof
+        are detected as automation (OAuth providers reject them).
         """
-        import logging
-        _log = logging.getLogger("pergel.cdp")
-        _log.info("_arm_page: tid=%s sid=%s is_popup=%s",
-                  target_id[:12], sid[:12], is_popup)
-        if not is_popup:
-            await self._call_on(sid, "Fetch.enable")
-            _log.info("_arm_page: Fetch.enable OK sid=%s", sid[:12])
-        else:
-            _log.info("_arm_page: SKIPPING Fetch.enable for popup sid=%s", sid[:12])
+        await self._call_on(sid, "Fetch.enable")
         await self._call_on(sid, "Page.enable")
         try:
             await self._call_on(sid, "Network.enable")
@@ -248,13 +232,13 @@ class AdblockBrowserSession:
                 "platform": "Linux x86_64"})
             await self._call_on(sid, "Page.addScriptToEvaluateOnNewDocument", {
                 "source": (
-                    "try { Object.defineProperty(navigator, 'webdriver', "
-                    "{get: () => undefined}); } catch(e) {} "
-                    "try { window.chrome = window.chrome || {runtime: {}}; } catch(e) {} "
-                    "try { Object.defineProperty(navigator, 'plugins', "
-                    "{get: () => [1, 2, 3, 4, 5]}); } catch(e) {} "
-                    "try { Object.defineProperty(navigator, 'languages', "
-                    "{get: () => ['tr-TR', 'tr', 'en-US', 'en']}); } catch(e) {}"
+                    "Object.defineProperty(navigator, 'webdriver',"
+                    " {get: () => undefined});"
+                    " window.chrome = window.chrome || {runtime: {}};"
+                    " Object.defineProperty(navigator, 'plugins',"
+                    " {get: () => [1, 2, 3, 4, 5]});"
+                    " Object.defineProperty(navigator, 'languages',"
+                    " {get: () => ['tr-TR', 'tr', 'en-US', 'en']};"
                 )})
         except Exception:
             pass  # non-fatal
@@ -274,8 +258,6 @@ class AdblockBrowserSession:
     async def __aexit__(self, *exc):
         if self._pump:
             self._pump.cancel()
-            if getattr(self, "_watchdog", None):
-                self._watchdog.cancel()
         if self._ws:
             await self._ws.close()
         # keep_open: the user is still driving the window; closing is the caller's job
@@ -360,60 +342,21 @@ class AdblockBrowserSession:
                     self._pending.pop(m["id"]).set_result(m)
                     continue
                 if m.get("method") == "Fetch.requestPaused":
-                    import logging
-                    _log = logging.getLogger("pergel.cdp")
-                    params = m.get("params", {})
-                    _log.debug("Fetch.requestPaused: rid=%s url=%s sid=%s",
-                               params.get("requestId", "?")[:12],
-                               params.get("request", {}).get("url", "?")[:80],
-                               (m.get("sessionId") or self._sid or "?")[:12])
-                    rid = params.get("requestId", "")
-                    ev_sid = m.get("sessionId") or self._sid
-                    import time as _time
-                    self._paused_requests[rid] = (ev_sid, _time.monotonic())
-                    try:
-                        self._notify_decision(params)
-                        reply = self._bridge.on_request_paused(params)
-                    except Exception:
-                        # CRITICAL safety net: if the decision logic throws for
-                        # ANY reason, continue the request instead of letting it
-                        # hang forever (white-screen popup bug).  Allow through.
-                        import logging
-                        logging.getLogger("pergel.cdp").warning(
-                            "Fetch.requestPaused handler failed; continuing "
-                            "request %s (url=%s)", rid,
-                            params.get("request", {}).get("url", "?"),
-                            exc_info=True)
-                        reply = {"method": "Fetch.continueRequest",
-                                 "params": {"requestId": rid}}
+                    # surface the decision to the observer first (live counter),
+                    # then dispatch the real enforcement reply
+                    self._notify_decision(m["params"])
+                    reply = self._bridge.on_request_paused(m["params"])
                     self._seq += 1
-                    try:
-                        await self._ws.send(json.dumps(self._resume_message(
-                            reply, self._seq, event_sid=ev_sid,
-                            session_sid=self._sid)))
-                    except Exception:
-                        import logging
-                        logging.getLogger("pergel.cdp").warning(
-                            "Failed to send resume for %s", rid, exc_info=True)
-                    self._paused_requests.pop(rid, None)
+                    await self._ws.send(json.dumps(self._resume_message(
+                        reply, self._seq, event_sid=m.get("sessionId"),
+                        session_sid=self._sid)))
                 elif m.get("method") == "Target.attachedToTarget":
                     # a new tab (or startup-raced page) attached via auto-attach
-                    import logging
-                    _log = logging.getLogger("pergel.cdp")
                     p = m["params"]
-                    _log.info("Target.attachedToTarget: type=%s tid=%s sid=%s",
-                              p.get("targetInfo", {}).get("type", "?"),
-                              p.get("targetInfo", {}).get("targetId", "?")[:12],
-                              p.get("sessionId", "?")[:12])
                     if p.get("targetInfo", {}).get("type") == "page":
-                        is_popup = bool(p.get("targetInfo", {}).get("openerId"))
-                        _log.info("  -> is_popup=%s (openerId=%s)",
-                                  is_popup,
-                                  p.get("targetInfo", {}).get("openerId"))
                         task = asyncio.get_event_loop().create_task(
                             self._arm_page(p["targetInfo"]["targetId"],
-                                           p["sessionId"],
-                                           is_popup=is_popup))
+                                           p["sessionId"]))
                         self._arm_tasks.add(task)
                         task.add_done_callback(self._arm_tasks.discard)
                 elif m.get("method") in ("Page.loadEventFired",
@@ -423,27 +366,6 @@ class AdblockBrowserSession:
             pass
 
     # --- driver API ------------------------------------------------------
-    async def _resume_watchdog(self):
-        """Force-continue requests stuck >5s (safety net for popup white-screens)."""
-        import time
-        while True:
-            await asyncio.sleep(2)
-            now = time.monotonic()
-            stuck = [(rid, sid) for rid, (sid, ts)
-                     in list(self._paused_requests.items())
-                     if now - ts > 5.0]
-            for rid, sid in stuck:
-                self._paused_requests.pop(rid, None)
-                self._seq += 1
-                try:
-                    await self._ws.send(json.dumps({
-                        "id": self._seq,
-                        "method": "Fetch.continueRequest",
-                        "params": {"requestId": rid},
-                        **({"sessionId": sid} if sid else {})}))
-                except Exception:
-                    pass
-
     def _notify_decision(self, params: dict) -> dict:
         """Compute the enforcement decision for a paused request and surface it.
 
