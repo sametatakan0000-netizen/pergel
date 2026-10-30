@@ -22,8 +22,14 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-import torch
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn.functional as F
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    F = None
+    _TORCH_AVAILABLE = False
 
 logger = logging.getLogger("mahoraga.filter")
 
@@ -32,7 +38,7 @@ logger = logging.getLogger("mahoraga.filter")
 class RefusalDirection:
     """Detected refusal direction at a specific layer."""
     layer: int
-    direction: torch.Tensor  # normalized direction vector
+    direction: Any  # torch.Tensor (lazy heavy dep)
     harmful_cosine_sim: float = 0.0
     harmless_cosine_sim: float = 0.0
     separation: float = 0.0
@@ -91,15 +97,36 @@ class FilterDetector:
         self._models: Dict[str, Any] = {}
         logger.info("Filter Detector initialized")
 
-    def load_model(self, model_name: str = "gpt2", device: str = "cuda") -> Any:
-        """Load model via TransformerLens for abliteration."""
+    @staticmethod
+    def _require_torch() -> None:
+        """Heavy runtime deps are lazy; raise clearly if the GPU path is used without them."""
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError("torch is not installed; install torch + transformer_lens for abliteration")
+
+    def load_model(
+        self,
+        model_name: str = "gpt2",
+        device: str = "cuda",
+        dtype: Any = "auto",
+    ) -> Any:
+        """Load model via TransformerLens for abliteration.
+
+        dtype: "auto" (default) loads bfloat16 on CUDA and float32 on CPU —
+        required for models larger than ~3B params on consumer GPUs. Pass an
+        explicit torch.dtype to override. All refusal-direction math is done
+        in float32 regardless of model dtype.
+        """
+        self._require_torch()
         if model_name in self._models:
             return self._models[model_name]
         from transformer_lens import HookedTransformer
+        if dtype == "auto":
+            dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
         t0 = time.monotonic()
-        model = HookedTransformer.from_pretrained(model_name, device=device)
+        model = HookedTransformer.from_pretrained(model_name, device=device, dtype=dtype)
         self._models[model_name] = model
-        logger.info(f"Loaded {model_name} in {(time.monotonic()-t0)*1000:.0f}ms")
+        logger.info(f"Loaded {model_name} in {(time.monotonic()-t0)*1000:.0f}ms "
+                    f"({model.cfg.n_layers} layers, d_model={model.cfg.d_model}, dtype={dtype})")
         return model
 
     def detect_refusal_direction(
@@ -107,21 +134,30 @@ class FilterDetector:
         model_name: str,
         harmful_prompts: List[str],
         harmless_prompts: List[str],
-        layer: int = 8,
+        layer: Optional[int] = None,
         device: str = "cuda",
     ) -> RefusalDirection:
         """Detect refusal direction via difference of means (Arditi baseline).
 
         Method: mean(harmful activations) - mean(harmless activations), normalized.
         This is the key finding from arXiv:2406.11717 — refusal lives in one direction.
+
+        layer: which residual stream layer to read. None (default) picks the
+        model's middle layer (n_layers // 2), which is scale-agnostic — the old
+        hardcoded 8 only made sense for 12-layer GPT-2.
         """
         model = self.load_model(model_name, device)
+        if layer is None:
+            layer = model.cfg.n_layers // 2
+        key = f"blocks.{layer}.hook_resid_post"
 
-        def get_residual(prompt: str) -> torch.Tensor:
+        def get_residual(prompt: str) -> Any:
             tokens = model.to_tokens(prompt)
-            _, cache = model.run_with_cache(tokens)
-            key = f"blocks.{layer}.hook_resid_post"
-            return cache[key][0, -1, :].detach()
+            _, cache = model.run_with_cache(
+                tokens, names_filter=lambda name: name == key
+            )
+            # fp32 for the direction math regardless of model dtype
+            return cache[key][0, -1, :].detach().float()
 
         harmful_acts = torch.stack([get_residual(p) for p in harmful_prompts])
         harmless_acts = torch.stack([get_residual(p) for p in harmless_prompts])
@@ -163,11 +199,13 @@ class FilterDetector:
         r = refusal_dir.direction
         layer = refusal_dir.layer
 
-        def get_residual(prompt: str) -> torch.Tensor:
+        def get_residual(prompt: str) -> Any:
             tokens = model.to_tokens(prompt)
-            _, cache = model.run_with_cache(tokens)
             key = f"blocks.{layer}.hook_resid_post"
-            return cache[key][0, -1, :].detach()
+            _, cache = model.run_with_cache(
+                tokens, names_filter=lambda name: name == key
+            )
+            return cache[key][0, -1, :].detach().float()
 
         # Test harmful prompt
         harmful_act = get_residual(test_harmful)
@@ -197,6 +235,27 @@ class FilterDetector:
                     f"reasoning_delta={delta*100:.2f}%")
         return result
 
+    @staticmethod
+    def _direction_from_acts(
+        harmful_acts: Any, harmless_acts: Any, layer: int
+    ) -> RefusalDirection:
+        """Difference-of-means direction from stacked last-token activations."""
+        harmful_mean = harmful_acts.mean(dim=0)
+        harmless_mean = harmless_acts.mean(dim=0)
+        direction = F.normalize(harmful_mean - harmless_mean, dim=0)
+
+        harmful_sims = F.cosine_similarity(harmful_acts, direction.unsqueeze(0), dim=1)
+        harmless_sims = F.cosine_similarity(harmless_acts, direction.unsqueeze(0), dim=1)
+
+        return RefusalDirection(
+            layer=layer,
+            direction=direction,
+            harmful_cosine_sim=harmful_sims.mean().item(),
+            harmless_cosine_sim=harmless_sims.mean().item(),
+            separation=(harmful_sims.mean() - harmless_sims.mean()).item(),
+            detection_method="difference_of_means",
+        )
+
     def scan_refusal_layers(
         self,
         model_name: str,
@@ -207,15 +266,39 @@ class FilterDetector:
         """Scan all layers for refusal directions.
 
         Identifies which layers carry the strongest refusal signal.
+
+        Memory/scale note: runs each prompt ONCE caching only the residual
+        stream hooks (names_filter), then computes per-layer directions from
+        the cache. The old version re-ran full forwards per layer, which is
+        O(n_layers) passes and caches every activation — prohibitive for
+        models with dozens of layers.
         """
         model = self.load_model(model_name, device)
         n_layers = model.cfg.n_layers
-        results = []
 
+        def collect(prompts: List[str]) -> List[List[Any]]:
+            per_layer: List[List[Any]] = [[] for _ in range(n_layers)]
+            for prompt in prompts:
+                tokens = model.to_tokens(prompt)
+                _, cache = model.run_with_cache(
+                    tokens,
+                    names_filter=lambda name: name.endswith("hook_resid_post"),
+                )
+                for layer in range(n_layers):
+                    act = cache[f"blocks.{layer}.hook_resid_post"][0, -1, :]
+                    per_layer[layer].append(act.detach().float())
+            return per_layer
+
+        harmful_by_layer = collect(harmful_prompts)
+        harmless_by_layer = collect(harmless_prompts)
+
+        results = []
         for layer in range(n_layers):
             try:
-                rd = self.detect_refusal_direction(
-                    model_name, harmful_prompts, harmless_prompts, layer, device
+                rd = self._direction_from_acts(
+                    torch.stack(harmful_by_layer[layer]),
+                    torch.stack(harmless_by_layer[layer]),
+                    layer,
                 )
                 results.append(rd)
             except Exception as e:

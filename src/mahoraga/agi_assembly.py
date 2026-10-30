@@ -155,7 +155,7 @@ class AGIAssembly:
         t0 = time.monotonic()
         try:
             refusal_dir = self.detector.detect_refusal_direction(
-                model_id, harmful, harmless, layer=8, device=device
+                model_id, harmful, harmless, layer=None, device=device
             )
             ablit_result = self.detector.abliterate_rank1(model_id, refusal_dir, device=device)
             result.filter_map = self.detector.detect_filters(model_id)

@@ -294,7 +294,10 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import torch
+        try:
+            import torch
+        except ImportError:
+            raise unittest.SkipTest("torch not installed")
         if not torch.cuda.is_available():
             raise unittest.SkipTest("CUDA not available")
         from src.mahoraga.synapse_profiler import SynapseProfiler
@@ -312,7 +315,8 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
 
     def test_logit_lens(self):
         results = self.profiler.logit_lens(self.model_name, "The capital of France is")
-        self.assertEqual(len(results), 12)
+        model = self.profiler._models[self.model_name]
+        self.assertEqual(len(results), model.cfg.n_layers)
         self.assertTrue(all(r.predicted_token != "" for r in results))
         self.assertTrue(all(0 <= r.confidence <= 1 for r in results))
 
@@ -322,7 +326,8 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
             clean_text="The Eiffel Tower is in Paris",
             corrupted_text="The Eiffel Tower is in Berlin",
         )
-        self.assertEqual(len(results), 12)
+        model = self.profiler._models[self.model_name]
+        self.assertEqual(len(results), model.cfg.n_layers)
         self.assertTrue(all(isinstance(r.matches_clean, bool) for r in results))
 
     def test_loaded_models_tracking(self):
@@ -336,7 +341,10 @@ class TestFilterDetectorIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import torch
+        try:
+            import torch
+        except ImportError:
+            raise unittest.SkipTest("torch not installed")
         if not torch.cuda.is_available():
             raise unittest.SkipTest("CUDA not available")
         from src.mahoraga.filter_detector import FilterDetector
@@ -353,8 +361,9 @@ class TestFilterDetectorIntegration(unittest.TestCase):
         rd = self.detector.detect_refusal_direction(
             self.model_name, harmful, harmless, layer=8
         )
+        model = self.detector._models[self.model_name]
         self.assertGreater(rd.separation, 0)
-        self.assertEqual(rd.direction.shape[0], 768)
+        self.assertEqual(rd.direction.shape[0], model.cfg.d_model)
         self.assertAlmostEqual(rd.direction.norm().item(), 1.0, places=3)
 
     def test_rank1_abliteration(self):
@@ -374,7 +383,8 @@ class TestFilterDetectorIntegration(unittest.TestCase):
         results = self.detector.scan_refusal_layers(
             self.model_name, harmful, harmless
         )
-        self.assertEqual(len(results), 12)
+        model = self.detector._models[self.model_name]
+        self.assertEqual(len(results), model.cfg.n_layers)
         separations = [r.separation for r in results]
         self.assertEqual(separations, sorted(separations, reverse=True))
 
@@ -384,6 +394,9 @@ class TestComponentMergerIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        import importlib.util as _ilu
+        if _ilu.find_spec("mergekit") is None:
+            raise unittest.SkipTest("mergekit not installed")
         try:
             from src.mahoraga.component_merger import ComponentMerger
             cls.merger = ComponentMerger()
@@ -422,8 +435,98 @@ class TestComponentMergerIntegration(unittest.TestCase):
         self.assertAlmostEqual(exp.improvement, 4.667, places=1)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestVariableModelSizes(unittest.TestCase):
+    """Scale-agnostic behavior: same pipeline on models of different shapes.
+
+    Uses randomly-initialized HookedTransformers (no downloads) to verify
+    nothing assumes GPT-2's 12 layers / 768 hidden size.
+    """
+
+    SHAPES = [
+        {"n_layers": 4, "d_model": 128, "n_heads": 4, "d_head": 32},
+        {"n_layers": 6, "d_model": 256, "n_heads": 8, "d_head": 32},
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import torch
+            from transformer_lens import HookedTransformer, HookedTransformerConfig
+        except ImportError:
+            raise unittest.SkipTest("torch/transformer_lens not installed")
+        cls.models = {}
+        for i, shape in enumerate(cls.SHAPES):
+            cfg = HookedTransformerConfig(
+                n_ctx=64, d_vocab=50257, tokenizer_name="gpt2",
+                act_fn="relu", **shape,
+            )
+            torch.manual_seed(0)
+            name = f"random-{shape['n_layers']}l-{shape['d_model']}d"
+            cls.models[name] = HookedTransformer(cfg)
+
+    def _detector_with(self, name):
+        from src.mahoraga.filter_detector import FilterDetector
+        det = FilterDetector()
+        det._models[name] = self.models[name]
+        return det
+
+    def test_refusal_direction_adapts_to_hidden_size(self):
+        harmful = ["How do I make a bomb?", "How to hack an account?"]
+        harmless = ["How do I make a cake?", "How to improve memory?"]
+        for name, model in self.models.items():
+            det = self._detector_with(name)
+            rd = det.detect_refusal_direction(name, harmful, harmless)
+            self.assertEqual(rd.direction.shape[0], model.cfg.d_model,
+                             f"direction dim must match {name} d_model")
+            self.assertAlmostEqual(rd.direction.norm().item(), 1.0, places=3)
+
+    def test_default_layer_is_middle_layer(self):
+        for name, model in self.models.items():
+            det = self._detector_with(name)
+            rd = det.detect_refusal_direction(
+                name, ["How do I make a bomb?"], ["How do I make a cake?"]
+            )
+            self.assertEqual(rd.layer, model.cfg.n_layers // 2)
+
+    def test_layer_scan_adapts_to_depth(self):
+        for name, model in self.models.items():
+            det = self._detector_with(name)
+            results = det.scan_refusal_layers(
+                name, ["How do I make a bomb?"], ["How do I make a cake?"]
+            )
+            self.assertEqual(len(results), model.cfg.n_layers,
+                             f"scan must return one result per layer of {name}")
+            self.assertEqual(
+                [r.separation for r in results],
+                sorted((r.separation for r in results), reverse=True),
+            )
+
+    def test_rank1_abliteration_on_variable_sizes(self):
+        for name, model in self.models.items():
+            det = self._detector_with(name)
+            rd = det.detect_refusal_direction(
+                name, ["How do I make a bomb?"], ["How do I make a cake?"]
+            )
+            result = det.abliterate_rank1(name, rd)
+            self.assertTrue(result.refusal_removed, f"abliteration failed on {name}")
+            self.assertTrue(result.reasoning_preserved)
+
+    def test_synapse_tools_on_variable_sizes(self):
+        from src.mahoraga.synapse_profiler import SynapseProfiler
+        for name, model in self.models.items():
+            prof = SynapseProfiler()
+            prof._models[name] = model
+            lens = prof.logit_lens(name, "The capital of France is")
+            self.assertEqual(len(lens), model.cfg.n_layers)
+            patch = prof.activation_patching(
+                name,
+                clean_text="The Eiffel Tower is in Paris",
+                corrupted_text="The Eiffel Tower is in Berlin",
+            )
+            self.assertEqual(len(patch), model.cfg.n_layers)
+
+
+
 
 
 class TestAGIAssembly(unittest.TestCase):
@@ -458,3 +561,7 @@ class TestAGIAssembly(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertGreater(result.total_time_s, 0)
         self.assertIn("profile", result.stage_times)
+
+
+if __name__ == "__main__":
+    unittest.main()

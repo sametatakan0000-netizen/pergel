@@ -83,14 +83,27 @@ class SynapseProfiler:
         self._models: Dict[str, Any] = {}
         logger.info("Synapse Profiler initialized")
 
-    def load_model(self, model_name: str = "gpt2", device: str = "cuda") -> Any:
-        """Load a model via TransformerLens HookedTransformer."""
+    def load_model(
+        self,
+        model_name: str = "gpt2",
+        device: str = "cuda",
+        dtype: Any = "auto",
+    ) -> Any:
+        """Load a model via TransformerLens HookedTransformer.
+
+        dtype: "auto" (default) loads bfloat16 on CUDA and float32 on CPU —
+        keeps large models within consumer-GPU memory budgets. Pass an
+        explicit torch.dtype to override.
+        """
         if model_name in self._models:
             return self._models[model_name]
         try:
+            import torch
             from transformer_lens import HookedTransformer
+            if dtype == "auto":
+                dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
             t0 = time.monotonic()
-            model = HookedTransformer.from_pretrained(model_name, device=device)
+            model = HookedTransformer.from_pretrained(model_name, device=device, dtype=dtype)
             load_ms = (time.monotonic() - t0) * 1000
             self._models[model_name] = model
             logger.info(f"Loaded {model_name} in {load_ms:.0f}ms "
@@ -103,7 +116,11 @@ class SynapseProfiler:
         """Logit lens: what does each layer predict?"""
         model = self.load_model(model_name, device)
         tokens = model.to_tokens(text)
-        logits, cache = model.run_with_cache(tokens)
+        # Cache only the residual stream — full caches scale with
+        # n_layers * n_components * seq_len and blow up on large models.
+        logits, cache = model.run_with_cache(
+            tokens, names_filter=lambda name: name.endswith("hook_resid_post")
+        )
         results = []
         for layer in range(model.cfg.n_layers):
             key = f"blocks.{layer}.hook_resid_post"
@@ -133,8 +150,12 @@ class SynapseProfiler:
         model = self.load_model(model_name, device)
         clean_tokens = model.to_tokens(clean_text)
         corrupted_tokens = model.to_tokens(corrupted_text)
-        clean_logits, clean_cache = model.run_with_cache(clean_tokens)
-        _, corrupted_cache = model.run_with_cache(corrupted_tokens)
+        # clean run needs only the logits (no cache); corrupted run caches only
+        # the patched component — full caches are prohibitive on large models.
+        clean_logits = model(clean_tokens)
+        _, corrupted_cache = model.run_with_cache(
+            corrupted_tokens, names_filter=lambda name: name.endswith(component)
+        )
         clean_pred = model.to_string(clean_logits[0, -1].argmax())
         results = []
         for layer in range(model.cfg.n_layers):

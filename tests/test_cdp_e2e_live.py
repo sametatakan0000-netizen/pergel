@@ -11,6 +11,7 @@ browser, not just against dicts.
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -25,6 +26,15 @@ except ImportError:  # pragma: no cover
 
 from src.browser_engine.cdp_bridge import CDPBridge, decide_cdp_response
 from src.browser_engine.rule_engine import compile_rules
+
+
+def _free_port() -> int:
+    """Ephemeral free TCP port (no hardcoded :9333/:9344 collision risk)."""
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    p = s.getsockname()[1]
+    s.close()
+    return p
 
 
 def _find_chromium():
@@ -50,7 +60,7 @@ class TestLiveCDPBridge(unittest.TestCase):
         if cls.chromium is None or websockets is None:
             raise unittest.SkipTest("no chromium binary or websockets lib")
         cls.tmp = tempfile.mkdtemp(prefix="cdp-e2e-")
-        cls.port = 9333
+        cls.port = _free_port()
         cls.proc = subprocess.Popen(
             [cls.chromium, "--headless=new", "--no-sandbox",
              f"--remote-debugging-port={cls.port}", "--user-data-dir=" + cls.tmp,

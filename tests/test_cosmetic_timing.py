@@ -14,7 +14,7 @@ try:
 except ImportError:  # pragma: no cover
     websockets = None
 
-from tests.test_cdp_e2e_live import _find_chromium
+from tests.test_cdp_e2e_live import _find_chromium, _free_port
 from src.browser_engine.cosmetic import cosmetic_css
 
 # A page that reports visibility every 50ms while loading, and holds an
@@ -47,7 +47,7 @@ class TestCosmeticDocumentStart(unittest.TestCase):
             raise unittest.SkipTest("no chromium or websockets")
         import subprocess, tempfile, time, urllib.request
         cls.tmp = tempfile.mkdtemp(prefix="cdp-fov-")
-        cls.port = 9344
+        cls.port = _free_port()
         cls.proc = subprocess.Popen(
             [_find_chromium(), "--headless=new", "--no-sandbox",
              f"--remote-debugging-port={cls.port}", "--user-data-dir=" + cls.tmp,

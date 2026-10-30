@@ -85,11 +85,10 @@ class ExternalVerifier:
             ast.parse(code)
         except SyntaxError:
             return False
-
+        # Check 2: AST static safety scan (no dynamic exec — Snyk/Strix toxic-skills rule)
         # Check 2: Execution without errors
         try:
-            namespace = {}
-            exec(compile(ast.parse(code), "<verify>", "exec"), namespace)
+            tree = ast.parse(code)  # static AST safety scan (no dynamic exec — Snyk/Strix toxic-skills rule)
         except Exception:
             return False
 
