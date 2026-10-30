@@ -12,13 +12,12 @@ from src.mahoraga.synapse_profiler import SynapseProfiler, SynapseMap, FeatureMa
 from src.mahoraga.filter_detector import FilterDetector, FilterMap
 from src.mahoraga.component_merger import ComponentMerger, MergeExperiment
 from src.mahoraga.self_evolution import (
-    SelfEvolutionLoop, ExternalVerifier, RewardHackDetector, EvolutionIteration
+    SelfEvolutionLoop, ExternalVerifier, RewardHackDetector,
+    EvolutionIteration, HGMSelector
 )
 
 
 class TestVessel(unittest.TestCase):
-    """Vessel Core — minimal kernel tests."""
-
     def test_boot_under_2s(self):
         vessel = Vessel()
         status = vessel.status()
@@ -37,9 +36,8 @@ class TestVessel(unittest.TestCase):
         loaded = []
         vessel.register_module("lazy1", lambda cfg: loaded.append(1) or "obj1")
         vessel.register_module("lazy2", lambda cfg: loaded.append(2) or "obj2")
-        # Only load one
         vessel.get_module("lazy1")
-        self.assertEqual(len(loaded), 1)  # lazy2 NOT loaded yet
+        self.assertEqual(len(loaded), 1)
 
     def test_duplicate_registration_rejected(self):
         vessel = Vessel()
@@ -75,8 +73,6 @@ class TestVessel(unittest.TestCase):
 
 
 class TestWebsurfOracle(unittest.TestCase):
-    """Websurf Oracle — live data access tests."""
-
     def test_initialization(self):
         oracle = WebsurfOracle()
         status = oracle.status()
@@ -116,8 +112,6 @@ class TestWebsurfOracle(unittest.TestCase):
 
 
 class TestSynapseProfiler(unittest.TestCase):
-    """Synapse Profiler — mechanistic interpretability tests."""
-
     def test_initialization(self):
         profiler = SynapseProfiler()
         self.assertEqual(len(profiler.profiled_models), 0)
@@ -145,8 +139,6 @@ class TestSynapseProfiler(unittest.TestCase):
 
 
 class TestFilterDetector(unittest.TestCase):
-    """Filter Detector — alignment detection/removal tests."""
-
     def test_initialization(self):
         detector = FilterDetector()
         self.assertEqual(len(detector.analyzed_models), 0)
@@ -168,7 +160,6 @@ class TestFilterDetector(unittest.TestCase):
             capability_before={"mmlu": 80.0, "gsm8k": 70.0},
             capability_after={"mmlu": 82.0, "gsm8k": 75.0},
         )
-        # avg_before = 75, avg_after = 78.5 → (3.5/75)*100 = 4.67%
         self.assertAlmostEqual(fmap.hidden_potential, 4.667, places=1)
 
     def test_hidden_potential_empty(self):
@@ -177,15 +168,13 @@ class TestFilterDetector(unittest.TestCase):
 
 
 class TestComponentMerger(unittest.TestCase):
-    """Component Merger — cross-model merging tests."""
-
     def test_initialization(self):
         merger = ComponentMerger()
         self.assertEqual(len(merger.experiments), 0)
 
     def test_merge_creates_experiment(self):
         merger = ComponentMerger()
-        exp = merger.merge(["model_a", "model_b"], technique="ties")
+        exp = merger.merge(["model_a", "model_b"], method="ties")
         self.assertIsInstance(exp, MergeExperiment)
         self.assertEqual(exp.source_models, ["model_a", "model_b"])
         self.assertEqual(exp.technique, "ties")
@@ -196,7 +185,6 @@ class TestComponentMerger(unittest.TestCase):
             benchmark_before={"mmlu": 80.0, "gsm8k": 70.0},
             benchmark_after={"mmlu": 84.0, "gsm8k": 73.0},
         )
-        # avg_before = 75, avg_after = 78.5 → (3.5/75)*100 = 4.67%
         self.assertAlmostEqual(exp.improvement, 4.667, places=1)
 
     def test_successful_merges_filter(self):
@@ -209,69 +197,96 @@ class TestComponentMerger(unittest.TestCase):
 
 
 class TestSelfEvolution(unittest.TestCase):
-    """Self-Evolution Loop — DGM-style recursive improvement tests."""
+    """Self-evolution tests with real deterministic verification."""
 
-    def test_initialization(self):
-        loop = SelfEvolutionLoop()
-        self.assertEqual(len(loop.iterations), 0)
-
-    def test_external_verifier_default_rejects(self):
+    def test_external_verifier_deterministic(self):
         verifier = ExternalVerifier()
-        self.assertFalse(verifier.verify({"any": "state"}))
+        self.assertTrue(verifier.verify({"code": "x = 1", "benchmark_score": 0.5}))
+        self.assertFalse(verifier.verify({"code": "def broken(:", "benchmark_score": 0.5}))
+        self.assertFalse(verifier.verify({"code": "x = 1", "benchmark_score": 0.0}))
 
-    def test_external_verifier_custom(self):
-        verifier = ExternalVerifier(verify_fn=lambda s: s.get("score", 0) > 50)
-        self.assertTrue(verifier.verify({"score": 60}))
-        self.assertFalse(verifier.verify({"score": 30}))
+    def test_verifier_stats_tracking(self):
+        verifier = ExternalVerifier()
+        verifier.verify({"code": "x = 1", "benchmark_score": 0.5})
+        verifier.verify({"code": "bad(:", "benchmark_score": 0.5})
+        stats = verifier.stats
+        self.assertEqual(stats["checks_run"], 2)
+        self.assertEqual(stats["checks_passed"], 1)
 
     def test_reward_hack_detection(self):
         detector = RewardHackDetector()
-        # Huge improvement without verification → suspicious
-        self.assertTrue(detector.check(50.0, 80.0, False))
-        # Normal improvement with verification → OK
-        self.assertFalse(detector.check(50.0, 55.0, True))
+        # Pattern 1: Unverified jump
+        self.assertTrue(detector.check(50.0, 80.0, "code", False))
+        # Pattern 2: Hardcoded answers
+        self.assertTrue(detector.check(50.0, 90.0, "return 42", True))
+        # Normal improvement should NOT trigger
+        self.assertFalse(detector.check(50.0, 55.0, "for i in range(10): pass", True))
 
-    def test_evolution_iteration(self):
+    def test_reward_hack_signatures(self):
+        detector = RewardHackDetector()
+        detector.check(50.0, 80.0, "code", False)
+        self.assertEqual(len(detector.signatures), 1)
+        self.assertEqual(detector.signatures[0]["pattern"], "unverified_jump")
+
+    def test_hgm_selector(self):
+        selector = HGMSelector()
+        iterations = [
+            EvolutionIteration(iteration=0, external_verified=True,
+                             benchmark_before=50, benchmark_after=60),
+            EvolutionIteration(iteration=1, external_verified=True,
+                             benchmark_before=60, benchmark_after=70),
+        ]
+        meta = selector.evaluate_clade(iterations)
+        self.assertGreater(meta, 0)
+        self.assertLessEqual(meta, 1.0)
+
+    def test_evolution_iteration_improvement(self):
+        it = EvolutionIteration(iteration=0, benchmark_before=50.0, benchmark_after=60.0)
+        self.assertAlmostEqual(it.improvement, 20.0)
+        it_zero = EvolutionIteration(iteration=1, benchmark_before=0.0, benchmark_after=50.0)
+        self.assertEqual(it_zero.improvement, 0.0)  # from zero = can't calculate %
+
+    def test_full_evolution_cycle(self):
         loop = SelfEvolutionLoop()
-        state = {"score": 50, "last_modification": "test_mod"}
+        state = {"code": "x = 1", "benchmark_score": 0.0, "last_modification": "initial"}
 
         def modify_fn(s):
-            s["score"] = 60
-            s["last_modification"] = "improved"
+            s["code"] = "x = 1\ny = 2"
+            s["benchmark_score"] = 0.5
+            s["last_modification"] = "added y"
             return s
 
         def benchmark_fn(s):
-            return s["score"]
+            return s["benchmark_score"]
 
         it = loop.evolve_once(modify_fn, benchmark_fn, state)
-        self.assertIsInstance(it, EvolutionIteration)
-        self.assertEqual(it.benchmark_before, 50)
-        self.assertEqual(it.benchmark_after, 60)
-        self.assertGreater(it.improvement, 0)
+        self.assertTrue(it.external_verified)
+        self.assertFalse(it.reward_hack_suspected)
+        # benchmark_before=0, so improvement=0 (can't calculate %)
+        # but the iteration is still tracked
+        self.assertEqual(len(loop.iterations), 1)
 
-    def test_verified_improvements_only_count_verified(self):
+    def test_clade_metaproductivity(self):
         loop = SelfEvolutionLoop()
-        state = {"score": 50}
+        state = {"code": "x = 1", "benchmark_score": 0.0}
 
         def modify_fn(s):
-            s["score"] = 60
+            s["code"] = f"x = {s['benchmark_score'] + 0.3}"
+            s["benchmark_score"] = min(s["benchmark_score"] + 0.3, 1.0)
             return s
 
         def benchmark_fn(s):
-            return s["score"]
+            return s["benchmark_score"]
 
-        it = loop.evolve_once(modify_fn, benchmark_fn, state)
-        # Default verifier rejects → not counted as verified improvement
-        self.assertEqual(len(loop.verified_improvements), 0)
-        self.assertFalse(it.external_verified)
+        for _ in range(3):
+            loop.evolve_once(modify_fn, benchmark_fn, state)
+
+        self.assertGreater(loop.clade_metaproductivity, 0)
+        self.assertLessEqual(loop.clade_metaproductivity, 1.0)
 
     def test_bounded_iterations(self):
         loop = SelfEvolutionLoop({"max_iterations": 5})
         self.assertEqual(loop.status()["max_iterations"], 5)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TestSynapseProfilerIntegration(unittest.TestCase):
@@ -279,7 +294,6 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Load model once for all tests."""
         import torch
         if not torch.cuda.is_available():
             raise unittest.SkipTest("CUDA not available")
@@ -294,11 +308,11 @@ class TestSynapseProfilerIntegration(unittest.TestCase):
     def test_model_loaded(self):
         self.assertIn(self.model_name, self.profiler.loaded_models)
         model = self.profiler._models[self.model_name]
-        self.assertEqual(model.cfg.n_layers, 12)  # GPT-2 Small has 12 layers
+        self.assertEqual(model.cfg.n_layers, 12)
 
     def test_logit_lens(self):
         results = self.profiler.logit_lens(self.model_name, "The capital of France is")
-        self.assertEqual(len(results), 12)  # 12 layers
+        self.assertEqual(len(results), 12)
         self.assertTrue(all(r.predicted_token != "" for r in results))
         self.assertTrue(all(0 <= r.confidence <= 1 for r in results))
 
@@ -339,8 +353,8 @@ class TestFilterDetectorIntegration(unittest.TestCase):
         rd = self.detector.detect_refusal_direction(
             self.model_name, harmful, harmless, layer=8
         )
-        self.assertGreater(rd.separation, 0)  # harmful should be more aligned
-        self.assertEqual(rd.direction.shape[0], 768)  # GPT-2 d_model
+        self.assertGreater(rd.separation, 0)
+        self.assertEqual(rd.direction.shape[0], 768)
         self.assertAlmostEqual(rd.direction.norm().item(), 1.0, places=3)
 
     def test_rank1_abliteration(self):
@@ -350,8 +364,8 @@ class TestFilterDetectorIntegration(unittest.TestCase):
             self.model_name, harmful, harmless, layer=8
         )
         result = self.detector.abliterate_rank1(self.model_name, rd)
-        self.assertTrue(result.refusal_removed)  # refusal signal should be gone
-        self.assertTrue(result.reasoning_preserved)  # < 30% delta
+        self.assertTrue(result.refusal_removed)
+        self.assertTrue(result.reasoning_preserved)
         self.assertLess(result.reasoning_delta_pct, 30)
 
     def test_layer_scanning(self):
@@ -360,8 +374,7 @@ class TestFilterDetectorIntegration(unittest.TestCase):
         results = self.detector.scan_refusal_layers(
             self.model_name, harmful, harmless
         )
-        self.assertEqual(len(results), 12)  # GPT-2 has 12 layers
-        # Results should be sorted by separation
+        self.assertEqual(len(results), 12)
         separations = [r.separation for r in results]
         self.assertEqual(separations, sorted(separations, reverse=True))
 
@@ -407,3 +420,7 @@ class TestComponentMergerIntegration(unittest.TestCase):
         exp.benchmark_before = {"mmlu": 80.0, "gsm8k": 70.0}
         exp.benchmark_after = {"mmlu": 84.0, "gsm8k": 73.0}
         self.assertAlmostEqual(exp.improvement, 4.667, places=1)
+
+
+if __name__ == "__main__":
+    unittest.main()
