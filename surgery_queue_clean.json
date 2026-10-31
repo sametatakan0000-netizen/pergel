@@ -121,7 +121,7 @@
     "arch_class": "Qwen3ForCausalLM"
   },
   {
-    "name": "mistralai/Mistral-Nemo-12B-Instruct-2407",
+    "name": "mistralai/Mistral-Nemo-Instruct-2407",
     "arch_type": "Dense",
     "model_type": "unknown",
     "layers": 40,
@@ -187,7 +187,7 @@
     "arch_class": "Qwen3ForCausalLM"
   },
   {
-    "name": "mistralai/Ministral-3B-Instruct-2410",
+    "name": "mistralai/Ministral-3-3B-Instruct-2512",
     "arch_type": "Dense",
     "model_type": "unknown",
     "layers": 36,
@@ -594,7 +594,7 @@
     "arch_class": "Qwen2ForCausalLM"
   },
   {
-    "name": "deepseek-ai/DeepSeek-Coder-V2-16B-Instruct",
+    "name": "deepseek-ai/DeepSeek-Coder-V2-Instruct",
     "arch_type": "Dense",
     "model_type": "coder",
     "layers": 0,
