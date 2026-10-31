@@ -37,6 +37,18 @@ def compress_cli_output(raw_output: str, max_lines: int = 20) -> str:
     return "\n".join(result)
 
 
+def _is_junk_dir(dirpath: str, name: str) -> bool:
+    """Vendored/generated trees the debt scan must never enter.
+
+    Name denylist plus a `pyvenv.cfg` marker check so custom-named venvs
+    (`.venv-mahoraga`, `venv-foo`, ...) are skipped without name heuristics.
+    """
+    if name in {".git", "__pycache__", ".pytest_cache", "venv", ".venv",
+                "node_modules", "site-packages"}:
+        return True
+    return os.path.isfile(os.path.join(dirpath, name, "pyvenv.cfg"))
+
+
 def scan_shortcut_debt(root_dir: str) -> List[Dict[str, Any]]:
     """Kod tabanındaki `# shortcut:` (Ponytail) ve `# TODO:` teknik borç kayıtlarını toplar."""
     pattern = re.compile(r"^\s*#\s*(shortcut|TODO)\s*:\s*(.+)$", re.IGNORECASE)
@@ -44,14 +56,16 @@ def scan_shortcut_debt(root_dir: str) -> List[Dict[str, Any]]:
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
         dirnames[:] = [
-            d for d in dirnames if d not in {".git", "__pycache__", ".pytest_cache", "venv", ".venv"}
+            d for d in dirnames if not _is_junk_dir(dirpath, d)
         ]
         for fname in sorted(filenames):
             if not fname.endswith((".py", ".sh", ".md", ".yaml", ".yml")):
                 continue
             fpath = os.path.join(dirpath, fname)
             try:
-                with open(fpath, "r", encoding="utf-8") as f:
+                # errors="replace": a stray non-UTF-8 byte must not kill the scan;
+                # the ASCII `# shortcut:`/`# TODO:` markers still match.
+                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
                     for lineno, line in enumerate(f, start=1):
                         match = pattern.search(line)
                         if match:

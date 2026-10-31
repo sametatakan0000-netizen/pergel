@@ -47,6 +47,31 @@ class TestTokenAndDebtHygiene(unittest.TestCase):
             items = scan_shortcut_debt(tmp)
             self.assertEqual(items, [])
 
+    def test_scan_shortcut_debt_skips_virtualenv_trees_including_custom_names(self):
+        # A venv with a custom name (.venv-mahoraga) escaped the old denylist and
+        # crashed/polluted repo-root scans with vendored third-party markers.
+        with tempfile.TemporaryDirectory() as tmp:
+            venv_dir = os.path.join(tmp, ".venv-mahoraga")
+            os.makedirs(os.path.join(venv_dir, "lib"))
+            with open(os.path.join(venv_dir, "pyvenv.cfg"), "w", encoding="utf-8") as f:
+                f.write("home = /usr/bin\n")
+            with open(os.path.join(venv_dir, "lib", "vendor.py"), "w", encoding="utf-8") as f:
+                f.write("# shortcut: vendored third-party marker must not pollute the ledger\n")
+            with open(os.path.join(tmp, "app.py"), "w", encoding="utf-8") as f:
+                f.write("# shortcut: real project debt\n")
+            items = scan_shortcut_debt(tmp)
+            self.assertEqual(len(items), 1)
+            self.assertIn("real project debt", items[0]["detail"])
+
+    def test_scan_shortcut_debt_survives_non_utf8_bytes_and_still_finds_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "legacy.py"), "wb") as f:
+                f.write(b"# shortcut: marker before the bad byte\n"
+                        b"x = '\xa4'  # latin-1 stray byte\n")
+            items = scan_shortcut_debt(tmp)
+            self.assertEqual(len(items), 1)
+            self.assertIn("marker before the bad byte", items[0]["detail"])
+
     def test_browser_orchestrator_persists_domain_floors_and_apis_to_sqlite(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = os.path.join(tmp, "browser_memory.db")
