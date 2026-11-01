@@ -7,6 +7,7 @@ first layout. This test measures visibility DURING load, not after.
 """
 import asyncio
 import json
+import time
 import unittest
 
 try:
@@ -38,6 +39,22 @@ window.__probe = setInterval(() => {
 }, 25);
 </script>
 </body></html>"""
+
+
+def _pick_page_target(target_infos, created_target_id=None):
+    """Choose the page target to drive after ``Target.createTarget``.
+
+    ``Target.getTargets`` ordering is NOT guaranteed to place the freshly
+    created target last (observed live: 2/5 trials), so the id returned by
+    ``Target.createTarget`` is authoritative and only the newest page is a
+    fallback.
+    """
+    pages = [t for t in target_infos if t.get("type") == "page"]
+    if created_target_id is not None:
+        for t in pages:
+            if t.get("targetId") == created_target_id:
+                return t
+    return pages[-1] if pages else None
 
 
 class TestCosmeticDocumentStart(unittest.TestCase):
@@ -94,10 +111,11 @@ class TestCosmeticDocumentStart(unittest.TestCase):
                         if m.get("id") == seq[0]:
                             return m
 
-                await call("Target.createTarget", {"url": "about:blank"})
+                created = await call("Target.createTarget", {"url": "about:blank"})
+                created_id = created["result"]["targetId"]
                 targets = await call("Target.getTargets")
-                page = [t for t in targets["result"]["targetInfos"]
-                        if t["type"] == "page"][-1]
+                page = _pick_page_target(targets["result"]["targetInfos"],
+                                         created_id)
                 sess = await call("Target.attachToTarget",
                                   {"targetId": page["targetId"], "flatten": True})
                 sid = sess["result"]["sessionId"]
@@ -119,21 +137,35 @@ class TestCosmeticDocumentStart(unittest.TestCase):
                 # Wait for the page's inline probe script to initialise so
                 # window.__sawVisible is a real boolean, not undefined. Without
                 # this the final evaluate races the parser (intermittent flake).
+                ready_ok = False
                 for _ in range(100):
                     ready = await call("Runtime.evaluate",
                                        {"expression": "typeof window.__sawVisible === 'boolean'",
                                         "returnByValue": True}, sid=sid)
                     if ready["result"]["result"].get("value"):
+                        ready_ok = True
                         break
                     await asyncio.sleep(0.02)
+                if not ready_ok:
+                    raise AssertionError(
+                        "probe script never initialised on the target "
+                        "(window.__sawVisible is not a boolean)")
                 if not inject_at_document_start:
                     await asyncio.sleep(0.5)  # late injection: after load
                     await call("Runtime.evaluate", {"expression": inject}, sid=sid)
-                await asyncio.sleep(1.5)
-                res = await call("Runtime.evaluate",
-                                 {"expression": "window.__sawVisible",
-                                  "returnByValue": True}, sid=sid)
-                return res["result"]["result"]["value"]
+                # Poll instead of one fixed-latency read: headless tabs can
+                # throttle the 25ms probe interval, so give the flag up to
+                # 2.5s to flip. The flag is sticky-true once set.
+                deadline = time.monotonic() + 2.5
+                while True:
+                    res = await call("Runtime.evaluate",
+                                     {"expression": "window.__sawVisible === true",
+                                      "returnByValue": True}, sid=sid)
+                    if res["result"]["result"].get("value"):
+                        return True
+                    if time.monotonic() >= deadline:
+                        return False
+                    await asyncio.sleep(0.05)
 
         return asyncio.run(main())
 
@@ -147,6 +179,31 @@ class TestCosmeticDocumentStart(unittest.TestCase):
         self.assertTrue(self._run(False),
                         "probe never saw the ad even with late injection; "
                         "the visibility check is not measuring anything")
+
+
+class TestPickPageTarget(unittest.TestCase):
+    """Pure-logic guard for the flaky live test: Target.getTargets ordering is
+    NOT guaranteed to place the freshly created target last (observed live:
+    2/5 trials), so a positional [-1] pick drives a stale about:blank where
+    window.__sawVisible is undefined and the sanity assertion misfires."""
+
+    def test_created_target_preferred_even_when_not_last(self):
+        old = {"targetId": "AAAA", "type": "page"}
+        new = {"targetId": "BBBB", "type": "page"}
+        iframe = {"targetId": "CCCC", "type": "iframe"}
+        picked = _pick_page_target([new, old, iframe], created_target_id="BBBB")
+        self.assertIsNotNone(picked)
+        self.assertEqual(picked["targetId"], "BBBB")
+
+    def test_falls_back_to_last_page_when_created_id_absent(self):
+        old = {"targetId": "AAAA", "type": "page"}
+        new = {"targetId": "BBBB", "type": "page"}
+        picked = _pick_page_target([old, new], created_target_id="ZZZZ")
+        self.assertEqual(picked["targetId"], "BBBB")
+
+    def test_no_pages_returns_none(self):
+        self.assertIsNone(_pick_page_target([{"targetId": "C", "type": "iframe"}],
+                                            created_target_id="C"))
 
 
 if __name__ == "__main__":
