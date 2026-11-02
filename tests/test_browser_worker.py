@@ -50,6 +50,37 @@ class TestBrowserWorker(unittest.TestCase):
             ["https://example.com/api/product", "https://example.com/api/reviews"],
         )
 
+    def test_har_discovery_ignores_api_substring_inside_segment(self):
+        # precision: 'capital-city' merely contains the letters a-p-i and is not an API path
+        raw_html = '<script>var s = "https://example.com/capital-city";</script>'
+        self.assertEqual(
+            discover_har_api_endpoints(raw_html, base_url="https://example.com"),
+            [],
+        )
+
+    def test_har_discovery_matches_template_literal_urls(self):
+        raw_html = "<script>fetch(`https://api.example.com/v1/data`);</script>"
+        self.assertEqual(
+            discover_har_api_endpoints(raw_html),
+            ["https://api.example.com/v1/data"],
+        )
+
+    def test_har_discovery_skips_interpolated_template_urls(self):
+        # a template literal with ${...} is not a concrete, fetchable endpoint
+        raw_html = "<script>fetch(`/api/product/${id}`);</script>"
+        self.assertEqual(
+            discover_har_api_endpoints(raw_html, base_url="https://example.com"),
+            [],
+        )
+
+    def test_har_discovery_keeps_api_host_without_api_path(self):
+        # recall guard: the API token may live in the host label, not the path
+        raw_html = '<script>fetch("https://api.example.com/products");</script>'
+        self.assertEqual(
+            discover_har_api_endpoints(raw_html),
+            ["https://api.example.com/products"],
+        )
+
     def test_worker_escalates_engine_when_lightpanda_returns_empty(self):
         called_engines = []
 

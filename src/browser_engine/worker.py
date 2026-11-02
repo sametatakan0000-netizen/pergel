@@ -28,17 +28,44 @@ def _strip_non_script_tags(raw_html: str) -> str:
     return re.sub(r"<(?:link|meta)\b[^>]*>", "", raw_html, flags=re.IGNORECASE)
 
 
+def _looks_like_api_endpoint(candidate: str) -> bool:
+    """Bir URL adayı XHR/JSON API çağrısı gibi mi?
+
+    Segment ve host-label farkındalıklı: ``api``/``graphql`` bir yol segmenti
+    veya host etiketi olmalı (``api-v2`` gibi önek türevleri dahil), ya da son
+    segment ``.json`` ile bitmeli. Böylece ``/capital-city`` gibi yalnızca
+    a-p-i harflerini içeren yollar yanlış pozitif olmaz.
+    """
+    parts = urllib.parse.urlsplit(candidate)
+    labels = [lab for lab in (parts.hostname or "").split(".") if lab]
+    segments = [seg for seg in parts.path.split("/") if seg]
+    token_re = re.compile(r"^(?:api|graphql)(?:[._-].*)?$", re.IGNORECASE)
+
+    def _is_token(seg: str) -> bool:
+        return bool(token_re.match(seg))
+
+    if any(_is_token(lab) for lab in labels) or any(_is_token(seg) for seg in segments):
+        return True
+    return bool(segments) and segments[-1].lower().endswith(".json")
+
+
 def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
     """`har-derived-api-client` desenine uygun olarak sayfa kaynağındaki XHR/JSON API uçlarını keşfeder."""
-    # shortcut: regex, not a DOM/JS parser; only quoted strings inside JS network calls
-    # or script blocks count, so <link> icons/manifests are not reported as APIs.
+    # shortcut: regex, not a DOM/JS parser; only quoted strings (incl. backtick
+    # template literals) inside JS network calls or script blocks count, so
+    # <link> icons/manifests are not reported as APIs. Upgrade to a real JS
+    # parser when string-concatenated or fully dynamic URLs matter.
     pattern = re.compile(
-        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'])((?:https?://|/)[^"'\s)<>]*?(?:api|graphql|\.json)[^"'\s)<>]*)["']""",
+        r"""(?:fetch|axios\.(?:get|post)|XMLHttpRequest|["'`])((?:https?://|/)[^"'`\s)<>]*)["'`]""",
         re.IGNORECASE,
     )
     found: List[str] = []
     for match in pattern.finditer(_strip_non_script_tags(raw_html)):
         candidate = re.sub(r"(\\[nrt])+$", "", match.group(1).strip()).rstrip("\\")
+        if "${" in candidate:
+            continue  # interpolated template literal: not a concrete endpoint
+        if not _looks_like_api_endpoint(candidate):
+            continue
         if base_url and candidate.startswith("/"):
             candidate = urllib.parse.urljoin(base_url, candidate)
         if candidate not in found:
