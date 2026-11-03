@@ -75,7 +75,7 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
 
 try:
     import trafilatura
-except ImportError:  # shortcut: regex fallback drops only nav/header/footer/aside landmarks, trafilatura preferred in production deploys
+except ImportError:  # shortcut: regex fallback IS the production extractor (installed .deb runs system python3; no apt python3-trafilatura, Depends has no extraction dep). Upgrade when the deb ships an extraction backend (vendored trafilatura or bundled venv).
     trafilatura = None
 
 _MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; regex path keeps them
@@ -157,9 +157,16 @@ def _regex_markdown(raw_html: str) -> str:
 
     text = re.sub(r"<(script|style|noscript)[^>]*>.*?</\1>", "", raw_html, flags=re.S | re.I)
     text = re.sub(r"<(nav|header|footer|aside)\b[^>]*>.*?</\1>", "", text, flags=re.S | re.I)
-    text = re.sub(r"<h1[^>]*>(.*?)</h1>", r"\n# \1\n", text, flags=re.S | re.I)
-    text = re.sub(r"<h2[^>]*>(.*?)</h2>", r"\n## \1\n", text, flags=re.S | re.I)
-    text = re.sub(r"<h3[^>]*>(.*?)</h3>", r"\n### \1\n", text, flags=re.S | re.I)
+    # headings h1-h6: prefix length = level
+    text = re.sub(
+        r"<h([1-6])[^>]*>(.*?)</h\1>",
+        lambda m: "\n" + "#" * int(m.group(1)) + " " + m.group(2) + "\n",
+        text, flags=re.S | re.I,
+    )
+    # table structure: one row per line, cells pipe-separated (else adjacent
+    # <td> text glues into mush when tags are stripped)
+    text = re.sub(r"<tr[^>]*>", "\n", text, flags=re.I)
+    text = re.sub(r"</\s*t[dh]\s*>", " | ", text, flags=re.I)
     text = re.sub(
         r"""<a\s+[^>]*href=["']([^"']+)["'][^>]*>(.*?)</a>""",
         r"[\2](\1)",
@@ -170,7 +177,14 @@ def _regex_markdown(raw_html: str) -> str:
     text = re.sub(r"</p>|</div>|<br\s*/?>", "\n", text, flags=re.I)
     text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    def _clean_line(line: str) -> str:
+        line = line.strip()
+        if line.endswith("|"):  # trailing cell separator from </td></th>
+            line = line[:-1].rstrip()
+        return line
+
+    lines = [_clean_line(line) for line in text.splitlines() if line.strip()]
     return "\n\n".join(lines)
 
 
