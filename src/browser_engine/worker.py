@@ -1,6 +1,7 @@
 """Kademeli Motor Yükseltmeli (Engine Cascading) Tarayıcı İşçisi ve HAR/XHR API Keşfedici."""
 import html
 import re
+from html.parser import HTMLParser
 import time
 import urllib.error
 import urllib.parse
@@ -75,7 +76,7 @@ def discover_har_api_endpoints(raw_html: str, base_url: str = "") -> List[str]:
 
 try:
     import trafilatura
-except ImportError:  # shortcut: regex fallback IS the production extractor (installed .deb runs system python3; no apt python3-trafilatura, Depends has no extraction dep). Upgrade when the deb ships an extraction backend (vendored trafilatura or bundled venv).
+except ImportError:  # shortcut: fallback (stdlib HTMLParser, regex last resort) IS the production extractor (installed .deb runs system python3; no apt python3-trafilatura, Depends has no extraction dep). Upgrade when the deb ships an extraction backend (vendored trafilatura or bundled venv).
     trafilatura = None
 
 _MIN_EXTRACTED_CHARS = 80  # shorter results are usually fragments/SPA shells; regex path keeps them
@@ -129,8 +130,8 @@ def looks_like_js_app_shell(raw_html: str, extracted_md: str) -> bool:
 
 
 def html_to_clean_markdown(raw_html: str) -> str:
-    """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta regex yedeğine düşer.
-    Kalite kapısı: trafilatura regex'ten %50'den az kelime dönerse regex kullan (trafilatura aşırı filtrelemiş)."""
+    """Ana içeriği (trafilatura) Markdown olarak çıkarır; kısa/boş sonuçta bağımlılıksız parser yedeğine düşer.
+    Kalite kapısı: trafilatura yedekten %50'den az kelime dönerse yedek kullan (trafilatura aşırı filtrelemiş)."""
     if not raw_html or not raw_html.strip():
         return ""
     if trafilatura is not None:
@@ -143,13 +144,13 @@ def html_to_clean_markdown(raw_html: str) -> str:
             favor_recall=True,
         )
         if extracted and len(extracted.strip()) >= _MIN_EXTRACTED_CHARS:
-            regex_md = _regex_markdown(raw_html)
-            # quality gate: if trafilatura kept < 50% of regex word count,
+            fallback_md = _fallback_markdown(raw_html)
+            # quality gate: if trafilatura kept < 50% of fallback word count,
             # it dropped too much (sidebar, index pages, reference docs)
-            if regex_md and len(extracted.split()) < len(regex_md.split()) * 0.5:
-                return regex_md.strip()
+            if fallback_md and len(extracted.split()) < len(fallback_md.split()) * 0.5:
+                return fallback_md.strip()
             return extracted.strip()
-    return _regex_markdown(raw_html)
+    return _fallback_markdown(raw_html)
 
 
 def _regex_markdown(raw_html: str) -> str:
@@ -186,6 +187,91 @@ def _regex_markdown(raw_html: str) -> str:
 
     lines = [_clean_line(line) for line in text.splitlines() if line.strip()]
     return "\n\n".join(lines)
+
+
+class _MarkdownHTMLParser(HTMLParser):
+    """Stdlib HTML -> Markdown: ham `<`/`>` metni korunur, yorumlar damıtılır,
+    tırnaksız `href=/path` dahil linkler `[text](href)` olur, `dt/dd` ayrılır."""
+
+    # shortcut: skip-tag derinlik sayacı dengeli etiketler varsayar; bozuk iç
+    # içe nav/script için tam DOM gerekir. Yükseltme: .deb extraction bağımlılığı
+    # (vendored trafilatura) geldiğinde bu sınıf tamamen kalkabilir.
+    _SKIP = {"script", "style", "noscript", "nav", "header", "footer", "aside"}
+    _HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+    _BLOCK_END = {"p", "div", "dt", "dd", "li", "tr", "table", "pre", "blockquote"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.out: List[str] = []
+        self._skip = 0
+        self._link: Optional[List[Any]] = None  # [href, start_index]
+
+    def handle_starttag(self, tag: str, attrs: List[Any]) -> None:
+        if self._skip:
+            if tag in self._SKIP:
+                self._skip += 1
+            return
+        if tag in self._SKIP:
+            self._skip = 1
+        elif tag == "a":
+            self._link = [dict(attrs).get("href") or "", len(self.out)]
+        elif tag in self._HEADINGS:
+            self.out.append("\n" + "#" * int(tag[1]) + " ")
+        elif tag == "tr":
+            self.out.append("\n")
+        elif tag == "li":
+            self.out.append("\n- ")
+        elif tag == "br":
+            self.out.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._skip:
+            if tag in self._SKIP:
+                self._skip -= 1
+            return
+        if tag == "a" and self._link is not None:
+            href, start = self._link
+            inner = "".join(self.out[start:]).strip()
+            del self.out[start:]
+            self.out.append(f"[{inner}]({href})" if href else inner)
+            self._link = None
+        elif tag in self._HEADINGS:
+            self.out.append("\n")
+        elif tag in ("td", "th"):
+            self.out.append(" | ")
+        elif tag in self._BLOCK_END or tag == "br":
+            self.out.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            self.out.append(data)
+
+
+def _parser_markdown(raw_html: str) -> str:
+    """Ham HTML'i stdlib HTMLParser ile yapı koruyan Markdown'a çevirir."""
+    parser = _MarkdownHTMLParser()
+    parser.feed(raw_html)
+    parser.close()
+    text = "".join(parser.out)
+
+    def _clean_line(line: str) -> str:
+        line = line.strip()
+        if line.endswith("|"):  # trailing cell separator from </td></th>
+            line = line[:-1].rstrip()
+        return line
+
+    lines = [_clean_line(line) for line in text.splitlines() if line.strip()]
+    return "\n\n".join(lines)
+
+
+def _fallback_markdown(raw_html: str) -> str:
+    """Bağımlılıksız yedek çıkarım: önce stdlib parser, o çökerse regex."""
+    try:
+        return _parser_markdown(raw_html)
+    except Exception:
+        # shortcut: HTMLParser tolerandır ama bozuk baytlarda yutulabilir;
+        # regex yedeği emniyet ağı olarak kalıyor, N sürüm sonra kaldır.
+        return _regex_markdown(raw_html)
 
 
 MAX_BODY_BYTES = 2 * 1024 * 1024

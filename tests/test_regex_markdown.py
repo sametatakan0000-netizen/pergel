@@ -2,8 +2,11 @@
 
 Production reality (verified 2026-11-03): the installed .deb launcher runs
 system python3, which has no trafilatura (and apt has no python3-trafilatura),
-so `_regex_markdown` IS the production extractor for every fetch. Two defects
-made it corrupt structured content:
+so the dependency-free fallback IS the production extractor for every fetch.
+Since 2026-11-04 that fallback is `_parser_markdown` (stdlib HTMLParser, see
+test_parser_markdown.py for its contract); `_regex_markdown` below is the
+documented last-resort layer and still pins the original table/heading fixes.
+Two defects made it corrupt structured content:
 
 1. Table cells concatenated into mush (`<td>url</td><td>required</td>` ->
    "urlrequired") because only ``</p>|</div>|<br>`` produced line breaks and
