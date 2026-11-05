@@ -295,7 +295,7 @@ Türkçe öğretim + LLM araştırma → LLM araştırma/inceleme → Türkçeni
 
 - Envanter: `/home/pc/mahoraga_synapses_profile.json` (22:44, synapse_inventory.py dosya bazlı sayım; sum_check True; dup_hash_pairs 0)
 - Manifest: `/home/pc/mahoraga_synapses/manifest.json` (27 model, Toshiba `f241847c-cbe8-45c0-b262-b3611c1f71ea`)
-- Kuyruk: `/home/pc/mahoraga_surgery/surgery_queue_clean.json` (yalnız bunlar ameliyat)
+- Kuyruk: `/home/pc/mahoraga_surgery/surgery_queue_clean.json` (yalnız bunlar ameliyat; 05.11'de kayıp dosya `manifest.json` 27 modeli üzerinden yeniden kuruldu — §1.4 ile birebir; `before_pause` 86-model listesi üst kümedir, kuyruk DEĞİLDİR)
 - Öğretmen haritası: `/home/pc/mahoraga_ogretmen_haritasi.json` (6 soru yanıtı + M8-M10 + model_rehberi + sonraki adımlar)
 - Gece araştırması: `docs/mahoraga-gece-arastirmasi.md` + `/home/pc/research_benchmarks_raw.json` (141KB ham)
 - Olay günlüğü:
@@ -304,5 +304,6 @@ Türkçe öğretim + LLM araştırma → LLM araştırma/inceleme → Türkçeni
   - 2026-11-04 22:4x-00:xx — sınıf denetimi; PRM/critic araştırması; öğretmen haritası M8-M10 doğrulaması; marp/PRM/Granite-Docling/SWE-smith/RAGEv2 gece araştırması
   - 2026-11-05 00:3x-01:xx — nihai sentez; araç-yazma yolu terminal-yanı (göreli write_file/patch gölge ağacı riski) — doküman terminal üzerinden tek atomik yazım + `md5sum`/`grep` doğrulaması ile yerleştirildi
   - 2026-11-05 05:0x-11:xx — `@roundtable_so` sömürüsü (1.386 başlık, 583 repo, 149 transkript): AirLLM/Colibri/ktransformers/unsloth taşınabilir çıkarım teknikleri; §7.2 etki analizi + portabilite ilkesi (Karar 10); SOTA radar + haftalık döngüye kanal takibi (`roundtable-watch.sh`) eklendi
+  - 2026-11-05 12:3x-12:4x — Faz-5 çekirdeği gerçek kılındı: `src/mahoraga/faz5_extraction.py` (gerçek aktivasyon+kovaryans yön çıkarımı — `surgery_orchestrator` simülasyon stublarının yerini alır); `surgery_queue_clean.json` yeniden kuruldu (manifest 27); pilot ölçüm başlatıldı (Mistral-7B-Instruct-v0.2, `proc_07aa04a32ac0`)
 
 **Not (araç zinciri):** Bu gece yazma/patch araçlarının göreli yolları terminal dosya ağacından farklı bir kökene yazılabiliyor; doküman içeriği terminal `cat`/`wc`/`md5sum` ile doğrulanmıştır. Eski "okunamayan" dosya (`mahoraga-plan.md`) hiç var olmadı — okumalar aynı dosyanın farklı görünümleriydi.
