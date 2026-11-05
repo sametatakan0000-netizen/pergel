@@ -193,9 +193,11 @@ class _MarkdownHTMLParser(HTMLParser):
     """Stdlib HTML -> Markdown: ham `<`/`>` metni korunur, yorumlar damıtılır,
     tırnaksız `href=/path` dahil linkler `[text](href)` olur, `dt/dd` ayrılır."""
 
-    # shortcut: skip-tag derinlik sayacı dengeli etiketler varsayar; bozuk iç
-    # içe nav/script için tam DOM gerekir. Yükseltme: .deb extraction bağımlılığı
-    # (vendored trafilatura) geldiğinde bu sınıf tamamen kalkabilir.
+    # Skip-tag izolasyonu yığın (stack) ile: içinde hiç açılmamış bir
+    # `</header>`/`</style>` bölgeleri erken açamaz (eski sayaç sızdırıyordu).
+    # Kalan limit: hiç kapanmamış bir skip etiketi (ör. `<nav>`) kalan sayfayı
+    # yutar — tarayıcı DOM davranışıyla tutarlı; tam DOM gerekirse vendored
+    # trafilatura geldiğinde bu sınıf tamamen kalkabilir.
     _SKIP = {"script", "style", "noscript", "nav", "header", "footer", "aside"}
     _HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
     _BLOCK_END = {"p", "div", "dt", "dd", "li", "tr", "table", "pre", "blockquote"}
@@ -203,16 +205,16 @@ class _MarkdownHTMLParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.out: List[str] = []
-        self._skip = 0
+        self._skip_stack: List[str] = []
         self._link: Optional[List[Any]] = None  # [href, start_index]
 
     def handle_starttag(self, tag: str, attrs: List[Any]) -> None:
-        if self._skip:
+        if self._skip_stack:
             if tag in self._SKIP:
-                self._skip += 1
+                self._skip_stack.append(tag)
             return
         if tag in self._SKIP:
-            self._skip = 1
+            self._skip_stack.append(tag)
         elif tag == "a":
             self._link = [dict(attrs).get("href") or "", len(self.out)]
         elif tag in self._HEADINGS:
@@ -225,9 +227,12 @@ class _MarkdownHTMLParser(HTMLParser):
             self.out.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
-        if self._skip:
-            if tag in self._SKIP:
-                self._skip -= 1
+        if self._skip_stack:
+            # Yalnız gerçekten açık olan skip etiketleri kapanabilir; sıyrık bir
+            # `</header>` bölgeyi erken açamaz. Ters sırada kapanışta eşleşen
+            # etiket ve üstündeki iç içe skip etiketleri birlikte kapanır.
+            if tag in self._skip_stack:
+                del self._skip_stack[self._skip_stack.index(tag):]
             return
         if tag == "a" and self._link is not None:
             href, start = self._link
@@ -243,7 +248,7 @@ class _MarkdownHTMLParser(HTMLParser):
             self.out.append("\n")
 
     def handle_data(self, data: str) -> None:
-        if not self._skip:
+        if not self._skip_stack:
             self.out.append(data)
 
 

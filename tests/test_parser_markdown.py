@@ -49,6 +49,39 @@ class DefinitionListSeparation(unittest.TestCase):
         self.assertIn("first item", out, out)
 
 
+class MalformedSkipRegion(unittest.TestCase):
+    """Bozuk atlama-bölgesi HTML'i çıkarımı bozmamalı (shortcut: worker.py
+    derinlik sayacı düzeltmesinin sözleşmesi).
+
+    Gerçek sayfalarda atlama bölgeleri (nav/header/script...) dengesiz gelir:
+    bölgenin içinde hiç açılmamış bir `</header>`/`</style>` görünürsa sayaç
+    erken sıfırlanır ve bölgenin kalanı (menü, telif, script artığı) metne
+    sızar. Ayrıca sıyrıklar iç içe geçmiş atlama etiketlerini doğru kapatmalı.
+    """
+
+    def test_stray_skip_end_tag_does_not_unlock_region(self):
+        out = html_to_clean_markdown(
+            "<nav>menu junk</header> more junk</nav><p>real content</p>"
+        )
+        self.assertIn("real content", out, out)
+        self.assertNotIn("menu junk", out, out)
+        self.assertNotIn("more junk", out, out)
+
+    def test_mismatched_skip_end_tags_keep_following_content(self):
+        out = html_to_clean_markdown(
+            "<nav><header>inner junk</nav></header><p>after content</p>"
+        )
+        self.assertIn("after content", out, out)
+        self.assertNotIn("inner junk", out, out)
+
+    def test_nested_skip_regions_stay_hidden(self):
+        out = html_to_clean_markdown(
+            "<nav><div><header>deep junk</header></div></nav><p>visible</p>"
+        )
+        self.assertIn("visible", out, out)
+        self.assertNotIn("deep junk", out, out)
+
+
 class StructureStillKept(unittest.TestCase):
     """Regression guard: the new fallback must keep yesterday's contract too."""
 
