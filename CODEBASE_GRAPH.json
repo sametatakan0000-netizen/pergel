@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 116,
-    "total_classes": 111,
-    "total_functions": 824,
-    "total_loc": 17322
+    "total_files": 117,
+    "total_classes": 112,
+    "total_functions": 831,
+    "total_loc": 17485
   },
   "modules": [
     {
@@ -4079,6 +4079,59 @@
       "change_risk": 7.99
     },
     {
+      "module": "src.mahoraga.montaj_manifest",
+      "path": "src/mahoraga/montaj_manifest.py",
+      "loc": 163,
+      "classes": [
+        "SinapsIndeksi"
+      ],
+      "functions": [
+        "aile_bul",
+        "manifest_yukle",
+        "montaj_manifesti",
+        "__init__",
+        "kayit",
+        "kopya_sayisi",
+        "kopya_hashleri"
+      ],
+      "imports": [
+        "__future__",
+        "datetime",
+        "glob",
+        "json",
+        "pathlib"
+      ],
+      "calls": [
+        "LookupError",
+        "Path",
+        "SinapsIndeksi",
+        "ValueError",
+        "aile_bul",
+        "append",
+        "get",
+        "glob",
+        "isoformat",
+        "items",
+        "kayit",
+        "kopya_sayisi",
+        "len",
+        "list",
+        "load",
+        "lower",
+        "manifest_yukle",
+        "now",
+        "open",
+        "setdefault",
+        "sorted",
+        "split",
+        "startswith",
+        "str",
+        "strip",
+        "sum"
+      ],
+      "change_risk": 8.64
+    },
+    {
       "module": "src.mahoraga.multi_direction_extractor",
       "path": "src/mahoraga/multi_direction_extractor.py",
       "loc": 174,
@@ -5662,6 +5715,8 @@
     "src.mahoraga.filter_detector.status",
     "src.mahoraga.filter_surface.build_report",
     "src.mahoraga.moe_extractor.extract_moe_synapses",
+    "src.mahoraga.montaj_manifest.kopya_hashleri",
+    "src.mahoraga.montaj_manifest.montaj_manifesti",
     "src.mahoraga.multi_direction_extractor.extract_multi_directions",
     "src.mahoraga.multid_validation.covariance_weighted_svd",
     "src.mahoraga.multid_validation.l1_mask",
