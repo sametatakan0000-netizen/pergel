@@ -3,7 +3,7 @@
     "total_files": 116,
     "total_classes": 111,
     "total_functions": 824,
-    "total_loc": 17311
+    "total_loc": 17322
   },
   "modules": [
     {
@@ -3716,7 +3716,7 @@
     {
       "module": "src.mahoraga.behavior_tests",
       "path": "src/mahoraga/behavior_tests.py",
-      "loc": 88,
+      "loc": 98,
       "classes": [],
       "functions": [
         "build_catalog",
@@ -3738,7 +3738,7 @@
         "set",
         "values"
       ],
-      "change_risk": 1.5
+      "change_risk": 1.62
     },
     {
       "module": "src.mahoraga.combination_search",
@@ -4311,7 +4311,7 @@
     {
       "module": "src.mahoraga.red_collection",
       "path": "src/mahoraga/red_collection.py",
-      "loc": 161,
+      "loc": 162,
       "classes": [],
       "functions": [
         "dual_measure",
@@ -4341,7 +4341,7 @@
         "values",
         "verify_altin_kirmizi"
       ],
-      "change_risk": 6.81
+      "change_risk": 6.83
     },
     {
       "module": "src.mahoraga.self_evolution",

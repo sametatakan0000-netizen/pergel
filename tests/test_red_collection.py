@@ -3,7 +3,7 @@
 Kapsam (plan §8 Faz-5):
 - çift yönlü ölçüm (aktivasyon + kovaryans)
 - kırmızı kayıp (red loss) eşiği
-- StegoLLM-PAQ marjinal kayıp AUC doğrulaması (0.98 hedef)
+- Marjinal kayıp AUC doğrulaması (0.98 mühendislik hedefi; "PAQ" adı doğrulanamadı)
 - altın-kırmızı 4 kopya kuralı
 - kurtarma matrisi (kırmızı davranış -> reçete ailesi + yedek kaynakları)
 """

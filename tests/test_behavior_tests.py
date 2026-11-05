@@ -2,7 +2,7 @@
 
 Katalog 4 davranış sınıfını gerçek kamuya açık kaynaklara bağlar:
 kod -> SWE-bench Verified, araç -> tau-bench (retail/airline),
-güvenlik -> StegoLLM-PAQ + IA gizlilik, dil/karar -> Netmind niyet.
+güvenlik -> LSGC steganaliz + izleme kanıtı (2026-11-05 düzeltmesi), dil/karar -> Netmind niyet.
 """
 import os
 import sys
@@ -28,7 +28,9 @@ class TestKatalog(unittest.TestCase):
         kod = cat["suites"]["kod"]
         self.assertIn("SWE-bench", kod["kaynak"])
         self.assertIn("tau-bench", cat["suites"]["arac"]["kaynak"])
-        self.assertIn("PAQ", cat["suites"]["guvenlik"]["kaynak"])
+        self.assertIn("LSGC", cat["suites"]["guvenlik"]["kaynak"])
+        self.assertIn("arXiv:2406.04218", cat["suites"]["guvenlik"]["kaynak"])
+        self.assertEqual(cat["suites"]["guvenlik"]["kanit_banti"], [0.70, 0.99])
         for suite in cat["suites"].values():
             self.assertGreater(suite["orneklem"], 0)
             self.assertIn("hedef_davranis", suite)

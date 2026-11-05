@@ -3,7 +3,7 @@
 
 1. 27 modelin sinaps manifestoları (/home/pc/mahoraga_synapses/*_synapses.json)
 2. Öğretmen haritası davranış skorları (birincil 0.9, listeli 0.7, kanıt
-   override, taban 0.3; guvenlik kanıtsız -> düz 0.5 — dürüst boşluk)
+   override, taban 0.3; guvenlik kanıt bandı 0.70-0.99 (LSGC) -> muhafazakar 0.70)
 3. Fonksiyonel kümeleme -> her kümeden "en" -> kombinasyon simülasyonu
 Çıktı: /home/pc/mahoraga_kombinasyon_sonuc.json
 """
@@ -28,7 +28,7 @@ DAVRANIS_ESLEME = {
     "kod": ["kod"],
     "arac": ["arac_agentic"],
     "dil_karar": ["dil_uslup", "karar_router"],
-    "guvenlik": [],  # öğretmen haritasında davranış kanıtı YOK -> düz 0.5
+    "guvenlik": [],  # davranış kanıtı: LSGC bandı 0.70-0.99 (behavior_tests katalog)
 }
 
 # Kanıt override'ları (agentic_kanit.sonuclar — 05.11 doğrulanmış sayılar)
@@ -46,7 +46,7 @@ def model_skorlarini_uret(ogretmen_haritasi: dict, modeller: list[str]) -> dict:
     norm = {m.lower(): m for m in modeller}
     for dav, siniflar in DAVRANIS_ESLEME.items():
         for m in modeller:
-            s = 0.5 if dav == "guvenlik" else 0.3  # taban / dürüst boşluk
+            s = 0.7 if dav == "guvenlik" else 0.3  # taban: LSGC kanıt bandı alt ucu (0.70)
             for sinif in siniflar:
                 e = uzman.get(sinif, {})
                 birincil = (e.get("birincil") or "").lower()
@@ -97,9 +97,9 @@ def main() -> int:
         clusters = functional_clusters(records)
         best = select_best(clusters, dav, skorlar, prior=PRIOR)
         en_az = len(best)
-        # Guvenlik: davranis kaniti YOK (duz 0.5) -> esik 0.5, huni kovaryans
-        # gucuyle calisir (tie-break); Faz-5.5 olcumleri bu boslugu dolduracak.
-        esik = 0.5 if dav == "guvenlik" else 0.6
+        # Guvenlik: davranis kaniti LSGC bandi (0.70-0.99, arXiv:2406.04218);
+        # muhafazakar esik 0.70. (2026-11-05: eski 'kanitsiz 0.5' boslugu kapandi.)
+        esik = 0.7 if dav == "guvenlik" else 0.6
         best = funnel_candidates(best, min_skor=esik, ust_sinir=18)
         enler = {rol: v["en"] for rol, v in best.items()}
         # oracle: anahtar -> kayıt dönüşümü (aynı key farklı modellerde olabilir;

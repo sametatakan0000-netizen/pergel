@@ -195,6 +195,9 @@ Kaynak dosyası: `docs/mahoraga-gece-arastirmasi.md` (11 ham URL, MARP ana hatla
 
 ---
 
+### 7.1 Doğrulama düzeltmesi (2026-11-05)
+Yukarıdaki "StegoLLM-PAQ" adının kamuya açık kaynağı **BULUNAMADI**; "DeepEclipse" (Pegoraro vd., USENIX Security 2024) ise beyaz-kutu DNN **filigran kaldırma** çalışmasıdır — "IA / çıkarım anında gizlilik" kanıtı olarak **yanlış atıftır**. Gerçek, doğrulanabilir güvenlik kanıtları: (a) LSGC steganaliz (arXiv:2406.04218, Tablo III): güçlü gizlemede tespit %97-99, en zor senaryolarda %70-83; (b) izleme kanıtı (arXiv:2507.02737): frontier modeller standart imkânlarda gizli mesajı izleyiciden gizleyemiyor; risk yalnız izlenmeyen defter + kararlaştırılmış şema ile. Güvenlik davranış kanıtı bandı **0.70-0.99**; pipeline tabanı muhafazakar **0.70** (eski kanıtsız 0.5 boşluğu kapandı).
+
 ## 8. Fazlar
 
 ### Faz-1: Planlama + Araç üretimi (1-2 hafta) — 27 model tamam
@@ -202,8 +205,8 @@ Kaynak dosyası: `docs/mahoraga-gece-arastirmasi.md` (11 ham URL, MARP ana hatla
 
 ### Faz-5: Kırmızı toplama + kurtarma matrisi (3-7 gün) — ÖNCELİK: model davranışı doğrulama
 Her model/öğrenci için: **çift yönlü ölçüm** (aktivasyon + kovaryans) + **kırmızı kayıp**. Yeni teknikler (gece araştırması):
-- **StegoLLM-PAQ testi:** Dinamik tabanlı marjinal kayıp doğrulaması (AUC 0.98+ hedef); derleme sonrası ikinci analiz.
-- **LLM-gizlilik (IA):** Çıkarım anında gizlilik davranış testi.
+- **Stego tespit/reddetme testi:** LSGC steganaliz kanıtı (arXiv:2406.04218): tespit bandı %70-99; derleme sonrası ikinci analiz (bkz. §7 düzeltmesi).
+- **Çıkarım anında izleme (IA):** İzleme kanıtı (arXiv:2507.02737) temelli davranış testi; "StegoLLM-PAQ"/"DeepEclipse" atıfları düzeltildi (§7).
 - **Multi-D (çok-yönlü abliteration):** Birden fazla yön (kod/güvenlik/araç/dil kalitesi); L1-norm maskesi + Covariance-Weighted SVD + doğrulama matrisi.
 - **Altın-kırmızı:** Gövde silinir; sinaps yedekleri 4 kopya (depo + Toshiba + `mahoraga_synapses/` + manifest).
 

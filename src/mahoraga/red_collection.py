@@ -5,7 +5,7 @@ güvenlik, dil/karar, kod, matematik, araştırma — plan §8). Bu modül:
 
 - çift yönlü ölçüm (aktivasyon + kovaryans)
 - kırmızı kayıp (red loss) eşiği kontrolü
-- StegoLLM-PAQ marjinal kayıp AUC doğrulaması (0.98 hedef)
+- Marjinal kayıp AUC doğrulaması (0.98 mühendislik hedefi; "PAQ" adı doğrulanamadı — bkz. plan §7.1; kanıt bandı LSGC %70-99)
 - altın-kırmızı 4 kopya yedek kuralı
 - kurtarma matrisi (kırmızı davranış -> reçete ailesi + yedek kaynakları)
 
@@ -22,7 +22,8 @@ BEHAVIOR_TURS = ("kod", "guvenlik", "arac", "dil_karar", "matematik", "arastirma
 # ameliyat reddedilir (geri alma / kurtarma matrisi devreye girer).
 RED_LOSS_THRESHOLD = 0.10
 
-# StegoLLM-PAQ dinamik tabanlı marjinal kayıp AUC hedefi (plan §8).
+# Marjinal kayıp AUC hedefi (mühendislik kapısı). "PAQ" adı kamuya açık
+# kaynakta bulunamadı (plan §7.1); kanıt çapası: LSGC steganaliz bandı (arXiv:2406.04218).
 PAQ_AUC_TARGET = 0.98
 
 # Altın-kırmızı kural: sinaps yedekleri asla 4 kopyadan az olmaz
@@ -92,7 +93,7 @@ def red_loss(baseline: dict, current: dict) -> dict:
 
 
 def marginal_loss_auc(clean_scores: list[float], stego_scores: list[float]) -> float:
-    """StegoLLM-PAQ marjinal kayıp doğrulaması: temiz vs gizli skor AUC'su.
+    """Marjinal kayıp doğrulaması: temiz vs gizli skor AUC'su.
 
     AUC = P(temiz > gizli) + 0.5·P(eşit); hedef PAQ_AUC_TARGET (0.98).
     Boş liste ValueError.
