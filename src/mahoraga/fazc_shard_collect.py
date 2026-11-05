@@ -1,6 +1,6 @@
 """Faz-C sinaps shard toplayıcı — kazanan mevki tensörleri (Σw·v hammaddesi).
 
-Montaj manifestindeki (57 mevki) kazanan sinapsların GERÇEK tensörlerini toplar:
+Montaj manifestindeki kazanan sinapsların GERÇEK tensörlerini toplar:
 
   1. model.safetensors.index.json weight_map -> mevki-key -> shard eşlemesi
      (çift-format repolarda index.json weight_map GERÇEK dosya listesidir)
@@ -10,6 +10,10 @@ Montaj manifestindeki (57 mevki) kazanan sinapsların GERÇEK tensörlerini topl
      (96.085 eksik kayıt — ek indirme yok, zaten gelen shard'lardan)
   4. Kazanan tensörler safetensors olarak 4 kopya yedeklenir (ALTIN-KIRMIZI)
   5. Shard gövdeleri silinir (sinaps çıkarıldı, gövde geçici)
+
+STREAMING KURALI (101 GB shard dersi): safe_open().get_tensor() ve mmap dev
+tensörlerde ENOMEM'e düşer. Hash ve çıkarım dosya baytları üzerinden
+parça parça (chunked) yapılır; tensör ASLA RAM'e yüklenmez.
 
 Kullanım:
   python3 fazc_shard_collect.py --dry-run                    # depolama planı
@@ -24,12 +28,14 @@ import hashlib
 import json
 import os
 import shutil
+import struct
 import subprocess
 import time
 from pathlib import Path
 
 # IDM mantığı: hf_transfer paralel parça indirme (hf_hub_download hızlandırması)
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
+os.environ.setdefault("HF_XET_HIGH_PERFORMANCE", "1")  # yeni Xet yolu (hf_transfer deprecated)
 
 MANIFEST = "/home/pc/mahoraga_montaj_manifest.json"
 WORK = Path("/mnt/toshiba/mahoraga/fazc_shards")  # geçici shard çalışma kütüphanesi
@@ -41,6 +47,11 @@ BACKUP_DIRS = [
     Path("/mnt/toshiba/mahoraga/synapse_backups"),
 ]
 SYNAPSE_JSON_DIRS = BACKUP_DIRS  # *_synapses.json hash backfill de 4 kopya
+
+CHUNK = 64 << 20  # 64 MB akış penceresi
+DTYPE_MAP = {"BF16": "torch.bfloat16", "F32": "torch.float32", "F16": "torch.float16",
+             "F64": "torch.float64", "I64": "torch.int64", "I32": "torch.int32",
+             "I16": "torch.int16", "I8": "torch.int8", "U8": "torch.uint8", "BOOL": "bool"}
 
 
 def log(msg: str) -> None:
@@ -98,21 +109,62 @@ def plan_for_model(repo_id: str, winners: list[dict]) -> dict:
     }
 
 
-def sha256_tensor(t) -> str:
-    """bf16 dahil: tensor'un HAM baytlarının sha256'sı (dönüştürme yok)."""
-    import torch
+# ---------- STREAMING safetensors yardımcıları (mmap'siz, RAM'siz) ----------
 
-    if not isinstance(t, torch.Tensor):
-        t = torch.as_tensor(t)
-    raw = t.contiguous().view(torch.uint8).numpy().tobytes()
-    return hashlib.sha256(raw).hexdigest()
+def read_st_header(fp) -> dict:
+    """safetensors başlığını ayrıştır: {key: {dtype, shape, start, end}}."""
+    fp.seek(0)
+    n = struct.unpack("<Q", fp.read(8))[0]
+    header = json.loads(fp.read(n))
+    base = 8 + n
+    out = {}
+    for key, v in header.items():
+        if key == "__metadata__":
+            continue
+        s, e = v["data_offsets"]
+        out[key] = {"dtype": v["dtype"], "shape": v["shape"],
+                    "start": base + s, "end": base + e}
+    return out
+
+
+def hash_range(fp, start: int, end: int) -> str:
+    """Dosya aralığının sha256'sı — parça parça okuma, RAM'e yükleme yok."""
+    h = hashlib.sha256()
+    fp.seek(start)
+    left = end - start
+    while left > 0:
+        b = fp.read(min(CHUNK, left))
+        if not b:
+            break
+        h.update(b)
+        left -= len(b)
+    return h.hexdigest()
+
+
+def extract_winner(fp, info: dict, key: str, outp: Path) -> int:
+    """Tensörü ham baytlarıyla yeni safetensors dosyasına kopyalar (kayıpsız)."""
+    nbytes = info["end"] - info["start"]
+    hdr = {key: {"dtype": info["dtype"], "shape": info["shape"],
+                 "data_offsets": [0, nbytes]}}
+    hb = json.dumps(hdr).encode()
+    with open(outp, "wb") as out:
+        out.write(struct.pack("<Q", len(hb)))
+        out.write(hb)
+        fp.seek(info["start"])
+        left = nbytes
+        while left > 0:
+            b = fp.read(min(CHUNK, left))
+            out.write(b)
+            left -= len(b)
+    return nbytes
 
 
 def download_shard(repo_id: str, shard: str, work_dir: Path) -> Path:
     """IDM mantığı: aria2c 16 bağlantılı paralel indirme; olmazsa hf_hub_download."""
     dst = work_dir / shard
-    if dst.exists():
-        return dst
+    ctrl = dst.parent / (dst.name + ".aria2")  # yarım indirme kontrol dosyası
+    if dst.exists() and not ctrl.exists():
+        return dst  # tamamlanmış
     dst.parent.mkdir(parents=True, exist_ok=True)
     if shutil.which("aria2c"):
         url = f"https://huggingface.co/{repo_id}/resolve/main/{shard}"
@@ -122,9 +174,9 @@ def download_shard(repo_id: str, shard: str, work_dir: Path) -> Path:
                "-d", str(dst.parent), "-o", dst.name, url]
         token = os.environ.get("HF_TOKEN")
         if token:
-            cmd += ["--header", f"Authorization: Bearer {token}"]
+            cmd += ["--header", f"Authorization: Bearer ***"]
         r = subprocess.run(cmd, capture_output=True, text=True)
-        if r.returncode == 0 and dst.exists():
+        if r.returncode == 0 and dst.exists() and not ctrl.exists():
             return dst
         log(f"    ⚠️ aria2c başarısız (rc={r.returncode}), hf_hub_download'a düşüldü")
     from huggingface_hub import hf_hub_download
@@ -133,9 +185,6 @@ def download_shard(repo_id: str, shard: str, work_dir: Path) -> Path:
 
 
 def collect_model(repo_id: str, winners: list[dict]) -> dict:
-    from safetensors import safe_open
-    from safetensors.torch import save_file
-
     plan = plan_for_model(repo_id, winners)
     win_by_key = {w["key"]: w for w in winners}
     model_dir = WINNERS_ROOT / repo_id.replace("/", "__")
@@ -150,6 +199,7 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
     syn_name = repo_id.replace("/", "_") + "_synapses.json"
     syn_paths = [d / syn_name for d in SYNAPSE_JSON_DIRS if (d / syn_name).exists()]
     syn_records = {}
+    syn = {}
     if syn_paths:
         syn = json.load(open(syn_paths[0]))
         syn_records = {t["key"]: t for t in syn.get("tensors", [])}
@@ -158,23 +208,24 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
         log(f"  ↓ shard: {shard}")
         local = download_shard(repo_id, shard, work_dir)
         seen_hashes = {}
-        with safe_open(local, framework="pt") as f:
-            for key in f.keys():
-                t = f.get_tensor(key)
-                h = sha256_tensor(t)
+        with open(local, "rb") as fp:
+            hdr = read_st_header(fp)
+            for key, info in hdr.items():
+                h = hash_range(fp, info["start"], info["end"])  # streaming hash
                 seen_hashes[key] = h
                 if key in win_by_key:
                     outp = model_dir / f"{key.replace('.', '__')}.safetensors"
-                    save_file({key: t}, str(outp))
+                    n = extract_winner(fp, info, key, outp)  # ham bayt kopya
                     meta = outp.with_suffix(".meta.json")
                     meta.write_text(json.dumps({
                         "model": repo_id, "key": key, "mevki": win_by_key[key]["mevki"],
                         "behavior": win_by_key[key]["behavior"], "aile": win_by_key[key]["aile"],
-                        "sha256": h, "shape": list(t.shape),
-                        "dtype": str(t.dtype), "bytes": int(t.numel() * t.element_size()),
+                        "sha256": h, "shape": info["shape"],
+                        "dtype": DTYPE_MAP.get(info["dtype"], info["dtype"]),
+                        "safetensors_dtype": info["dtype"], "bytes": n,
                     }, ensure_ascii=False, indent=1))
                     result["winners_saved"].append(str(outp))
-                    log(f"    ✅ kazanan tensör: {key} {list(t.shape)} ({t.numel() * t.element_size() / 1e9:.2f} GB)")
+                    log(f"    ✅ kazanan tensör: {key} {info['shape']} ({n / 1e9:.2f} GB)")
         # hash backfill (geri kalan eksik kayıtlar bu shard'lardan dolar)
         for key, h in seen_hashes.items():
             rec = syn_records.get(key)
@@ -197,7 +248,7 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
 
 
 def backup_winners(repo_id: str) -> dict:
-    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya + sha256 doğrulama."""
+    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya + streaming sha256 doğrulama."""
     model_dir = WINNERS_ROOT / repo_id.replace("/", "__")
     if not model_dir.exists():
         return {}
@@ -206,11 +257,12 @@ def backup_winners(repo_id: str) -> dict:
         dst = d / "winners" / model_dir.name
         dst.mkdir(parents=True, exist_ok=True)
         n = 0
-        for fp in model_dir.iterdir():
+        for fp in sorted(model_dir.iterdir()):
             target = dst / fp.name
-            target.write_bytes(fp.read_bytes())
-            if hashlib.sha256(fp.read_bytes()).hexdigest() != hashlib.sha256(target.read_bytes()).hexdigest():
-                raise RuntimeError(f"Yedek doğrulama BAŞARISIZ: {target}")
+            shutil.copyfile(fp, target)
+            with open(fp, "rb") as a, open(target, "rb") as b:
+                if hash_range(a, 0, fp.stat().st_size) != hash_range(b, 0, target.stat().st_size):
+                    raise RuntimeError(f"Yedek doğrulama BAŞARISIZ: {target}")
             n += 1
         copied[str(dst)] = n
     log(f"  4 kopya yedek doğrulandı: {repo_id} ({list(copied.values())[0]} dosya)")
@@ -241,29 +293,35 @@ def main() -> None:
             log(f"  ⚠️ plan hatası {m}: {e}")
 
     total = sum(p["download_bytes"] for _, _, p in plans)
-    win_total = 0
     for m, w, p in plans:
-        per_win = p["download_bytes"] / max(1, p["n_winners"])
-        est_win = sum(0 for _ in w)  # gerçek tensör boyutu shard'dan biliniyor; tahmin:
         log(f"  {m}: {p['n_winners']} mevki → {len(p['needed_shards'])} shard, "
             f"indirme {p['download_bytes'] / 1e9:.1f} GB")
         if p["keys_not_in_weightmap"]:
             log(f"    ⚠️ weight_map'te olmayan anahtarlar: {p['keys_not_in_weightmap']}")
     log(f"TOPLAM indirme: {total / 1e9:.1f} GB | seçili model sayısı: {len(plans)}")
-    log(f"Depolama: / (NVMe) geçici kazananlar + yedekler; /mnt/toshiba shard çalışma kütüphanesi")
 
     if args.dry_run:
         return
 
     for m, w, p in plans:
+        out = Path("/home/pc/mahoraga_montaj") / f"collect_{m.replace('/', '__')}.json"
+        if out.exists():
+            log(f"\n=== ATLANDI (tamamlanmış): {m} ===")
+            continue
         log(f"\n=== TOPLAMA: {m} ({len(w)} mevki) ===")
         res = collect_model(m, w)
         res["backup"] = backup_winners(m)
-        out = Path("/home/pc/mahoraga_montaj") / f"collect_{m.replace('/', '__')}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(res, ensure_ascii=False, indent=1))
         log(f"TAMAM: {m} — {len(res['winners_saved'])} tensör, "
             f"{res['hashes_backfilled']} hash backfill")
+
+    # nihai doğrulama: benzersiz (model, key) sayısı == winner dosya sayısı
+    uniq = {(w["model"], w["key"]) for w in winners}
+    files = list(WINNERS_ROOT.rglob("*.safetensors"))
+    log(f"\nDOĞRULAMA: {len(uniq)} benzersiz (model, key) mevki ↔ {len(files)} kazanan dosya")
+    if len(files) != len(uniq):
+        log("⚠️ EŞLEŞMEYOR — eksik/fazla dosya var, sessiz geçme!")
 
 
 if __name__ == "__main__":
