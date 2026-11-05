@@ -68,7 +68,9 @@ Birleşik aileler: **MoE 993.248.049.152 (%52,88)** · **MLP 443.013.697.592 (%2
 ### 1.3 Filtre yüzeyi (reçete kapıları — cross-cutting)
 
 Reçete hedef kapıları: `attention_out, mlp_down, moe_expert_down, moe_expert_gate_up, embedding_in, embedding_out, mtp_head, lookup_memory`
-→ **712.511.582.597 sinaps (%37,94).** Bu kesim bilgi/karar sınıflarının *üzerine biner* (ör. moe_expert_down aynı anda bilgi ağırlığı ve davranış yazma kapısıdır); "kullanım yüzeyi" budur. Eski `mahoraga_filter_surface.json` (583,89B) eski sınıflandırma ile hesaplanmıştı; yeni sayım sonrası rapor Faz-1'de yeniden üretilecek (eşik yine %30).
+→ **712.511.582.597 sinaps (%37,94)** — geniş "reçete hedef kapıları" seti. Bu kesim bilgi/karar sınıflarının *üzerine biner* (ör. moe_expert_down aynı anda bilgi ağırlığı ve davranış yazma kapısıdır).
+
+**Faz-1 çapraz doğrulama (05.11 — tamamlandı, `mahoraga_filter_surface_v2.json`):** `filter_surface.py` anatomik tanımıyla (Arditi: artık/kelime **yazar** kapıları — moe_expert_gate_up ve PLE key_proj KAPIDA sayılır, yüzeyde değil; engram yalnız v_* yükü, lookup_memory yalnız value_proj/conv1d) yeniden hesaplandı: **582.096.632.162 sinaps (%30,99)**, 27 modelin tamamında `sum_check: True`, HF `index.json` shard eşlemeleri ile birlikte indirme planlı. İki tanımın farkı = moe_expert_gate_up (80,53B) + lookup_memory kapı yolu farkı. **Eşik %30 üstünde — Faz-1 kriteri geçti.** Kullanım: *anatomik yazar yüzeyi* (582,10B) abliteration hedefi; *reçete seti* (712,51B) geniş ameliyat kapısı listesi.
 
 ### 1.4 Model envanteri (tam)
 
