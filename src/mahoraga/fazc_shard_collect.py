@@ -267,15 +267,17 @@ TOSHIBA_BACKUP_DIRS = [
 
 
 def backup_winners(repo_id: str) -> dict:
-    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya + streaming sha256 doğrulama.
+    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya.
 
     Dev tensör (>20 GB) düzeni: 1 NVMe kopya + 3 Toshiba kopya (NVMe 3 kopyaya sığmaz).
-    Toshiba mount'suzsa dev kopya için HATA — sessizce NVMe'ye doldurma yok."""
+    Toshiba mount'suzsa dev kopya için HATA — sessizce NVMe'ye doldurma yok.
+    USB2 (~40 MB/s) hız duvarı için: yarım kopyadan devam + yazarken hash
+    (ek doğrulama okuması yok) + yarım parçada baş/son örnekleme."""
     model_dir = WINNERS_ROOT / repo_id.replace("/", "__")
     if not model_dir.exists():
         return {}
     toshiba_ok = Path("/mnt/toshiba").is_mount()
-    copied = {}
+    done_dirs: set[str] = set()
     for fp in sorted(model_dir.iterdir()):
         if fp.suffix == ".meta.json":
             continue
@@ -286,18 +288,65 @@ def backup_winners(repo_id: str) -> dict:
             dests = [BACKUP_DIRS[0]] + TOSHIBA_BACKUP_DIRS  # 1 NVMe + 3 Toshiba
         else:
             dests = BACKUP_DIRS
+        todo = []
         for d in dests:
             dst = d / "winners" / model_dir.name
             dst.mkdir(parents=True, exist_ok=True)
             target = dst / fp.name
-            if not target.exists() or target.stat().st_size != size:
-                shutil.copyfile(fp, target)
-            with open(fp, "rb") as a, open(target, "rb") as b:
-                if hash_range(a, 0, size) != hash_range(b, 0, size):
-                    raise RuntimeError(f"Yedek doğrulama BAŞARISIZ: {target}")
-            copied[str(dst)] = copied.get(str(dst), 0) + 1
-    log(f"  4 kopya yedek doğrulandı: {repo_id} ({max(copied.values())} dosya/kopya)")
-    return copied
+            tsz = target.stat().st_size if target.exists() else -1
+            if tsz == size:
+                done_dirs.add(str(dst))
+                continue  # tam kopya var (önceki turda hash'li doğrulandı)
+            todo.append((target, max(tsz, 0)))
+        if not todo:
+            continue
+        log(f"  kopya: {fp.name} ({size / 1e9:.1f} GB) → {len(todo)} hedef"
+            f" ({[f'{t.name}:@{o / 1e9:.1f}G' for t, o in todo]})")
+        import hashlib
+        src_digest = hashlib.sha256()
+        tgt_fhs = []
+        for target, off in todo:
+            mode = "r+b" if off > 0 else "wb"
+            tgt_fhs.append((open(target, mode), off, hashlib.sha256()))
+        with open(fp, "rb") as sf:
+            # yarım kopyalar: kaynağın [0,off) kısmını önden hash'le (NVMe okuma hızlı)
+            for fh, off, dig in tgt_fhs:
+                if off:
+                    sf.seek(0)
+                    remain = off
+                    while remain:
+                        c = sf.read(min(1 << 22, remain))
+                        dig.update(c)
+                        remain -= len(c)
+                    # örnekleme: yarım parçanın başı sonu kaynakla eşit mi?
+                    for probe in (0, max(0, off - (1 << 20))):
+                        plen = min(1 << 20, off - probe)
+                        if plen <= 0:
+                            continue
+                        sf.seek(probe)
+                        fh.seek(probe)
+                        if fh.read(plen) != sf.read(plen):
+                            raise RuntimeError(f"Yarım kopya bozuk ({target}) — baştan kopyalanmalı")
+                    fh.seek(off)
+                    sf.seek(off)
+            pos = 0
+            while pos < size:
+                chunk = sf.read(min(1 << 22, size - pos))
+                src_digest.update(chunk)
+                for fh, off, dig in tgt_fhs:
+                    lo = max(0, off - pos)  # hizasız yarım ofset: chunk kuyruğunu yaz
+                    if lo < len(chunk):
+                        fh.write(chunk[lo:])
+                        dig.update(chunk[lo:])
+                pos += len(chunk)
+        want = src_digest.hexdigest()
+        for fh, off, dig in tgt_fhs:
+            fh.close()
+            if dig.hexdigest() != want:
+                raise RuntimeError(f"Yedek hash uyuşmadı: {fh.name}")
+        done_dirs.update(str(t) for t, _ in todo)
+    log(f"  4 kopya yedek doğrulandı: {repo_id} ({len(done_dirs)} hedef dizin)")
+    return {d: 1 for d in done_dirs}
 
 
 def main() -> None:
