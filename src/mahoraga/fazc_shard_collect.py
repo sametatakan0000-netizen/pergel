@@ -22,8 +22,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import shutil
+import subprocess
 import time
 from pathlib import Path
+
+# IDM mantığı: hf_transfer paralel parça indirme (hf_hub_download hızlandırması)
+os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 MANIFEST = "/home/pc/mahoraga_montaj_manifest.json"
 WORK = Path("/mnt/toshiba/mahoraga/fazc_shards")  # geçici shard çalışma kütüphanesi
@@ -93,18 +99,42 @@ def plan_for_model(repo_id: str, winners: list[dict]) -> dict:
 
 
 def sha256_tensor(t) -> str:
-    import numpy as np
+    """bf16 dahil: tensor'un HAM baytlarının sha256'sı (dönüştürme yok)."""
+    import torch
 
-    h = hashlib.sha256()
-    arr = t.numpy() if hasattr(t, "numpy") else np.asarray(t)
-    h.update(arr.tobytes())
-    return h.hexdigest()
+    if not isinstance(t, torch.Tensor):
+        t = torch.as_tensor(t)
+    raw = t.contiguous().view(torch.uint8).numpy().tobytes()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def download_shard(repo_id: str, shard: str, work_dir: Path) -> Path:
+    """IDM mantığı: aria2c 16 bağlantılı paralel indirme; olmazsa hf_hub_download."""
+    dst = work_dir / shard
+    if dst.exists():
+        return dst
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if shutil.which("aria2c"):
+        url = f"https://huggingface.co/{repo_id}/resolve/main/{shard}"
+        cmd = ["aria2c", "-x", "16", "-s", "16", "-k", "4M", "-c",
+               "--console-log-level=warn", "--summary-interval=0",
+               "--file-allocation=none", "--auto-file-renaming=false",
+               "-d", str(dst.parent), "-o", dst.name, url]
+        token = os.environ.get("HF_TOKEN")
+        if token:
+            cmd += ["--header", f"Authorization: Bearer {token}"]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode == 0 and dst.exists():
+            return dst
+        log(f"    ⚠️ aria2c başarısız (rc={r.returncode}), hf_hub_download'a düşüldü")
+    from huggingface_hub import hf_hub_download
+
+    return Path(hf_hub_download(repo_id, shard, local_dir=str(work_dir)))
 
 
 def collect_model(repo_id: str, winners: list[dict]) -> dict:
-    from huggingface_hub import hf_hub_download
     from safetensors import safe_open
-    from safetensors.numpy import save_file
+    from safetensors.torch import save_file
 
     plan = plan_for_model(repo_id, winners)
     win_by_key = {w["key"]: w for w in winners}
@@ -126,9 +156,9 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
 
     for shard in plan["needed_shards"]:
         log(f"  ↓ shard: {shard}")
-        local = hf_hub_download(repo_id, shard, local_dir=str(work_dir))
+        local = download_shard(repo_id, shard, work_dir)
         seen_hashes = {}
-        with safe_open(local, framework="np") as f:
+        with safe_open(local, framework="pt") as f:
             for key in f.keys():
                 t = f.get_tensor(key)
                 h = sha256_tensor(t)
@@ -141,10 +171,10 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
                         "model": repo_id, "key": key, "mevki": win_by_key[key]["mevki"],
                         "behavior": win_by_key[key]["behavior"], "aile": win_by_key[key]["aile"],
                         "sha256": h, "shape": list(t.shape),
-                        "dtype": str(t.dtype), "bytes": int(t.size * t.itemsize),
+                        "dtype": str(t.dtype), "bytes": int(t.numel() * t.element_size()),
                     }, ensure_ascii=False, indent=1))
                     result["winners_saved"].append(str(outp))
-                    log(f"    ✅ kazanan tensör: {key} {list(t.shape)} ({t.size * t.itemsize / 1e9:.2f} GB)")
+                    log(f"    ✅ kazanan tensör: {key} {list(t.shape)} ({t.numel() * t.element_size() / 1e9:.2f} GB)")
         # hash backfill (geri kalan eksik kayıtlar bu shard'lardan dolar)
         for key, h in seen_hashes.items():
             rec = syn_records.get(key)

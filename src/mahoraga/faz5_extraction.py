@@ -95,6 +95,8 @@ def load_model(model_path: Path):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(str(model_path))
+    if tok.pad_token is None:  # Mistral/Llama ailelerinde pad yok — batch için eos kullan
+        tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(
         str(model_path),
         torch_dtype=torch.float16,
