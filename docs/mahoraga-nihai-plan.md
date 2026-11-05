@@ -18,6 +18,7 @@ Resmî envanter kaynağı: `/home/pc/mahoraga_synapses_profile.json` (synapse_in
 7. **Göz kararı.** Vision taahhüdü doğrulanmış modellerin (Qwen3.5-9B, Qwen3.8-27B, Qwen3.8-Flash-Next, Nemotron-Bolt-74B) görsel sinapsları (`vision_tower`) **korunur**; `Gemma-3-27B-it` üstün göz kalitesi nedeniyle **amiral görsel-uzamsal öğrenci** adayı olarak önceliklidir. Görev metni "gemi içi görsel kodlayıcı/subagent KULLANMA" dediği için Gemma göz uzmanı ayrı araç subagent'ı olarak kalır; amiral, görsel yorumu ondan kaynaklı alıntılarla alır. Görevdeki "en iyi model öyle istiyor" şartı bu şekilde karşılanır.
 8. **Öğretmen kriterleri (katı).** Kaynak aile + sinaps sayısı + SWE-bench Verified + LiveCodeBench + IFEval + GPQA + MT-Bench + MATH + **agentic skorlar** + özel durumlar (Sober/Roblox/Minecraft kartları). Sadece kişisel yorumlar öğretmen tayinine yetmez. Türkçe öğretim + LLM araştırma; Almanca pedagojik öğretim + LLM araştırma. Eski "GitHub-Dev-Code-Sailor" hayali öğretmen zinciri rafa kalktı; gerçek öğretmenler kanıtlanmış açık ağırlıklı modellerdir.
 9. **Dil köprüsü.** Çıkarılan Türkçe/Almanca bilgi sinapsları (engram/PLE memori) doğrudan öğrenciye taşınmaz; **İngilizce kalıcı anlam** üzerinden köprü kurulur (çift kodlama + çoklu dil eşlemesi). Türkçe canlı akış Pergel/websurf'ten; öğrenci İngilizceyi `C4-tr` (58,2GB) ve `C4-de` ile pekiştirir.
+10. **Portabilite ilkesi (2026-11-05 — MOBİL MAHORAGA).** Tüm hattın çalıştığı donanım tek dizüstü (RTX 5050, 8GB VRAM + 30GB RAM) + taşınabilir SSD (Toshiba) ile sınırlıdır; veri merkezi varsayımı yoktur. Dev öğretmen/aday modeller tam yüklemeden çalışır: **katman offload (AirLLM)**, **SSD lazy block paging (Colibri)**, **CPU/GPU hibrit MoE (ktransformers)**. Çıktı formatı tek safetensors + GGUF Q4 (laptop/edge taşınabilirliği). Ameliyat her zaman tam hassasiyette safetensors (altın-kırmızı korunur); yalnız ölçüm/çalıştırma taşınabilir yığından yapılır.
 
 ---
 
@@ -198,7 +199,22 @@ Kaynak dosyası: `docs/mahoraga-gece-arastirmasi.md` (11 ham URL, MARP ana hatla
 ### 7.1 Doğrulama düzeltmesi (2026-11-05)
 Yukarıdaki "StegoLLM-PAQ" adının kamuya açık kaynağı **BULUNAMADI**; "DeepEclipse" (Pegoraro vd., USENIX Security 2024) ise beyaz-kutu DNN **filigran kaldırma** çalışmasıdır — "IA / çıkarım anında gizlilik" kanıtı olarak **yanlış atıftır**. Gerçek, doğrulanabilir güvenlik kanıtları: (a) LSGC steganaliz (arXiv:2406.04218, Tablo III): güçlü gizlemede tespit %97-99, en zor senaryolarda %70-83; (b) izleme kanıtı (arXiv:2507.02737): frontier modeller standart imkânlarda gizli mesajı izleyiciden gizleyemiyor; risk yalnız izlenmeyen defter + kararlaştırılmış şema ile. Güvenlik davranış kanıtı bandı **0.70-0.99**; pipeline tabanı muhafazakar **0.70** (eski kanıtsız 0.5 boşluğu kapandı).
 
+### 7.2 Etki analizi (2026-11-05 — taşınabilir çıkarım teknikleri)
+
+Kaynak: `@roundtable_so` kanal sömürüsü (AirLLM, Colibri, ktransformers, unsloth; 583 repo envanteri, `/home/pc/mahoraga_channel_analiz/`). **Yanıt: ETKİ VAR — ama yalnız ölçüm/doğrulama yüzeyinde.** Tamamlanan envanter, sinaps yedekleme (4 kopya), altın-kırmızı kural ve Faz-1 çapraz doğrulama **olduğu gibi geçerlidir**; değişen, dev öğretmen/aday modellerin laptop'ta ölçülüp doğrulanabilmesidir:
+
+| Öğrenilen | Eski varsayım | Etki | Değişen faz |
+|---|---|---|---|
+| AirLLM katman offload (70B→4GB VRAM, kantizasyon yok) | Dev modeller davranış testine sığmaz | Öğretmen davranış skorları (Top-5 = %63 sinaps) artık **laptop'ta ölçülür** | Faz-5 / Faz-5.5 ölçüm |
+| Colibri SSD lazy block paging (744B int4→25GB RAM, ~60 tok/s) | Tam yükleme şart | Faz-C tensör doğrulama + montaj manifest denetimi blok akışıyla; Toshiba doğrudan **çalışma kütüphanesi** | Faz-C doğrulama |
+| ktransformers CPU/GPU hibrit MoE | MoE uzmanları GPU'da kilitli | DeepSeek 256-uzman MoE (508B) ölçümü mümkün: aktif uzman GPU, kalan CPU/RAM | Faz-5 DeepSeek ölçümü + Faz-D çalışma motoru |
+| unsloth hızlı LoRA | Ağır yeniden eğitim | Davranış boşluğu kalan öğrenciye hızlı düzeltme | Faz-C eğitim yolu |
+
+Değişmeyenler: altın-kırmızı (ameliyat her zaman tam hassasiyet safetensors), merge-first, 4 kopya yedek, 3B-8B öğrenci boyutu (taşınabilirlikle pekişir), davranış kapısı eşikleri (red %10 / davranış %70).
+
 ## 8. Fazlar
+
+**Sıra (kesin — 05.11 gündüz):** Faz-1 **tamam** → **Faz-5** → **Faz-5.5** → **Faz-C** → **Faz-D**. Her davranış §9 ömür döngüsünden geçer; davranış doğrulaması paketlemeden önce zorunludur. **Portabilite kesintisiz kesittir:** her faz tek dizüstü (8GB VRAM/30GB RAM) + Toshiba üzerinde ölçülür ve doğrulanır; taşınabilir çıkarım yığını dev modelleri tam yüklemeden çalıştırır.
 
 ### Faz-1: Planlama + Araç üretimi (1-2 hafta) — 27 model tamam
 `mahoraga_recipe_map.json` güncelleme, `distill_covariance.py` LLM covariance 0.01-0.3 (kod uzmanları). Kanıtlama: test dosyaları + 8 test geçti (`test_synapse_inventory_classify.py`, `test_synapse_inventory_generate_report.py`). Düzenleyici görev: taze `filter_surface` raporu (`mahoraga_filter_surface.py`), öğretmen haritası davranışı (Faz-5.5).
@@ -222,9 +238,10 @@ Her model/öğrenci için: **çift yönlü ölçüm** (aktivasyon + kovaryans) +
 - Öğrenci boyutu: 3B-8B (dil/görsel-karar için 3-4B; kod/güvenlik için 5-8B; mimari benzer modellerden).
 - Eğitim: Faz-5 toplaması + davranışı doğrulanmış veriler (davranış testleriyle filtrelenmiş) + öğretmen davranış/denetim puanı. SVD covariance bileşenleri + öğretmen davranışı (yalnız davranış testi/puanlamayı geçerse) + LLM-gizlilik testi (IA) + davranış listesi doğrulaması.
 - Doğrulama: davranış denetimi + davranış listesi testi; %70 başarı eşiği.
+- **Taşınabilir doğrulama yığını (05.11):** birleştirme adayları tam GPU'ya alınmadan AirLLM/Colibri tarzı katman/blok akışıyla davranış testlerinden geçirilir; davranış boşluğu kalırsa unsloth LoRA hızlı düzeltme uygulanır.
 
 ### Faz-D: Birleştirme (yalnız davranış doğrulaması sonrası)
-1. Öğrenci uzmanları tek safetensors + GGUF'a derleme (8GB VRAM için Q4/AWQ dönüştürme).
+1. Öğrenci uzmanları tek safetensors + GGUF'a derleme (8GB VRAM için Q4/AWQ dönüştürme). Çalışma motoru: ktransformers/llama.cpp hibrit (hot katmanlar GPU, bulk CPU/RAM) — GGUF Q4 türevi laptop/edge taşınabilirliği için zorunlu.
 2. Karar katmanı (`Vessel Core`) ağırlık çakışması olmadan davranış/denetim kodu olarak bağlanır.
 3. Davranış listesi doğrulaması + davranış denetimi; başarısızlık durumunda öğrenci yeniden eğitilir (yalnız davranış doğrulaması geçerse).
 4. **Tek çıktı:** Gemi içi dil çekirdeği (tek safetensors + tek GGUF türevi). "Gemma göz öğrenci üretir" iddiası davranış/doğrulama testiyle kabul edilir.
@@ -251,6 +268,7 @@ Her model/öğrenci için: **çift yönlü ölçüm** (aktivasyon + kovaryans) +
 | 3 | Öğrenci uzman dağıtım önerisi doğrulandı (RTX 5050 8GB VRAM): 3B-8B uzmanlar Q4/AWQ ile sığar; eğitim 30GB RAM'de BF16/LoRA; paketleme en sonda | **YAPILDI** |
 | 4 | Gerçekçi olmayan karmaşıklık sadeleştirildi (2 uzman: kod/güvenlik + araç); "Karmaşık → Basit Karmaşık → Basit" akışı; gemi içi kritik vurgusu | **YAPILDI** |
 | 5 | Sayısal doğruluk (26 Ekim tahminleri yerine gerçek sayılar): 27 model, 1.878.138.642.781 sinaps, `sum_check: True` | **YAPILDI** |
+| 6 | Portabilite ilkesi (Karar 10) + taşınabilir çıkarım yığını (AirLLM/Colibri/ktransformers/unsloth) plana işlendi; SOTA cron'larına `@roundtable_so` takibi eklendi | **YAPILDI** (05.11 gündüz) |
 
 ---
 
@@ -285,5 +303,6 @@ Türkçe öğretim + LLM araştırma → LLM araştırma/inceleme → Türkçeni
   - 2026-11-04 22:44 — **resmî sayım**: 1.878.138.642.781 sinaps (sum_check True); DeepSeek 508.182.659.298
   - 2026-11-04 22:4x-00:xx — sınıf denetimi; PRM/critic araştırması; öğretmen haritası M8-M10 doğrulaması; marp/PRM/Granite-Docling/SWE-smith/RAGEv2 gece araştırması
   - 2026-11-05 00:3x-01:xx — nihai sentez; araç-yazma yolu terminal-yanı (göreli write_file/patch gölge ağacı riski) — doküman terminal üzerinden tek atomik yazım + `md5sum`/`grep` doğrulaması ile yerleştirildi
+  - 2026-11-05 05:0x-11:xx — `@roundtable_so` sömürüsü (1.386 başlık, 583 repo, 149 transkript): AirLLM/Colibri/ktransformers/unsloth taşınabilir çıkarım teknikleri; §7.2 etki analizi + portabilite ilkesi (Karar 10); SOTA radar + haftalık döngüye kanal takibi (`roundtable-watch.sh`) eklendi
 
 **Not (araç zinciri):** Bu gece yazma/patch araçlarının göreli yolları terminal dosya ağacından farklı bir kökene yazılabiliyor; doküman içeriği terminal `cat`/`wc`/`md5sum` ile doğrulanmıştır. Eski "okunamayan" dosya (`mahoraga-plan.md`) hiç var olmadı — okumalar aynı dosyanın farklı görünümleriydi.
