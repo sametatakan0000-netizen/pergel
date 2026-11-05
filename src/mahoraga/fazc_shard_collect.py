@@ -303,6 +303,26 @@ def backup_winners(repo_id: str) -> dict:
         log(f"  kopya: {fp.name} ({size / 1e9:.1f} GB) → {len(todo)} hedef"
             f" ({[f'{t.name}:@{o / 1e9:.1f}G' for t, o in todo]})")
         import hashlib
+        # yarım kopya örnekleme: yırtık kuyruk varsa o hedefi baştan al
+        fixed_todo = []
+        for target, off in todo:
+            if off:
+                ok = True
+                with open(fp, "rb") as sf2, open(target, "rb") as tf2:
+                    for probe in (0, max(0, off - (1 << 20))):
+                        plen = min(1 << 20, off - probe)
+                        if plen <= 0:
+                            continue
+                        sf2.seek(probe)
+                        tf2.seek(probe)
+                        if tf2.read(plen) != sf2.read(plen):
+                            ok = False
+                            break
+                if not ok:
+                    log(f"  ⚠ yarım kopya yırtık → baştan: {target.name}")
+                    off = 0
+            fixed_todo.append((target, off))
+        todo = fixed_todo
         src_digest = hashlib.sha256()
         tgt_fhs = []
         for target, off in todo:
@@ -318,15 +338,6 @@ def backup_winners(repo_id: str) -> dict:
                         c = sf.read(min(1 << 22, remain))
                         dig.update(c)
                         remain -= len(c)
-                    # örnekleme: yarım parçanın başı sonu kaynakla eşit mi?
-                    for probe in (0, max(0, off - (1 << 20))):
-                        plen = min(1 << 20, off - probe)
-                        if plen <= 0:
-                            continue
-                        sf.seek(probe)
-                        fh.seek(probe)
-                        if fh.read(plen) != sf.read(plen):
-                            raise RuntimeError(f"Yarım kopya bozuk ({target}) — baştan kopyalanmalı")
                     fh.seek(off)
                     sf.seek(off)
             pos = 0
