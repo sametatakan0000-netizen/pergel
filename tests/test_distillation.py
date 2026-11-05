@@ -1,9 +1,7 @@
-"""Faz-6 Karmaşık->Basit distilasyon testleri (TDD — önce RED).
+"""Faz-6 sinaps birleştirme (merge-first) testleri.
 
-Kapsam (plan §8):
-- davranış başına öğrenci planı (taze en-iyi-sınıf amiral + HQQ öğrenci)
-- kovaryanslı örnek ağırlıkları
-- 'ağır kayıp yok' doğrulama kapısı
+Stil kuralı: gradyan eğitimi YOK; sinapslar kovaryanslı ağırlıklarla
+doğrusal birleştirilir. Cross-arch -> stitch (akış bağlama).
 """
 import os
 import sys
@@ -14,51 +12,64 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from src.mahoraga.behavior_tests import BEHAVIOR_CLASSES, build_catalog
 from src.mahoraga.distillation import (
     BEHAVIOR_ADMIRALS,
-    build_student_plan,
-    covariance_sample_weights,
-    student_gate,
+    merge_coefficients,
+    merge_plan,
+    post_merge_gate,
+    strateji_sec,
 )
 
 
-class TestOgrenciPlani(unittest.TestCase):
-    def test_dort_davranis_amiral_ve_veri(self):
-        plan = build_student_plan(build_catalog())
-        self.assertEqual(set(plan["ogrenciler"].keys()), set(BEHAVIOR_CLASSES))
-        for cls, ogrenci in plan["ogrenciler"].items():
-            self.assertEqual(ogrenci["amiral"], BEHAVIOR_ADMIRALS[cls])
-            self.assertIn("veri_kaynak", ogrenci)
-            self.assertIn("orneklem", ogrenci)
-            self.assertEqual(ogrenci["quant"]["yontem"], "HQQ")
+class TestBirlestirmePlani(unittest.TestCase):
+    def test_dort_davranis_amiral_ve_strateji(self):
+        plan = merge_plan(build_catalog())
+        self.assertEqual(set(plan["birlestirmeler"].keys()), set(BEHAVIOR_CLASSES))
+        for cls, p in plan["birlestirmeler"].items():
+            self.assertEqual(p["amiral"], BEHAVIOR_ADMIRALS[cls])
+            self.assertIn(p["strateji"], ("direct_merge", "stitch"))
+            self.assertIn("veri_kaynak", p)
+            self.assertEqual(p["quant"]["yontem"], "HQQ")
 
-    def test_agir_kayip_siniri(self):
-        plan = build_student_plan(build_catalog())
-        for ogrenci in plan["ogrenciler"].values():
-            self.assertLessEqual(ogrenci["agir_kayip_siniri"], 0.10)
+    def test_ayni_mimari_direct_merge(self):
+        mimari = {"kod": ("gpt-oss", "gpt-oss"), "guvenlik": ("a", "b"),
+                  "arac": ("a", "b"), "dil_karar": ("a", "b")}
+        plan = merge_plan(build_catalog(), mimari=mimari)
+        self.assertEqual(plan["birlestirmeler"]["kod"]["strateji"], "direct_merge")
+        self.assertEqual(plan["birlestirmeler"]["arac"]["strateji"], "stitch")
+
+    def test_strateji_sec(self):
+        self.assertEqual(strateji_sec("x", "x"), "direct_merge")
+        self.assertEqual(strateji_sec("x", "y"), "stitch")
+
+    def test_gradyan_egitim_dil_kullanilmaz(self):
+        plan = merge_plan(build_catalog())
+        kapi = str(plan).lower()
+        self.assertNotIn("backprop", kapi)
+        self.assertNotIn("optimizer", kapi)
 
 
-class TestKovaryansliAgirliklar(unittest.TestCase):
+class TestKovaryansliBirlestirmeKatsayilari(unittest.TestCase):
     def test_normalizasyon(self):
-        recs = [
+        sets = [
             {"key": "a", "n_synapses": 100, "magnitude": 1.0},
             {"key": "b", "n_synapses": 300, "magnitude": 2.0},
         ]
-        w = covariance_sample_weights(recs, prior=0.15)
+        w = merge_coefficients(sets, prior=0.15)
         self.assertAlmostEqual(sum(w.values()), 1.0, places=6)
         self.assertGreater(w["b"], w["a"])
 
     def test_bos_girdi(self):
-        self.assertEqual(covariance_sample_weights([], prior=0.1), {})
+        self.assertEqual(merge_coefficients([], prior=0.1), {})
 
 
 class TestKapi(unittest.TestCase):
     def test_agir_kayip_yok_gecis(self):
         results = {c: {"behavior_rate": 0.85} for c in BEHAVIOR_CLASSES}
-        self.assertTrue(student_gate(results))
+        self.assertTrue(post_merge_gate(results))
         results["kod"] = {"behavior_rate": 0.5}
-        self.assertFalse(student_gate(results))
+        self.assertFalse(post_merge_gate(results))
 
     def test_eksik_davranis_engel(self):
-        self.assertFalse(student_gate({"kod": {"behavior_rate": 1.0}}))
+        self.assertFalse(post_merge_gate({"kod": {"behavior_rate": 1.0}}))
 
 
 if __name__ == "__main__":

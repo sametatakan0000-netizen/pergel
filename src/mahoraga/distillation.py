@@ -1,12 +1,18 @@
-"""Faz-6: Karmaşık→Basit distilasyon planı (plan §8).
+"""Faz-6: Karmaşık→Basit — SİNAPS BİRLEŞTİRME (MERGE-FIRST).
 
-Her üstün davranış için taze en-iyi-sınıf amiral kaynak seçilir; her
-davranışın bir öğrencisi eğitilir (tam davranış dağılımı, AĞIR KAYIP YOK).
-Öğrenciler HQQ ile kuantize edilir (kod detayı tekrar araştırılacak — plan).
-Örnek ağırlıkları distill_covariance kovaryans ağırlığıyla verilir.
+Stil kuralı (kullanıcı tezi + plan §8): çıkarılan sinapslar DOĞRUDAN
+birleştirilir. Gradyan-eğitim/backprop bizim tarzımız DEĞİLDİR — sinapslar
+boşuna çıkarılmadı (gövde silindi, sinapslar yedekli).
 
-Gerçek eğitim Faz-C motorunda (RTX 5050, davranış dağılımı öğretmeni)
-yapılır; bu modül PLAN + ağırlık + kapı katmanıdır (GPU'suz doğrulanabilir).
+Kovaryanslı ağırlıklar = doğrusal birleştirme katsayıları (Σ w_i·v_i).
+
+Strateji seçimi (kendi kuralımız: cross-arch merge YOK):
+- direct_merge : donor ile hedef aynı mimari -> sinapsları doğrudan merge
+- stitch       : cross-arch -> model_stitching akış bağlama (amiral+uzman
+                 simbiyoz; ağırlık değil akış birleştirilir)
+- distill      : yalnız davranış boşluğu kalırsa SON ÇARE (kapılar yine geçerli)
+
+Ölçüm zorunlu: her yoldan sonra davranış kapıları (red loss %10, davranış %70).
 """
 from __future__ import annotations
 
@@ -23,7 +29,7 @@ BEHAVIOR_ADMIRALS = {
     "dil_karar": "Nemotron-3-Super.249b",
 }
 
-# Faz-5'de doldurulan gerçek veri setleri (kural: uydurma yok).
+# Faz-5'de doldurulan gerçek davranış doğrulama verisi (kapı ölçümü için).
 DATA_FILES = {
     "kod": "/home/pc/mahoraga_davranis_veri/kod_swebench_verified.jsonl",
     "guvenlik": "/home/pc/mahoraga_davranis_veri/guvenlik_advbench.jsonl",
@@ -31,47 +37,78 @@ DATA_FILES = {
     "dil_karar": "/home/pc/mahoraga_davranis_veri/dil_karar_banking77.jsonl",
 }
 
-# HQQ kuantizasyon şeması (plan §8; kod detayı tekrar araştırılacak).
+# Birleştirme sonrası kuantizasyon (plan §8; kod detayı tekrar araştırılacak).
 HQQ_SPEC = {
     "yontem": "HQQ",
     "nbits": 4,
     "group_size": 64,
-    "not": "kod detayı tekrar araştırılacak (plan §8); Faz-6.5'te uygulanır",
+    "not": "kod detayı tekrar araştırılacak (plan §8); birleştirmeden sonra uygulanır",
+}
+
+# Varsayılan mimari eşlemesi: envanter gerçeği (donor, hedef) — çoğu cross-arch.
+# Aynı mimari çiftlerde 'direct_merge' seçilir.
+VARSAYILAN_MIMARI = {
+    "kod": ("nemotron-cortexa", "hedef-govde"),
+    "guvenlik": ("orbitar", "hedef-govde"),
+    "arac": ("gpt-oss", "hedef-govde"),
+    "dil_karar": ("nemotron-3", "hedef-govde"),
 }
 
 
-def build_student_plan(catalog: dict | None = None) -> dict:
-    """Davranış başına öğrenci planı: amiral kaynak + veri + HQQ + kayıp sınırı."""
+def strateji_sec(donor_mimari: str, hedef_mimari: str) -> str:
+    """Aynı mimari -> direct_merge; cross-arch -> stitch (akış bağlama)."""
+    return "direct_merge" if donor_mimari == hedef_mimari else "stitch"
+
+
+def merge_plan(catalog: dict | None = None, mimari: dict | None = None) -> dict:
+    """Davranış başına birleştirme planı (gradyan eğitimi YOK).
+
+    mimari: {behavior: (donor_mimari, hedef_mimari)} — verilmezse envanter
+    varsayılanı. Strateji mimari uyumundan türetilir; 'distill' yalnız
+    son çare olarak plana elle eklenir (bkz. modül docstring).
+    """
     catalog = catalog or build_catalog()
-    ogrenciler = {}
+    mimari = mimari or VARSAYILAN_MIMARI
+    planlar = {}
     for cls in BEHAVIOR_CLASSES:
+        donor, hedef = mimari[cls]
         suite = catalog["suites"][cls]
-        ogrenciler[cls] = {
+        planlar[cls] = {
             "amiral": BEHAVIOR_ADMIRALS[cls],
-            "veri_kaynak": DATA_FILES[cls],
+            "strateji": strateji_sec(donor, hedef),
+            "mimari": {"donor": donor, "hedef": hedef},
+            "veri_kaynak": DATA_FILES[cls],   # kapı ölçümü (doğrulama matrisi)
             "benchmark": suite["kaynak"],
             "orneklem": suite["orneklem"],
             "quant": dict(HQQ_SPEC),
-            "agir_kayip_siniri": RED_LOSS_THRESHOLD,  # ağır kayıp yok: <= %10
+            "agir_kayip_siniri": RED_LOSS_THRESHOLD,
         }
     return {
-        "ogrenciler": ogrenciler,
+        "birlestirmeler": planlar,
         "hedef": "her davranışın bir modeli (tam davranış dağılımı, ağır kayıp yok)",
         "gecme_esigi": BEHAVIOR_PASS_THRESHOLD,
+        "stil": "merge-first; gradyan eğitimi yok; cross-arch'de stitch/distill",
     }
 
 
-def covariance_sample_weights(records: list[dict], prior: float) -> dict:
-    """Kovaryanslı örnek ağırlıkları (1.0'a normalize)."""
-    if not records:
+def merge_coefficients(synapse_sets: list[dict], prior: float) -> dict:
+    """Kovaryanslı DOĞRUSAL birleştirme katsayıları (Σ w_i·v_i, 1.0'a normalize).
+
+    Her sinaps seti: {'key', 'n_synapses', 'magnitude'} (envanter manifestosu).
+    """
+    if not synapse_sets:
         return {}
-    weights = {r["key"]: covariance_weight(r, prior) for r in records}
+    weights = {s["key"]: covariance_weight(s, prior) for s in synapse_sets}
     toplam = sum(weights.values())
     return {k: w / toplam for k, w in weights.items()}
 
 
-def student_gate(results: dict) -> bool:
-    """'Ağır kayıp yok' kapısı: 4 davranışın TAMAMI >= %70 davranış oranı."""
+def post_merge_gate(results: dict) -> bool:
+    """Birleştirme sonrası davranış kapısı: 4 davranışın TAMAMI >= %70.
+
+    'Ağır kayıp yok' (plan §8): merge yolundan bağımsız, davranış ölçümü
+    zorunlu; geçemeyen birleştirme kabul edilmez.
+    """
     return set(results.keys()) == set(BEHAVIOR_CLASSES) and all(
         r.get("behavior_rate", 0.0) >= BEHAVIOR_PASS_THRESHOLD
         for r in results.values()
