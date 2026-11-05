@@ -22,3 +22,7 @@ dist/
 # stale status files (use git log / tests for current state)
 PRODUCT_STATUS.md
 ROUTER_STATUS.md
+
+# gecce arsivleri (335MB+)
+surgery_work_old/
+overnight.log
