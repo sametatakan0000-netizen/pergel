@@ -106,6 +106,7 @@ def plan_for_model(repo_id: str, winners: list[dict]) -> dict:
         "download_bytes": sum(st_files.get(n, 0) for n in needed),
         "total_repo_bytes": sum(st_files.values()),
         "keys_not_in_weightmap": missing,
+        "weight_map": wm or {},
     }
 
 
@@ -190,6 +191,8 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
     model_dir = WINNERS_ROOT / repo_id.replace("/", "__")
     model_dir.mkdir(parents=True, exist_ok=True)
     work_dir = WORK / repo_id.replace("/", "__")
+    if not Path("/mnt/toshiba").is_mount():
+        raise RuntimeError("Toshiba mount'lu değil — shard indirmesi sessizce NVMe'ye düşer, durduruldu")
     work_dir.mkdir(parents=True, exist_ok=True)
 
     result = {"repo_id": repo_id, "shards": [], "hashes_backfilled": 0,
@@ -205,6 +208,14 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
         syn_records = {t["key"]: t for t in syn.get("tensors", [])}
 
     for shard in plan["needed_shards"]:
+        # shard atlama: tüm kazananları zaten çıkarılmışsa indirmeye gerek yok
+        wm = plan.get("weight_map") or {}
+        shard_keys = [k for k in win_by_key if wm.get(k) == shard] if wm else list(win_by_key)
+        if shard_keys and all((model_dir / f"{k.replace('.', '__')}.safetensors").exists()
+                              for k in shard_keys):
+            result["shards"].append(shard)
+            log(f"  ⏭️ shard atlandı (kazananlar çıkarılmış): {shard}")
+            continue
         log(f"  ↓ shard: {shard}")
         local = download_shard(repo_id, shard, work_dir)
         seen_hashes = {}
@@ -247,25 +258,45 @@ def collect_model(repo_id: str, winners: list[dict]) -> dict:
     return result
 
 
+GIANT = 20 << 30  # 20 GB üstü tensörler 3 NVMe kopyasına sığmaz
+TOSHIBA_BACKUP_DIRS = [
+    Path("/mnt/toshiba/mahoraga/synapse_backups"),
+    Path("/mnt/toshiba/mahoraga/synapse_backups_b"),
+    Path("/mnt/toshiba/mahoraga/synapse_backups_c"),
+]
+
+
 def backup_winners(repo_id: str) -> dict:
-    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya + streaming sha256 doğrulama."""
+    """ALTIN-KIRMIZI: kazanan tensör dosyaları 4 kopyaya + streaming sha256 doğrulama.
+
+    Dev tensör (>20 GB) düzeni: 1 NVMe kopya + 3 Toshiba kopya (NVMe 3 kopyaya sığmaz).
+    Toshiba mount'suzsa dev kopya için HATA — sessizce NVMe'ye doldurma yok."""
     model_dir = WINNERS_ROOT / repo_id.replace("/", "__")
     if not model_dir.exists():
         return {}
+    toshiba_ok = Path("/mnt/toshiba").is_mount()
     copied = {}
-    for d in BACKUP_DIRS:
-        dst = d / "winners" / model_dir.name
-        dst.mkdir(parents=True, exist_ok=True)
-        n = 0
-        for fp in sorted(model_dir.iterdir()):
+    for fp in sorted(model_dir.iterdir()):
+        if fp.suffix == ".meta.json":
+            continue
+        size = fp.stat().st_size
+        if size > GIANT:
+            if not toshiba_ok:
+                raise RuntimeError(f"Dev tensör {fp.name} ({size / 1e9:.0f} GB) için Toshiba mount'lu olmalı — NVMe'ye sığmaz")
+            dests = [BACKUP_DIRS[0]] + TOSHIBA_BACKUP_DIRS  # 1 NVMe + 3 Toshiba
+        else:
+            dests = BACKUP_DIRS
+        for d in dests:
+            dst = d / "winners" / model_dir.name
+            dst.mkdir(parents=True, exist_ok=True)
             target = dst / fp.name
-            shutil.copyfile(fp, target)
+            if not target.exists() or target.stat().st_size != size:
+                shutil.copyfile(fp, target)
             with open(fp, "rb") as a, open(target, "rb") as b:
-                if hash_range(a, 0, fp.stat().st_size) != hash_range(b, 0, target.stat().st_size):
+                if hash_range(a, 0, size) != hash_range(b, 0, size):
                     raise RuntimeError(f"Yedek doğrulama BAŞARISIZ: {target}")
-            n += 1
-        copied[str(dst)] = n
-    log(f"  4 kopya yedek doğrulandı: {repo_id} ({list(copied.values())[0]} dosya)")
+            copied[str(dst)] = copied.get(str(dst), 0) + 1
+    log(f"  4 kopya yedek doğrulandı: {repo_id} ({max(copied.values())} dosya/kopya)")
     return copied
 
 
