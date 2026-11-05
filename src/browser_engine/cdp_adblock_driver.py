@@ -51,9 +51,24 @@ def _chromium() -> Optional[str]:
     return None
 
 
+
+def _apparmor_restricts_userns() -> bool:
+    """True when the kernel blocks unprivileged user namespaces (Ubuntu 23.10+
+    default ``kernel.apparmor_restrict_unprivileged_userns=1``).  Chromium's
+    setuid sandbox needs userns; without it the browser refuses to start
+    unless ``--no-sandbox`` is passed.
+    """
+    try:
+        with open("/proc/sys/kernel/apparmor_restrict_unprivileged_userns") as f:
+            return f.read().strip() == "1"
+    except OSError:
+        return False
+
+
 def browser_base_args(headless: bool = True) -> list:
-    """Flags every launch needs. ``--no-sandbox`` only as root: the desktop
-    user runs with the real sandbox (AppArmor userns profile).
+    """Flags every launch needs. ``--no-sandbox`` when root or when AppArmor
+    blocks unprivileged userns (Ubuntu 23.10+ default): Chromium's setuid
+    sandbox cannot start without userns, so the flag is mandatory there.
 
     ``--disable-gpu`` is a headless-CI crutch ONLY: on a real desktop it
     forces software compositing and makes scrolling/navigation visibly
@@ -62,7 +77,7 @@ def browser_base_args(headless: bool = True) -> list:
     args = ["--remote-debugging-port=0"]
     if headless:
         args.insert(0, "--disable-gpu")
-    if os.geteuid() == 0:
+    if os.geteuid() == 0 or _apparmor_restricts_userns():
         args.insert(0, "--no-sandbox")
     # Anti-detection: hide automation markers so sites like Google
     # don't block the browser as "insecure" (navigator.webdriver etc.)

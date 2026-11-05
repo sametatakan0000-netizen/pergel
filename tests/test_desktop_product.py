@@ -62,10 +62,18 @@ class TestWindowIdentity(unittest.TestCase):
         # than --user-agent flag which breaks extension loading)
         self.assertFalse([a for a in flags if a.startswith("--user-agent=")])
 
-    def test_sandbox_flag_only_for_root(self):
-        with mock.patch.object(driver.os, "geteuid", return_value=0):
+    def test_sandbox_flag_for_root_or_apparmor_userns_block(self):
+        # root -> --no-sandbox
+        with mock.patch.object(driver.os, "geteuid", return_value=0), \
+             mock.patch.object(driver, "_apparmor_restricts_userns", return_value=False):
             self.assertIn("--no-sandbox", driver.browser_base_args())
-        with mock.patch.object(driver.os, "geteuid", return_value=1000):
+        # non-root + AppArmor userns block -> --no-sandbox
+        with mock.patch.object(driver.os, "geteuid", return_value=1000), \
+             mock.patch.object(driver, "_apparmor_restricts_userns", return_value=True):
+            self.assertIn("--no-sandbox", driver.browser_base_args())
+        # non-root + no AppArmor block -> real sandbox
+        with mock.patch.object(driver.os, "geteuid", return_value=1000), \
+             mock.patch.object(driver, "_apparmor_restricts_userns", return_value=False):
             self.assertNotIn("--no-sandbox", driver.browser_base_args())
 
     def test_session_accepts_extra_args(self):

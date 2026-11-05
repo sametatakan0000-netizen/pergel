@@ -51,36 +51,15 @@
     "tiiuae/Falcon3-7B-Instruct",
     "teknium/OpenHermes-2.5-Mistral-7B",
     "HuggingFaceH4/zephyr-7b-beta",
-    "Intel/neural-chat-7b-v3-3"
+    "Intel/neural-chat-7b-v3-3",
+    "mistralai/Mistral-Nemo-Instruct-2407",
+    "mistralai/Ministral-3-3B-Instruct-2512",
+    "Qwen/Qwen3.8-Flash-Next"
   ],
   "failed": [
-    "mistralai/Codestral-22B-v0.1",
-    "mistralai/Mistral-Nemo-12B-Instruct-2407",
-    "mistralai/Mistral-Small-24B-Instruct-2501",
-    "huihui-ai/Huihui-Qwen3-8B-abliterated",
-    "mrfakename/Qwen3-8B-abliterated",
-    "mistralai/Ministral-3B-Instruct-2410",
-    "mlabonne/Llama-3.1-8B-abliterated",
-    "huihui-ai/Huihui-gemma-3-27b-it-abliterated",
-    "mlabonne/Llama-3.1-8B-abliterated",
-    "huihui-ai/Huihui-Qwen3-8B-abliterated",
-    "huihui-ai/Huihui-gemma-3-27b-it-abliterated",
-    "NaniDAO/Phi-3-mini-128k-instruct-abliterated-v3",
-    "mrfakename/Qwen3-8B-abliterated",
-    "davidbrown922/Meta-Llama-3.1-8B-Instruct-abliterated",
-    "NousResearch/Nous-Hermes-2-Llama-3-8B",
-    "cognitivecomputations/dolphin-2.9.1-mistral-7b",
-    "deepseek-ai/DeepSeek-Coder-V2-16B-Instruct",
-    "01-ai/Yi-1.5-6B-Chat",
-    "01-ai/Yi-1.5-34B-Chat",
-    "internlm/internlm2_5-7b-chat",
-    "Triangle104/Falcon3-1B-Instruct-abliterated",
-    "davidbrown922/Meta-Llama-3.1-8B-Instruct-abliterated",
-    "davidbrown922/mistral-7b-instruct-v0.2-abliterated",
-    "cognitivecomputations/dolphin-2.9.1-mistral-7b",
-    "teknium/Nous-Hermes-2-Mixtral-8x7B-DPO",
-    "NousResearch/Nous-Hermes-2-Llama-3-8B",
-    "berkeley-nest/Starling-LM-7B-beta"
+    "CohereForAI/c4ai-command-r-v01",
+    "meta-llama/Meta-Llama-3-70B",
+    "meta-llama/Llama-3.3-70B-Instruct"
   ],
-  "total_synapses": 683656744784
+  "total_synapses": 895850471945
 }
