@@ -214,6 +214,7 @@ Her model/öğrenci için: **çift yönlü ölçüm** (aktivasyon + kovaryans) +
 4. **Davranış/denetim puanlama görevi:** Yüksek örneklemeli denetçi + davranış testi; başarı oranı davranış olarak kaydedilir. Davranış listesi doğrulaması **paketlemeden önce** davranış doğrulaması olarak kalır.
 
 ### Faz-C: Öğrenci uzmanlar (her davranış için)
+**Birleştirme-öncelikli stil (MERGE-FIRST):** Çıkarılan sinapslar **doğrudan birleştirilir** (kovaryanslı ağırlıklar = doğrusal birleştirme katsayıları Σw·v; **gradyan eğitimi birincil yol DEĞİLDİR**). Aynı aile/mimari → `direct_merge` (sinaps merge); cross-arch → akış bağlama (amiral+uzman simbiyoz) veya §2 kuralı gereği distilasyon (yalnız davranış boşluğu kalırsa). Birleştirme sonrası HQQ kuantizasyon + davranış kapıları (red %10, davranış %70).
 - Kaynaklar: `student_experts` 1. öncelikli **kod/güvenlik** + **araç çağırmada etkili** (surgery_queue'dan 5-6 model); **matematik/araştırma** uzmanı (PRM + RAGEv2 kanıtıyla); **genel/araç/karar** uzmanı (karar akıl yürütme).
 - Öğrenci boyutu: 3B-8B (dil/görsel-karar için 3-4B; kod/güvenlik için 5-8B; mimari benzer modellerden).
 - Eğitim: Faz-5 toplaması + davranışı doğrulanmış veriler (davranış testleriyle filtrelenmiş) + öğretmen davranış/denetim puanı. SVD covariance bileşenleri + öğretmen davranışı (yalnız davranış testi/puanlamayı geçerse) + LLM-gizlilik testi (IA) + davranış listesi doğrulaması.
