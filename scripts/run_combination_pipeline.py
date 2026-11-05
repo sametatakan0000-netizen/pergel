@@ -15,8 +15,8 @@ import sys
 
 sys.path.insert(0, "/home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm")
 from src.mahoraga.combination_search import (  # noqa: E402
-    combination_score, funnel_candidates, functional_clusters, select_best,
-    simulate_combinations,
+    combination_score, funnel_candidates, functional_clusters, kadro_view,
+    select_best, simulate_combinations,
 )
 
 SYNAPSE_DIR = "/home/pc/mahoraga_synapses"
@@ -130,6 +130,7 @@ def main() -> int:
                             for rol, v in best.items()},
             "simulasyon": {
                 "en_iyi_kombinasyon": [k.split("::")[1] + " @ " + k.split("::")[0] for k in sim["en_iyi"]],
+                "kadro": kadro_view(combo_key_index, sim["en_iyi"]),
                 "skor": round(sim["skor"], 4) if sim["skor"] is not None else None,
                 "simulasyon_sayisi": sim["simulasyon_sayisi"],
                 "tam_exhaustive": sim["tam_exhaustive"],

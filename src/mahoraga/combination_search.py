@@ -18,7 +18,6 @@ from .distill_covariance import covariance_weight
 from .synapse_inventory import classify_key
 
 # "Farklı yol" bonusu: aynı sonuca giden farklı aile yolları ödüllendirilir.
-CESITLILIK_BONUSU = 0.05
 
 
 def functional_clusters(records: list[dict]) -> dict[str, list[dict]]:
@@ -51,18 +50,42 @@ def select_best(clusters: dict[str, list[dict]], hedef_davranis: str,
     return out
 
 
+def kadro_view(records: dict, combo_keys: list[str]) -> dict:
+    """Oyuncu görünümü: modeller = oyuncular, roller = mevkiler.
+
+    Kadro (kombinasyon) tek tek sinapslardan çok "hangi oyuncu hangi mevkide"
+    sorusuna göre okunur (oyuncu metaforu, 2026-11-05).
+    """
+    kadro: dict = {}
+    for k in combo_keys:
+        r = records.get(k)
+        if not r:
+            continue
+        kayit = kadro.setdefault(r["model"], {"mevkiler": [], "siniflar": set()})
+        kayit["mevkiler"].append(r.get("rol", "?"))
+        kayit["siniflar"].add(r.get("sinif", "?"))
+    out = {}
+    for oyuncu, kayit in kadro.items():
+        out[oyuncu] = {
+            "mevkiler": sorted(set(kayit["mevkiler"])),
+            "oynadigi_mevki": len(kayit["mevkiler"]),
+            "siniflar": sorted(kayit["siniflar"]),
+        }
+    return {"oyuncu_sayisi": len(out), "kadro": out}
+
+
 def combination_score(combo: list[dict], model_skorlari: dict,
                       hedef_davranis: str) -> float:
-    """Kombinasyon skoru: ortalam davranış skoru + çeşitlilik bonusu.
+    """Saf 'EN' skoru: mevkilerin davranış katkıları TOPLAMI.
 
-    Çeşitlilik bonusu = 0.05 × (farklı aile sayısı − 1): aynı sonuca giden
-    farklı yollar bir arada olunca konfigürasyon daha dayanıklı olur.
+    Oyuncu ilkesi (2026-11-05): modeller değişkendir (istedikleri biçime
+    girebilirler), farklı ailelerin gittiği yolları başka aileler de
+    yürüyebilir — yollar aileye kilitli DEĞİLDİR. Bu yüzden aile çeşitlilik
+    bonusu ya da takım uyumu YOKTUR: her mevkide işi EN iyi yapan kazanır,
+    kazanmayan yola gerek yoktur. Tam yapılandırma = her mevkinin "en"i;
+    her mevki toplama katkı verir (kaplama).
     """
-    if not combo:
-        return 0.0
-    temel = sum(model_skorlari[r["model"]][hedef_davranis] for r in combo) / len(combo)
-    aileler = {r.get("aile", r["model"]) for r in combo}
-    return temel + CESITLILIK_BONUSU * (len(aileler) - 1)
+    return sum(model_skorlari[r["model"]][hedef_davranis] for r in combo)
 
 
 def funnel_candidates(best: dict[str, dict], min_skor: float = 0.6,

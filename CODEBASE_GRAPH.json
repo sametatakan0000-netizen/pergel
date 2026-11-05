@@ -2,8 +2,8 @@
   "summary": {
     "total_files": 116,
     "total_classes": 111,
-    "total_functions": 823,
-    "total_loc": 17288
+    "total_functions": 824,
+    "total_loc": 17311
   },
   "modules": [
     {
@@ -3743,11 +3743,12 @@
     {
       "module": "src.mahoraga.combination_search",
       "path": "src/mahoraga/combination_search.py",
-      "loc": 117,
+      "loc": 140,
       "classes": [],
       "functions": [
         "functional_clusters",
         "select_best",
+        "kadro_view",
         "combination_score",
         "funnel_candidates",
         "simulate_combinations",
@@ -3760,6 +3761,7 @@
         "synapse_inventory"
       ],
       "calls": [
+        "add",
         "append",
         "classify_key",
         "combinations",
@@ -3772,12 +3774,13 @@
         "list",
         "oracle",
         "range",
+        "set",
         "setdefault",
         "skor",
         "sorted",
         "sum"
       ],
-      "change_risk": 6.26
+      "change_risk": 7.35
     },
     {
       "module": "src.mahoraga.component_merger",
@@ -5640,6 +5643,7 @@
     "src.mahoraga.combination_search.combination_score",
     "src.mahoraga.combination_search.functional_clusters",
     "src.mahoraga.combination_search.funnel_candidates",
+    "src.mahoraga.combination_search.kadro_view",
     "src.mahoraga.combination_search.select_best",
     "src.mahoraga.combination_search.simulate_combinations",
     "src.mahoraga.component_merger.experiments",

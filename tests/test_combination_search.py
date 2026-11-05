@@ -76,13 +76,22 @@ class TestSimulasyon(unittest.TestCase):
         out = simulate_combinations(adaylar, oracle, max_k=3, budget=10)
         self.assertLessEqual(out["simulasyon_sayisi"], 10)
 
-    def test_cesitlilik_bonusu_farkli_aileler(self):
-        combo_a = [REC("q1", "A", "a"), REC("q2", "B", "b")]
-        combo_b = [REC("q3", "A", "a"), REC("q4", "A", "a")]
-        scores = {"A": {"kod": 0.8}, "B": {"kod": 0.8}}
-        sa = combination_score(combo_a, scores, "kod")
-        sb = combination_score(combo_b, scores, "kod")
-        self.assertGreater(sa, sb)  # farklı aile = farklı yol = bonus
+    def test_saf_en_aile_bagimsiz(self):
+        # Yollar aileye kilitli DEĞİLDİR (oyuncu ilkesi 2026-11-05):
+        # aynı davranış skoru = aynı değer — aile/uyum bonusu YOK.
+        # 3 farklı aile vs 1 aile, hepsi 0.8: saf-ende eşit olmalılar.
+        combo_a = [REC("q1", "A", "a"), REC("q2", "A", "a"), REC("q3", "A", "a")]
+        combo_b = [REC("q4", "A", "a"), REC("q5", "B", "b"), REC("q6", "C", "c")]
+        scores = {"A": {"kod": 0.8}, "B": {"kod": 0.8}, "C": {"kod": 0.8}}
+        self.assertEqual(combination_score(combo_a, scores, "kod"),
+                         combination_score(combo_b, scores, "kod"))
+
+    def test_mevki_katkisi_toplamlidir(self):
+        # Tam yapılandırma = her mevkinin "en"i; her mevki toplama katkı verir.
+        from src.mahoraga.combination_search import combination_score
+        combo = [REC("q1", "A", "a"), REC("q2", "B", "b")]
+        scores = {"A": {"kod": 0.3}, "B": {"kod": 0.4}}
+        self.assertAlmostEqual(combination_score(combo, scores, "kod"), 0.7)
 
 
 if __name__ == "__main__":
@@ -118,3 +127,38 @@ class TestHuniVeTamSimulasyon(unittest.TestCase):
         out = simulate_combinations(adaylar, oracle, budget=1000)
         self.assertEqual(out["simulasyon_sayisi"], 7)  # 2^3 − 1
         self.assertTrue(out["tam_exhaustive"])
+
+
+class TestSafEn(unittest.TestCase):
+    """Oyuncu ilkesi (2026-11-05): modeller değişkendir, her aile her yolu
+    yürüyebilir — yollar aileye kilitli değildir. Seçim SAF 'EN': aynı işi en
+    iyi yapan kazanır, kazanmayan yola gerek yoktur. Çeşitlilik/uyum bonusu
+    YOKTUR."""
+
+    def test_davranis_skoru_kazanir_bonus_yok(self):
+        from src.mahoraga.combination_search import combination_score
+        iyi = [REC("q1", "A", "a")]
+        zayif = [REC("q2", "B", "b"), REC("q3", "C", "c")]
+        scores = {"A": {"kod": 0.9}, "B": {"kod": 0.3}, "C": {"kod": 0.3}}
+        self.assertGreater(combination_score(iyi, scores, "kod"),
+                           combination_score(zayif, scores, "kod"))
+
+    def test_simulasyon_kazanani_tum_mevkilerin_eni(self):
+        # Her mevki katkıdır (kaplama): tam yapılandırma = her mevkinin "en"i
+        adaylar = ["x1", "x2", "x3"]
+        skorlar = {"x1": 0.9, "x2": 0.7, "x3": 0.5}
+        oracle = lambda combo: sum(skorlar[k] for k in combo)
+        out = simulate_combinations(adaylar, oracle)
+        self.assertEqual(set(out["en_iyi"]), {"x1", "x2", "x3"})
+
+    def test_kadro_gorunumu_modellere_gore_gruplar(self):
+        from src.mahoraga.combination_search import kadro_view
+        recs = {
+            "q1": {"key": "q1", "model": "Codestral-22B", "rol": "attention_q", "sinif": "attention"},
+            "h1": {"key": "h1", "model": "Codestral-22B", "rol": "lm_head", "sinif": "embedding"},
+            "e1": {"key": "e1", "model": "DeepSeek-V4.1-Flash", "rol": "embedding_in", "sinif": "embedding"},
+        }
+        k = kadro_view(recs, ["q1", "h1", "e1"])
+        self.assertEqual(k["oyuncu_sayisi"], 2)
+        self.assertEqual(k["kadro"]["Codestral-22B"]["mevkiler"], ["attention_q", "lm_head"])
+        self.assertEqual(k["kadro"]["DeepSeek-V4.1-Flash"]["oynadigi_mevki"], 1)
