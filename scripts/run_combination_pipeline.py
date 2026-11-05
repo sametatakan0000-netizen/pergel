@@ -15,7 +15,8 @@ import sys
 
 sys.path.insert(0, "/home/pc/.hermes/sandboxes/docker/default/home/ai_browser_farm")
 from src.mahoraga.combination_search import (  # noqa: E402
-    combination_score, functional_clusters, select_best, simulate_combinations,
+    combination_score, funnel_candidates, functional_clusters, select_best,
+    simulate_combinations,
 )
 
 SYNAPSE_DIR = "/home/pc/mahoraga_synapses"
@@ -95,6 +96,11 @@ def main() -> int:
     for dav in ("kod", "arac", "dil_karar", "guvenlik"):
         clusters = functional_clusters(records)
         best = select_best(clusters, dav, skorlar, prior=PRIOR)
+        en_az = len(best)
+        # Guvenlik: davranis kaniti YOK (duz 0.5) -> esik 0.5, huni kovaryans
+        # gucuyle calisir (tie-break); Faz-5.5 olcumleri bu boslugu dolduracak.
+        esik = 0.5 if dav == "guvenlik" else 0.6
+        best = funnel_candidates(best, min_skor=esik, ust_sinir=18)
         enler = {rol: v["en"] for rol, v in best.items()}
         # oracle: anahtar -> kayıt dönüşümü (aynı key farklı modellerde olabilir;
         # 'en' seçiminde model bilgisi korunur)
@@ -115,9 +121,11 @@ def main() -> int:
         keys = list(combo_key_index.keys())
         oracle = lambda combo: combination_score(
             [combo_key_index[k] for k in combo], skorlar, dav)
-        sim = simulate_combinations(keys, oracle, max_k=4, budget=10000)
+        sim = simulate_combinations(keys, oracle)  # tüm boyutlar; bütçe supap
         sonuc["davranislar"][dav] = {
             "kume_sayisi": len(best),
+            "huni": {"min_skor": esik, "elene": en_az - len(best), "kalan_kume": len(best),
+                     "not": "duz 0.5 taban — Faz-5.5 dolduracak" if dav == "guvenlik" else ""},
             "en_secimler": {rol: {"en": v["en"], "skor": round(v["skorlar"][v["en"]], 4)}
                             for rol, v in best.items()},
             "simulasyon": {

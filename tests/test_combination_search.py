@@ -87,3 +87,34 @@ class TestSimulasyon(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHuniVeTamSimulasyon(unittest.TestCase):
+    def test_huni_dusuk_skorlulur_elener(self):
+        from src.mahoraga.combination_search import funnel_candidates
+        best = {
+            "attention_q": {"en": "q1", "adaylar": ["q1"], "skorlar": {"q1": 9.0},
+                            "davranis_skoru": 0.9},
+            "norm": {"en": "n1", "adaylar": ["n1"], "skorlar": {"n1": 1.0},
+                     "davranis_skoru": 0.3},
+        }
+        out = funnel_candidates(best, min_skor=0.6, ust_sinir=18)
+        self.assertIn("attention_q", out)
+        self.assertNotIn("norm", out)
+
+    def test_huni_ust_sinir_kalite_sirasiyla_kisar(self):
+        from src.mahoraga.combination_search import funnel_candidates
+        best = {f"r{i}": {"en": f"k{i}", "adaylar": [f"k{i}"], "skorlar": {f"k{i}": 1.0},
+                          "davranis_skoru": 0.5 + i * 0.01}
+                for i in range(10)}
+        out = funnel_candidates(best, min_skor=0.4, ust_sinir=3)
+        self.assertEqual(len(out), 3)
+        self.assertIn("r9", out)  # en yüksek skorlu kalır
+
+    def test_max_k_verilmezse_tum_boyutlar_simule_edilir(self):
+        adaylar = ["x1", "x2", "x3"]
+        cagrilar = []
+        oracle = lambda combo: (cagrilar.append(tuple(combo)) or 1.0)
+        out = simulate_combinations(adaylar, oracle, budget=1000)
+        self.assertEqual(out["simulasyon_sayisi"], 7)  # 2^3 − 1
+        self.assertTrue(out["tam_exhaustive"])

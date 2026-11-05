@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total_files": 109,
+    "total_files": 116,
     "total_classes": 111,
-    "total_functions": 789,
-    "total_loc": 16515
+    "total_functions": 823,
+    "total_loc": 17288
   },
   "modules": [
     {
@@ -3229,7 +3229,7 @@
     {
       "module": "src.browser_engine.worker",
       "path": "src/browser_engine/worker.py",
-      "loc": 599,
+      "loc": 604,
       "classes": [
         "_MarkdownHTMLParser",
         "FetchBlocked",
@@ -3677,6 +3677,109 @@
       "change_risk": 8.62
     },
     {
+      "module": "src.mahoraga.behavior_audit",
+      "path": "src/mahoraga/behavior_audit.py",
+      "loc": 119,
+      "classes": [],
+      "functions": [
+        "_check_steps",
+        "orm_score",
+        "prm_score",
+        "chain_reward",
+        "adaboost_update",
+        "winnow_update",
+        "update_selection_weights",
+        "behavior_score",
+        "flow_check"
+      ],
+      "imports": [
+        "__future__",
+        "math"
+      ],
+      "calls": [
+        "ValueError",
+        "_check_steps",
+        "adaboost_update",
+        "append",
+        "exp",
+        "float",
+        "len",
+        "orm_score",
+        "prm_score",
+        "sum",
+        "tuple",
+        "winnow_update",
+        "zip"
+      ],
+      "change_risk": 6.29
+    },
+    {
+      "module": "src.mahoraga.behavior_tests",
+      "path": "src/mahoraga/behavior_tests.py",
+      "loc": 88,
+      "classes": [],
+      "functions": [
+        "build_catalog",
+        "evaluate_suite",
+        "validation_gate"
+      ],
+      "imports": [
+        "__future__",
+        "behavior_audit"
+      ],
+      "calls": [
+        "all",
+        "behavior_score",
+        "build_catalog",
+        "get",
+        "items",
+        "keys",
+        "next",
+        "set",
+        "values"
+      ],
+      "change_risk": 1.5
+    },
+    {
+      "module": "src.mahoraga.combination_search",
+      "path": "src/mahoraga/combination_search.py",
+      "loc": 117,
+      "classes": [],
+      "functions": [
+        "functional_clusters",
+        "select_best",
+        "combination_score",
+        "funnel_candidates",
+        "simulate_combinations",
+        "skor"
+      ],
+      "imports": [
+        "__future__",
+        "distill_covariance",
+        "itertools",
+        "synapse_inventory"
+      ],
+      "calls": [
+        "append",
+        "classify_key",
+        "combinations",
+        "covariance_weight",
+        "dict",
+        "float",
+        "get",
+        "items",
+        "len",
+        "list",
+        "oracle",
+        "range",
+        "setdefault",
+        "skor",
+        "sorted",
+        "sum"
+      ],
+      "change_risk": 6.26
+    },
+    {
       "module": "src.mahoraga.component_merger",
       "path": "src/mahoraga/component_merger.py",
       "loc": 189,
@@ -3729,6 +3832,67 @@
         "values"
       ],
       "change_risk": 6.96
+    },
+    {
+      "module": "src.mahoraga.distill_covariance",
+      "path": "src/mahoraga/distill_covariance.py",
+      "loc": 88,
+      "classes": [],
+      "functions": [
+        "validate_prior",
+        "covariance_weight",
+        "select_for_distillation"
+      ],
+      "imports": [
+        "__future__"
+      ],
+      "calls": [
+        "ValueError",
+        "abs",
+        "append",
+        "covariance_weight",
+        "float",
+        "get",
+        "int",
+        "len",
+        "sorted",
+        "str",
+        "validate_prior"
+      ],
+      "change_risk": 3.7
+    },
+    {
+      "module": "src.mahoraga.distillation",
+      "path": "src/mahoraga/distillation.py",
+      "loc": 115,
+      "classes": [],
+      "functions": [
+        "strateji_sec",
+        "merge_plan",
+        "merge_coefficients",
+        "post_merge_gate"
+      ],
+      "imports": [
+        "__future__",
+        "behavior_audit",
+        "behavior_tests",
+        "distill_covariance",
+        "red_collection"
+      ],
+      "calls": [
+        "all",
+        "build_catalog",
+        "covariance_weight",
+        "dict",
+        "get",
+        "items",
+        "keys",
+        "set",
+        "strateji_sec",
+        "sum",
+        "values"
+      ],
+      "change_risk": 3.24
     },
     {
       "module": "src.mahoraga.filter_detector",
@@ -3971,6 +4135,39 @@
       "change_risk": 7.38
     },
     {
+      "module": "src.mahoraga.multid_validation",
+      "path": "src/mahoraga/multid_validation.py",
+      "loc": 80,
+      "classes": [],
+      "functions": [
+        "l1_mask",
+        "covariance_weighted_svd",
+        "validation_matrix"
+      ],
+      "imports": [
+        "__future__",
+        "behavior_audit",
+        "distill_covariance",
+        "red_collection"
+      ],
+      "calls": [
+        "ValueError",
+        "abs",
+        "all",
+        "append",
+        "covariance_weight",
+        "get",
+        "int",
+        "keys",
+        "len",
+        "max",
+        "set",
+        "sorted",
+        "values"
+      ],
+      "change_risk": 4.2
+    },
+    {
       "module": "src.mahoraga.real_surgery",
       "path": "src/mahoraga/real_surgery.py",
       "loc": 444,
@@ -4107,6 +4304,41 @@
         "write"
       ],
       "change_risk": 10.0
+    },
+    {
+      "module": "src.mahoraga.red_collection",
+      "path": "src/mahoraga/red_collection.py",
+      "loc": 161,
+      "classes": [],
+      "functions": [
+        "dual_measure",
+        "collect_reds",
+        "red_loss",
+        "marginal_loss_auc",
+        "verify_altin_kirmizi",
+        "build_recovery_matrix"
+      ],
+      "imports": [
+        "__future__",
+        "math"
+      ],
+      "calls": [
+        "ValueError",
+        "abs",
+        "all",
+        "append",
+        "float",
+        "get",
+        "items",
+        "len",
+        "max",
+        "set",
+        "sorted",
+        "sum",
+        "values",
+        "verify_altin_kirmizi"
+      ],
+      "change_risk": 6.81
     },
     {
       "module": "src.mahoraga.self_evolution",
@@ -5400,10 +5632,24 @@
     "src.mahoraga.agi_assembly.run_pipeline",
     "src.mahoraga.agi_assembly.stages_completed",
     "src.mahoraga.agi_assembly.status",
+    "src.mahoraga.behavior_audit.chain_reward",
+    "src.mahoraga.behavior_audit.flow_check",
+    "src.mahoraga.behavior_audit.update_selection_weights",
+    "src.mahoraga.behavior_tests.evaluate_suite",
+    "src.mahoraga.behavior_tests.validation_gate",
+    "src.mahoraga.combination_search.combination_score",
+    "src.mahoraga.combination_search.functional_clusters",
+    "src.mahoraga.combination_search.funnel_candidates",
+    "src.mahoraga.combination_search.select_best",
+    "src.mahoraga.combination_search.simulate_combinations",
     "src.mahoraga.component_merger.experiments",
     "src.mahoraga.component_merger.improvement",
     "src.mahoraga.component_merger.status",
     "src.mahoraga.component_merger.successful_merges",
+    "src.mahoraga.distill_covariance.select_for_distillation",
+    "src.mahoraga.distillation.merge_coefficients",
+    "src.mahoraga.distillation.merge_plan",
+    "src.mahoraga.distillation.post_merge_gate",
     "src.mahoraga.filter_detector.analyzed_models",
     "src.mahoraga.filter_detector.apply_removal",
     "src.mahoraga.filter_detector.get_map",
@@ -5413,7 +5659,15 @@
     "src.mahoraga.filter_surface.build_report",
     "src.mahoraga.moe_extractor.extract_moe_synapses",
     "src.mahoraga.multi_direction_extractor.extract_multi_directions",
+    "src.mahoraga.multid_validation.covariance_weighted_svd",
+    "src.mahoraga.multid_validation.l1_mask",
+    "src.mahoraga.multid_validation.validation_matrix",
     "src.mahoraga.real_surgery.run_batch",
+    "src.mahoraga.red_collection.build_recovery_matrix",
+    "src.mahoraga.red_collection.collect_reds",
+    "src.mahoraga.red_collection.dual_measure",
+    "src.mahoraga.red_collection.marginal_loss_auc",
+    "src.mahoraga.red_collection.red_loss",
     "src.mahoraga.self_evolution.clade_metaproductivity",
     "src.mahoraga.self_evolution.improvement",
     "src.mahoraga.self_evolution.iterations",

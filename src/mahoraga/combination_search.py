@@ -46,6 +46,7 @@ def select_best(clusters: dict[str, list[dict]], hedef_davranis: str,
             "en": ranked[0]["key"],
             "adaylar": [r["key"] for r in ranked[:max_aday]],
             "skorlar": {r["key"]: skor(r) for r in ranked[:max_aday]},
+            "davranis_skoru": model_skorlari[ranked[0]["model"]][hedef_davranis],
         }
     return out
 
@@ -64,13 +65,34 @@ def combination_score(combo: list[dict], model_skorlari: dict,
     return temel + CESITLILIK_BONUSU * (len(aileler) - 1)
 
 
-def simulate_combinations(adaylar: list, oracle, max_k: int = 3,
-                          budget: int = 1000) -> dict:
-    """Kombinasyon simülasyonu: 1..max_k alt-kümeler, bütçe kesmeli.
+def funnel_candidates(best: dict[str, dict], min_skor: float = 0.6,
+                      ust_sinir: int = 18) -> dict[str, dict]:
+    """'En' hunisi: kesmeyi KALİTE yapar, sayım değil (model/sinaps mantığı).
 
-    oracle(combo_keys) -> float. Bütçe aşılırsa arama durur ve
-    'tam_exhaustive' False olur (kalan uzay greedy/beam'e devredilir).
+    Davranış skoru eşiğinin altındaki kümeler elenir. Havuz ust_sinir'i
+    aşarsa en düşük skorlular gider (yine kalite sırasıyla); ust_sinir
+    yalnız son sigortadır, normalde huni yeter.
     """
+    gecen = {rol: v for rol, v in best.items() if v.get("davranis_skoru", 0.0) >= min_skor}
+    if len(gecen) > ust_sinir:
+        sirali = sorted(gecen.items(),
+                        key=lambda kv: (kv[1]["davranis_skoru"],
+                                        kv[1]["skorlar"].get(kv[1]["en"], 0.0)),
+                        reverse=True)
+        gecen = dict(sirali[:ust_sinir])
+    return gecen
+
+
+def simulate_combinations(adaylar: list, oracle, max_k: int | None = None,
+                          budget: int = 500_000) -> dict:
+    """Kombinasyon simülasyonu: 1..max_k alt-kümeler (varsayılan TÜM boyutlar).
+
+    oracle(combo_keys) -> float. Kesme huniyle yapılır (funnel_candidates),
+    bütçe YALNIZCA güvenlik supabıdır (havuz kazara büyürse); aşılırsa
+    'tam_exhaustive' False döner.
+    """
+    if max_k is None:
+        max_k = len(adaylar)  # tüm olası kombinasyonlar: 2^N − 1
     sim = 0
     best: list | None = None
     best_score = float("-inf")
