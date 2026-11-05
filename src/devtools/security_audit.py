@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 DANGEROUS_CODE_PATTERNS = [
     ("HARDCODED_SECRET", re.compile(r"(?:sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,})")),
-    ("UNSAFE_EVAL_EXEC", re.compile(r"\b(?:eval|exec)\s*\(")),
+    ("UNSAFE_EVAL_EXEC", re.compile(r"(?<![\w.])(?:eval|exec)\s*\(")),
     ("SUBPROCESS_SHELL_TRUE", re.compile(r"subprocess\.[a-zA-Z_]+\([^)]*shell\s*=\s*True")),
 ]
 
