@@ -83,6 +83,9 @@ class HFEngine:
                 )
         else:
             ids = self.tok(prompt["system"] + "\n" + prompt["user"], return_tensors="pt").input_ids
+        if not hasattr(ids, "shape"):
+            # transformers 5.x: apply_chat_template BatchEncoding döner (input_ids + attention_mask)
+            ids = ids["input_ids"]
         ids = ids.to(self.model.device if hasattr(self.model, "device") else next(self.model.parameters()).device)
         with torch.no_grad():
             out = self.model.generate(
