@@ -14,9 +14,11 @@ Kurallar (llm-pipeline-ops):
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -44,16 +46,45 @@ def complete(path: str, size: int | None) -> bool:
     return os.path.exists(path) and (size is None or os.path.getsize(path) == size)
 
 
-def download(repo: str, dest: str, rate: str | None) -> None:
+def write_manifest(local_dir: str, names: dict[str, int | None], repo: str) -> None:
+    manifest = {
+        "repo": repo,
+        "tarih": datetime.datetime.now().isoformat(timespec="seconds"),
+        "toplam_bayt": sum(s or 0 for s in names.values()),
+        "dosyalar": [
+            {"ad": n, "boyut": s,
+             "durum": "bitti" if complete(os.path.join(local_dir, n), s) else "eksik"}
+            for n, s in sorted(names.items())
+        ],
+    }
+    with open(os.path.join(local_dir, "eval_manifest.json"), "w") as fh:
+        json.dump(manifest, fh, ensure_ascii=False, indent=2)
+    log(f"manifest yazildi: {os.path.join(local_dir, 'eval_manifest.json')}")
+
+
+def download(repo: str, dest: str, rate: str | None, manifest_only: bool = False) -> None:
     local_dir = os.path.join(dest, re.sub(r"[^a-zA-Z0-9_-]", "_", repo))
     os.makedirs(local_dir, exist_ok=True)
     names = list_files(repo)
     remaining = {n: s for n, s in names.items() if not complete(os.path.join(local_dir, n), s)}
     total = sum(s or 0 for s in remaining.values())
     log(f"{repo}: {len(names)} dosya, {len(remaining)} eksik, {total/1e9:.1f} GB")
+    if manifest_only:
+        if remaining:
+            log(f"❌ manifest-only: eksik dosyalar var: {sorted(remaining)}")
+            sys.exit(1)
+        write_manifest(local_dir, names, repo)
+        return
     if not remaining:
         log("zaten tam — atlandı")
+        write_manifest(local_dir, names, repo)
         return
+    # depolama koruması: kalan indirme + 10 GiB pay diskte yoksa asla başlama
+    bos = shutil.disk_usage(dest).free
+    if bos < total + 10 * 2**30:
+        log(f"❌ depolama yetersiz: gereken {(total + 10 * 2**30)/2**30:.1f} GiB, boş {bos/2**30:.1f} GiB — durduruldu")
+        sys.exit(2)
+    log(f"depolama: kalan indirme {total/2**30:.1f} GiB, boş {bos/2**30:.1f} GiB (+10 GiB pay dahil)")
     base = f"https://huggingface.co/{repo}/resolve/main"
     tok = os.environ.get("HF_TOKEN")
     for i, (n, sz) in enumerate(sorted(remaining.items()), 1):
@@ -85,6 +116,7 @@ def download(repo: str, dest: str, rate: str | None) -> None:
     if bad:
         log(f"❌ eksik kalan dosya: {bad}")
         sys.exit(1)
+    write_manifest(local_dir, names, repo)
     log(f"✅ {repo} tam: {local_dir} ({len(names)} dosya dogrulandi)")
 
 
@@ -93,7 +125,9 @@ if __name__ == "__main__":
     ap.add_argument("--repo", required=True)
     ap.add_argument("--dest", default="/mnt/toshiba/eval_models")
     ap.add_argument("--rate", default=None, help="curl --limit-rate, ör. 12M")
+    ap.add_argument("--manifest-only", action="store_true",
+                    help="indirme yapma; doğrula + eval_manifest.json yaz")
     a = ap.parse_args()
     if not os.path.ismount("/mnt/toshiba"):
         raise RuntimeError("Toshiba mount'lu değil — /mnt/toshiba")
-    download(a.repo, a.dest, a.rate)
+    download(a.repo, a.dest, a.rate, manifest_only=a.manifest_only)
