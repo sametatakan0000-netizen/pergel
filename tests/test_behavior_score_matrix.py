@@ -17,6 +17,7 @@ from pathlib import Path
 from src.mahoraga.behavior_score_matrix import (
     BENCHMARK_AILELERI,
     davranis_skor_matrisi,
+    load_kanitlar,
     model_satirlari,
 )
 
@@ -141,6 +142,17 @@ class TestBehaviorScoreMatrix(unittest.TestCase):
         arac = m["davranislar"]["arac"]
         assert [r["model"] for r in arac["modeller"]] == ["n/n1"]
         assert arac["sinapsiz_kanitli_modeller"] == ["d/d1"]
+
+    def test_load_kanitlar_iki_bicim(self):
+        # Hem {"kanitlar": [...]} sarmalı hem çıplak liste yüklenir (yerel ölçüm çıktıları liste verir)
+        import tempfile
+
+        kayit = [{"model": "a/m1", "davranis": "kod", "benchmark": "swe-bench-verified", "skor": 60.0}]
+        for veri in (kayit, {"kanitlar": kayit}):
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+                json.dump(veri, f)
+                yol = f.name
+            self.assertEqual(load_kanitlar(yol), kayit)
 
     def test_model_satirlari_yardimcisi(self):
         satirlar = model_satirlari(self.manifest, self.kanitlar, "kod")

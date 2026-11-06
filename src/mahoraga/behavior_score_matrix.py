@@ -49,7 +49,11 @@ def load_manifest(path: str | Path) -> dict:
 
 
 def load_kanitlar(path: str | Path) -> list[dict]:
-    return json.loads(Path(path).read_text())["kanitlar"]
+    data = json.loads(Path(path).read_text())
+    # İki kanıt biçimi desteklenir: {"kanitlar": [...]} sarmalı veya çıplak liste.
+    if isinstance(data, list):
+        return data
+    return data["kanitlar"]
 
 
 def _davranis_sinaplari(manifest: dict, davranis: str) -> list[dict]:
