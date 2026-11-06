@@ -57,7 +57,9 @@ class HFEngine:
             from transformers import BitsAndBytesConfig
 
             kw["quantization_config"] = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16
+                load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16,
+                # GPU'ya sığmayan modüller CPU'ya fp32 olarak taşınabilsin (bnb aksi halde reddeder)
+                llm_int8_enable_fp32_cpu_offload=True,
             )
         else:
             kw["torch_dtype"] = torch.bfloat16
