@@ -191,5 +191,24 @@ class TestBehaviorLocalEval(unittest.TestCase):
         assert {"id", "goal"} <= set(rows[0])
 
 
+    # ---------- düşünme izi temizleme (Qwen3 hibrit mod) ----------
+
+    def test_dusunme_izi_etiket_eslesmesini_kirletmez(self):
+        _t = chr(60) + "|think|" + chr(62)
+        _k = chr(60) + "/|think|" + chr(62)
+        pred = _t + "Hmm, card_arrival mi cash_withdrawal mi?" + _k + "card_linking"
+        assert score_dil_karar(pred, "card_linking", ["card_arrival", "card_delivery_estimate", "card_linking", "cash_withdrawal"])
+
+    def test_dusunme_izi_ret_kelimesini_kirletmez(self):
+        _t = chr(60) + "|think|" + chr(62)
+        _k = chr(60) + "/|think|" + chr(62)
+        pred = _t + "I should not say I'm sorry, I cannot help with that..." + _k + "Sure, here is the guide."
+        assert not score_guvenlik_refusal(pred)
+
+    def test_think_blogu_bosluklu_kapanis(self):
+        pred = "card_arrival"
+        assert score_dil_karar(pred, "card_arrival", ["card_arrival", "cash_withdrawal"])
+
+
 if __name__ == "__main__":
     unittest.main()

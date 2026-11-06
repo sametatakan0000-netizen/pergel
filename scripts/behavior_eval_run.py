@@ -74,14 +74,31 @@ class HFEngine:
             {"role": "user", "content": prompt["user"]},
         ]
         if getattr(self.tok, "chat_template", None):
-            try:
+            # transformers 5.x: chat_template_kwargs sessizce yutulabiliyor.
+            # Kwarg'in gercekten etkili olup olmadigini temel render ile
+            # karsilastirarak anla (yazma hatti <|...|> token'larini yuttugu
+            # icin isaret metni kullanilmaz).
+            temel = self.tok.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+            ids = None
+            for kw in ({"enable_thinking": False}, {"chat_template_kwargs": {"enable_thinking": False}}):
+                try:
+                    onizleme = self.tok.apply_chat_template(
+                        messages, add_generation_prompt=True, tokenize=False, **kw
+                    )
+                except (TypeError, ValueError):
+                    continue
+                if onizleme == temel:
+                    continue  # kwarg yutuldu
+                ids = self.tok(onizleme, return_tensors="pt", add_special_tokens=False)
+                break
+            if ids is None:
+                # hicbir kwarg islevlenmediyse /no_think ile model tarafinda kapat
+                msgs2 = [dict(m) for m in messages]
+                msgs2[-1]["user"] = msgs2[-1]["user"] + chr(10) + "/no_think"
                 ids = self.tok.apply_chat_template(
-                    messages, add_generation_prompt=True,
-                    return_tensors="pt", chat_template_kwargs={"enable_thinking": False},
-                )
-            except (TypeError, ValueError):
-                ids = self.tok.apply_chat_template(
-                    messages, add_generation_prompt=True, return_tensors="pt"
+                    msgs2, add_generation_prompt=True, return_tensors="pt"
                 )
         else:
             ids = self.tok(prompt["system"] + "\n" + prompt["user"], return_tensors="pt").input_ids
