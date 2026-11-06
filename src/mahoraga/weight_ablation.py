@@ -314,6 +314,18 @@ def _last_token_mask(inputs: dict) -> np.ndarray:
     return mask
 
 
+def _inference_ctx():
+    """Torch inference_mode: tespit geçişi gradyan grafiği tutmaz —
+    8B gövdede OOM'un ana kaynağı buydu (grafik + aktivasyon tutulması).
+    Torch yoksa boşlam."""
+    try:
+        import torch
+        return torch.inference_mode()
+    except ImportError:
+        import contextlib
+        return contextlib.nullcontext()
+
+
 def _model_inputs(model, inputs: dict):
     """capture_activations için girdi biçimi: köprü modeller (run_with_cache)
     token tensörü bekler — dict geçilirse torch.embedding TypeError fırlatır
@@ -386,6 +398,8 @@ def detect_directions(model_dir, harmful_jsonl, harmless_jsonl,
             tokenizer = AutoTokenizer.from_pretrained(
                 model_dir, local_files_only=True)
 
+        if hasattr(model, "eval"):
+            model.eval()
         n_layers = _model_n_layers(model)
         if isinstance(layers, str) and layers.strip().lower() == "auto":
             if not n_layers:
@@ -401,17 +415,19 @@ def detect_directions(model_dir, harmful_jsonl, harmless_jsonl,
         for text in prompts_h:
             inputs = _tokenize(tokenizer, text)
             mask = _last_token_mask(inputs)
-            got = capture_activations(model, _model_inputs(model, inputs),
-                                      candidates,
-                                      site="resid_post", token_mask=mask)
+            with _inference_ctx():
+                got = capture_activations(model, _model_inputs(model, inputs),
+                                          candidates,
+                                          site="resid_post", token_mask=mask)
             for l in candidates:
                 acts_h[l].append(np.asarray(got[l], dtype=np.float32)[0])
         for text in prompts_n:
             inputs = _tokenize(tokenizer, text)
             mask = _last_token_mask(inputs)
-            got = capture_activations(model, _model_inputs(model, inputs),
-                                      candidates,
-                                      site="resid_post", token_mask=mask)
+            with _inference_ctx():
+                got = capture_activations(model, _model_inputs(model, inputs),
+                                          candidates,
+                                          site="resid_post", token_mask=mask)
             for l in candidates:
                 acts_n[l].append(np.asarray(got[l], dtype=np.float32)[0])
     finally:

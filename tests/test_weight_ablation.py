@@ -171,12 +171,18 @@ class _FakeBridgeModel:
         self.cfg = SimpleNamespace(n_layers=n_layers)
         self.vecs = vecs  # {tok_id: {layer: (D,) vektör}}
         self.received = None
+        self.grad_enabled = None
 
     def __call__(self, *args, **kwargs):
         raise AssertionError("köprü modeli doğrudan çağrılmamalı")
 
     def run_with_cache(self, inputs, names_filter=None):
         self.received = inputs
+        try:
+            import torch
+            self.grad_enabled = bool(torch.is_grad_enabled())
+        except ImportError:
+            self.grad_enabled = None
         if isinstance(inputs, dict):
             raise TypeError("embedding(): argument 'indices' (position 2) "
                             "must be Tensor, not dict")
@@ -447,6 +453,10 @@ class TestDetectDirections(unittest.TestCase):
             self.assertIsNotNone(bridge.received)
             self.assertFalse(isinstance(bridge.received, dict))
             self.assertEqual(np.asarray(bridge.received).shape[-1], 2)  # S=2
+            if bridge.grad_enabled is not None:
+                self.assertFalse(bridge.grad_enabled,
+                                 "tespit geçişi inference_mode'da olmalı "
+                                 "(gradyan grafiği OOM'a yol açar)")
             d0 = np.asarray(res["layers"]["0"]["direction"])
             self.assertGreater(abs(float(d0 @ _unit(0))), 0.999)
 
