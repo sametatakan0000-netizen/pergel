@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -12,7 +13,9 @@ import re
 import shutil
 import struct
 import subprocess
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +28,115 @@ def sanitize(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "_", name)
 
 
+DEFAULT_MAX_PARALLEL = 4
+_SHARD_RE = re.compile(r"model-\d{5}-of-\d{5}\.safetensors$")
+
+
+def download_shards_parallel(remaining: dict, local_dir: str, base: str,
+                             tok: str | None = None, log=None,
+                             max_parallel: int = DEFAULT_MAX_PARALLEL,
+                             limit_rate: str | None = None,
+                             curl_bin: str = "curl",
+                             max_attempts: int = 30,
+                             sleep=None) -> None:
+    """Shard dosyalarını PARALEL indir (varsayılan 4 eşzamanlı curl süreci).
+
+    remaining: {dosya_adı: beklenen_bayt | None} — index.json/weight_map ve HF
+    dosya listesinden gelen beklenen boyutlar (biliniyorsa birebir doğrulanır).
+    Korunan güvenlik semantikleri (seri yol ile birebir aynı):
+    - resume: `curl -C -` ile `.curlpart` yan dosyası üzerinden kaldığı yerden devam
+    - boyut doğrulama: boyut tutmayan dosya asla hedefe dönüştürülmez (sessiz
+      bozulma yok); boyut fazla ise parça silinip baştan alınır
+    - çift-format güvenliği: model-*-of-* shard'lar varsa consolidated.safetensors
+      asla karışmaz (defense in depth — çağrılmadan önce de filtrelenir)
+    - hata: bir shard denemeleri bitince ameliyat temiz iptal edilir (RuntimeError),
+      uçaktaki curl süreçleri durdurulur; kısmi `.curlpart` dosyaları resume için
+      korunur, asla silinmez
+    - limit_rate: her curl sürecine AYNI `--limit-rate` değeri uygulanır
+      (paralel süreç başına tutarlı; toplam bant = N x limit)
+
+    sleep: testler için geri sayım fonksiyonu (varsayılan: abort-duyarlı bekleme).
+    curl_bin: testler için sahte curl yoluna değiştirilebilir.
+    """
+    log = log or (lambda m: None)
+    max_parallel = max(1, int(max_parallel))
+    # çift-format güvenliği: shard ailesi varsa consolidated.safetensors asla karışmaz
+    if any(_SHARD_RE.match(n) for n in remaining):
+        remaining = {n: s for n, s in remaining.items()
+                     if n != "consolidated.safetensors"}
+    if not remaining:
+        return
+
+    abort = threading.Event()
+    rest = sleep if sleep is not None else abort.wait
+    failure: dict[str, str] = {}
+
+    def _kill(proc):
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+
+    def _one(n, sz):
+        target = os.path.join(local_dir, n)
+        part = target + ".curlpart"
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        for attempt in range(1, max_attempts + 1):
+            if abort.is_set():
+                return  # kısmi .curlpart resume için korunur
+            hdr = ["-H", f"Authorization: Bearer {tok}"] if tok else []
+            cmd = [curl_bin, "-sSL", "--fail", "--connect-timeout", "30",
+                   "--speed-time", "120", "--speed-limit", "1000"]
+            if limit_rate:
+                cmd += ["--limit-rate", str(limit_rate)]
+            cmd += ["-C", "-", "-o", part, *hdr, f"{base}/{n}"]
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
+            while True:
+                try:
+                    rc = proc.wait(timeout=0.2)
+                    break
+                except subprocess.TimeoutExpired:
+                    if abort.is_set():
+                        _kill(proc)  # .curlpart yazılan kısım resume için kalır
+                        return
+            cur = os.path.getsize(part) if os.path.exists(part) else 0
+            if (sz is not None and cur == sz) or (sz is None and rc == 0):
+                if os.path.exists(part):
+                    os.replace(part, target)
+                log(f"    ✅ {n} ({(sz or 0)/1e9:.1f} GB)")
+                return
+            if sz is not None and cur > sz:  # bozuk/fazla — bastan al
+                os.remove(part)
+                log(f"    ⚠️ {n}: boyut fazla ({cur} > {sz}) — yeniden alınıyor")
+            elif abort.is_set():
+                return
+            if attempt % 5 == 0 or attempt == 1:
+                log(f"    ⚠️ {n}: deneme {attempt}/{max_attempts} ({cur/1e6:.0f}MB / {(sz or 0)/1e6:.0f}MB)")
+            rest(min(5 * attempt, 60))
+        # denemeler tükendi — ameliyatı temiz iptal et, shard adıyla haber ver
+        failure[n] = f"indirme başarısız: {n} ({max_attempts} deneme)"
+        abort.set()
+
+    with ThreadPoolExecutor(max_workers=max_parallel) as ex:
+        futs = [ex.submit(_one, n, sz) for n, sz in sorted(remaining.items())]
+        for f in as_completed(futs):
+            f.result()
+    if failure:
+        raise RuntimeError(next(iter(failure.values())))
+
+
 class RealSurgery:
     """Gerçek model ameliyatı."""
     
-    def __init__(self, backup_dir="./synapse_backups", work_dir="./surgery_work"):
+    def __init__(self, backup_dir="./synapse_backups", work_dir="./surgery_work",
+                 max_parallel: int = DEFAULT_MAX_PARALLEL, limit_rate: str | None = None):
         self.backup_dir = Path(backup_dir)
         self.work_dir = Path(work_dir)
+        self.max_parallel = max(1, int(max_parallel))
+        self.limit_rate = limit_rate
         for d in (self.backup_dir, self.work_dir):
             try:
                 d.mkdir(parents=True, exist_ok=True)
@@ -70,8 +176,8 @@ class RealSurgery:
             self.log(f"  ⚠️ Yerel ön kontrol atlandı ({str(e)[:80]}), snapshot indirmeye geçiliyor")
         
         # CURL-TABANLI INDIRME: hf_hub/xet katmani agirda kaliyor (CAS Client Error, 0 MB/s).
-        # curl ayni HF CDN'den 24 MB/s gorduk (olcum 2026-11-03) — tek tek dosya indir, resume destekli.
-        # shortcut: tek curl sureci / dosya, sirali; 1 Gbps+ baglantida paralel 4 dosya yap, <2026-12
+        # curl ayni HF CDN'den 24 MB/s gorduk (olcum 2026-11-03) — dosya indir, resume destekli.
+        # 1 Gbps+ baglantida paralel 4 dosya (max_parallel, <2026-12): download_shards_parallel
         from huggingface_hub import HfApi
         tok = os.environ.get("HF_TOKEN") or None
         try:
@@ -98,33 +204,11 @@ class RealSurgery:
 
         base = f"https://huggingface.co/{repo_id}/resolve/main"
         os.makedirs(str(local_dir), exist_ok=True)
-        self.log(f"  📥 curl ile {len(remaining)} dosya indiriliyor ({sum(s or 0 for s in remaining.values())/1e9:.1f} GB)")
-        for i, (n, sz) in enumerate(sorted(remaining.items()), 1):
-            target = os.path.join(str(local_dir), n)
-            part = target + ".curlpart"
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            done, attempt = False, 0
-            while not done and attempt < 30:
-                attempt += 1
-                hdr = ["-H", f"Authorization: Bearer {tok}"] if tok else []
-                cmd = ["curl", "-sSL", "--fail", "--connect-timeout", "30",
-                       "--speed-time", "120", "--speed-limit", "1000",
-                       "-C", "-", "-o", part, *hdr, f"{base}/{n}"]
-                r = subprocess.run(cmd, capture_output=True, text=True)
-                cur = os.path.getsize(part) if os.path.exists(part) else 0
-                if sz and cur == sz:
-                    os.replace(part, target)
-                    done = True
-                elif sz and cur > sz:  # bozuk/fazla — bastan al
-                    os.remove(part)
-                    self.log(f"    ⚠️ {n}: boyut fazla ({cur} > {sz}) — yeniden alınıyor")
-                else:
-                    if attempt % 5 == 0 or attempt == 1:
-                        self.log(f"    ⚠️ {n}: deneme {attempt}/30 ({cur/1e6:.0f}MB / {(sz or 0)/1e6:.0f}MB)")
-                    time.sleep(min(5 * attempt, 60))
-            if not done:
-                raise RuntimeError(f"indirme başarısız: {n} ({attempt} deneme)")
-            self.log(f"    ✅ [{i}/{len(remaining)}] {n} ({(sz or 0)/1e9:.1f} GB)")
+        self.log(f"  📥 curl ile {len(remaining)} dosya indiriliyor ({sum(s or 0 for s in remaining.values())/1e9:.1f} GB) — paralel {min(self.max_parallel, len(remaining))} süreç")
+        download_shards_parallel(
+            remaining, str(local_dir), base, tok=tok, log=self.log,
+            max_parallel=self.max_parallel, limit_rate=self.limit_rate,
+        )
         self.log(f"  ✅ İndirildi: {local_dir}")
         return str(local_dir)
     
@@ -442,3 +526,28 @@ def tensor_record_chunked(f, key: str, chunk_elems: int = 16_000_000) -> dict:
         h.update(struct.pack("f", v))
     return {"key": key, "shape": shape, "n_synapses": n,
             "hash": h.hexdigest()[:16], "magnitude": abs_sum / n}
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description="Gerçek ameliyat pipeline — paralel shard indirme (curl)")
+    p.add_argument("repos", nargs="+", help="HF repo id, ör. Qwen/Qwen2.5-3B-Instruct")
+    p.add_argument("--max-parallel", type=int, default=DEFAULT_MAX_PARALLEL,
+                   help=f"eşzamanlı curl süreci sayısı (varsayılan {DEFAULT_MAX_PARALLEL})")
+    p.add_argument("--limit-rate", default=None,
+                   help="curl --limit-rate; her sürece ayrı ayrı uygulanır, ör. 12M")
+    p.add_argument("--backup-dir", default="./synapse_backups")
+    p.add_argument("--work-dir", default="./surgery_work")
+    return p
+
+
+def main(argv=None) -> int:
+    a = build_arg_parser().parse_args(argv)
+    surgery = RealSurgery(backup_dir=a.backup_dir, work_dir=a.work_dir,
+                          max_parallel=a.max_parallel, limit_rate=a.limit_rate)
+    results = surgery.batch_surgery(a.repos)
+    return 0 if all(r["status"] == "completed" for r in results) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
