@@ -162,6 +162,35 @@ class _FakeModel:
         return SimpleNamespace(hidden_states=tuple(hs))
 
 
+class _FakeBridgeModel:
+    """TransformerBridge yolu: run_with_cache + cfg. Girdi token tensörü
+    olmalı — dict geçilirse gerçek köprüde torch.embedding TypeError
+    fırlatır ('indices must be Tensor, not dict')."""
+
+    def __init__(self, vecs: dict, n_layers: int):
+        self.cfg = SimpleNamespace(n_layers=n_layers)
+        self.vecs = vecs  # {tok_id: {layer: (D,) vektör}}
+        self.received = None
+
+    def __call__(self, *args, **kwargs):
+        raise AssertionError("köprü modeli doğrudan çağrılmamalı")
+
+    def run_with_cache(self, inputs, names_filter=None):
+        self.received = inputs
+        if isinstance(inputs, dict):
+            raise TypeError("embedding(): argument 'indices' (position 2) "
+                            "must be Tensor, not dict")
+        ids = np.asarray(inputs)
+        tid = int(ids.reshape(-1)[0])
+        s = ids.shape[-1]
+        cache = {}
+        for l in range(self.cfg.n_layers):
+            arr = np.zeros((1, s, D_MODEL), dtype=np.float32)
+            arr[0, -1] = self.vecs[tid][l]
+            cache[f"blocks.{l}.hook_resid_post"] = arr
+        return None, cache
+
+
 def _unit(i: int) -> np.ndarray:
     v = np.zeros(D_MODEL, dtype=np.float32)
     v[i] = 1.0
@@ -401,6 +430,25 @@ class TestDetectDirections(unittest.TestCase):
             # ilk satır ~e0, ikinci ~e5
             self.assertGreater(abs(float(R[0] @ _unit(0))), 0.999)
             self.assertGreater(abs(float(R[1] @ _unit(5))), 0.999)
+
+    def test_bridge_model_receives_token_tensor_not_dict(self):
+        """Köprü modeller (run_with_cache) token tensörü almalı — dict
+        geçilirse gerçek gövdede torch.embedding TypeError fırlatır."""
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            layer_vecs = {
+                0: (_unit(0) + 0.1 * _unit(3), -_unit(0) + 0.1 * _unit(3)),
+            }
+            adv, b77, fake, tok = self._build(td, layer_vecs)
+            bridge = _FakeBridgeModel(fake.vecs, 1)
+            res = detect_directions(str(td), str(adv), str(b77),
+                                    model=bridge, tokenizer=tok,
+                                    n_directions=1)
+            self.assertIsNotNone(bridge.received)
+            self.assertFalse(isinstance(bridge.received, dict))
+            self.assertEqual(np.asarray(bridge.received).shape[-1], 2)  # S=2
+            d0 = np.asarray(res["layers"]["0"]["direction"])
+            self.assertGreater(abs(float(d0 @ _unit(0))), 0.999)
 
     def test_explicit_layers_only(self):
         with tempfile.TemporaryDirectory() as td:

@@ -314,6 +314,25 @@ def _last_token_mask(inputs: dict) -> np.ndarray:
     return mask
 
 
+def _model_inputs(model, inputs: dict):
+    """capture_activations için girdi biçimi: köprü modeller (run_with_cache)
+    token tensörü bekler — dict geçilirse torch.embedding TypeError fırlatır
+    ('indices must be Tensor, not dict'); HF gizli-durum yolu ise dict bekler.
+    Torch yoksa ham liste döner (köprü sahteleri liste kabul eder)."""
+    if not hasattr(model, "run_with_cache"):
+        return inputs
+    ids = inputs["input_ids"]
+    if not hasattr(ids, "detach"):
+        try:
+            import torch
+            ids = torch.as_tensor(ids, dtype=torch.long)
+        except ImportError:
+            return ids
+    if getattr(ids, "ndim", 0) == 1:
+        ids = ids[None, :]
+    return ids
+
+
 def _row_cos_mean(M: np.ndarray, r: np.ndarray) -> float:
     norms = np.linalg.norm(M, axis=1, keepdims=True)
     norms[norms == 0.0] = 1.0
@@ -382,14 +401,16 @@ def detect_directions(model_dir, harmful_jsonl, harmless_jsonl,
         for text in prompts_h:
             inputs = _tokenize(tokenizer, text)
             mask = _last_token_mask(inputs)
-            got = capture_activations(model, inputs, candidates,
+            got = capture_activations(model, _model_inputs(model, inputs),
+                                      candidates,
                                       site="resid_post", token_mask=mask)
             for l in candidates:
                 acts_h[l].append(np.asarray(got[l], dtype=np.float32)[0])
         for text in prompts_n:
             inputs = _tokenize(tokenizer, text)
             mask = _last_token_mask(inputs)
-            got = capture_activations(model, inputs, candidates,
+            got = capture_activations(model, _model_inputs(model, inputs),
+                                      candidates,
                                       site="resid_post", token_mask=mask)
             for l in candidates:
                 acts_n[l].append(np.asarray(got[l], dtype=np.float32)[0])
