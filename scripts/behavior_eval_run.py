@@ -15,6 +15,11 @@ Güvenlik: tek günlük doğruluk için tasarlandı —
 
 Motor: transformers (greedy, do_sample=False — deterministik). Qwen3 için thinking
 kapalı denenir; chat template yoksa düz metin prompt kullanılır.
+
+Alternatif motor: --taban-url ile OpenAI-uyumlu sunucu (llama.cpp / vLLM vb.)
+kullanılır — model her çalıştırmada yeniden yüklenmez (sıcak sunucu). Bu yol için
+--motor-ad zorunlu, --model-dir yasaktır; run_id "_openai" eki alır (checkpoint
+çakışması olmaz), quant alanı "gguf-openai" olur.
 """
 from __future__ import annotations
 
@@ -24,6 +29,8 @@ import json
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -125,10 +132,71 @@ def checkpoint_yukle(yol: Path) -> dict:
     return gecmis
 
 
-def main() -> None:
+class OpenAIEngine:
+    """OpenAI-uyumlu /chat/completions sunucu motoru (llama.cpp / vLLM vb.).
+
+    Isıtılmış sunucu üzerinden çalışır; her çalıştırmada model yüklemesi gerekmez.
+    generate(istemler) her istem için bir POST atar (şimdilik toplu değil),
+    choices[0].message.content değerlerini istem sırasıyla döndürür.
+    """
+
+    DENEME = 3
+    BEKLEME = 2.0  # saniye — 5xx/URLError geri çekilmesi
+
+    def __init__(self, base_url: str, model_name: str, max_new: int):
+        self.url = base_url.rstrip("/") + "/chat/completions"
+        self.model_name = model_name
+        self.max_new = max_new
+
+    def generate(self, prompts: list[str]) -> list[str]:
+        return [self._istek(istem) for istem in prompts]
+
+    def _istek(self, prompt: str) -> str:
+        govde = json.dumps({
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": self.max_new,
+            "temperature": 0,
+            "top_p": 1,
+        }).encode("utf-8")
+        istek = urllib.request.Request(
+            self.url, data=govde,
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        for deneme in range(self.DENEME):
+            if deneme:
+                time.sleep(self.BEKLEME)
+            try:
+                with urllib.request.urlopen(istek, timeout=120) as yanit:
+                    return self._coz(yanit.read())
+            except urllib.error.HTTPError as e:
+                metin = e.read().decode("utf-8", "replace")
+                e.close()
+                if 500 <= e.code < 600 and deneme < self.DENEME - 1:
+                    continue  # 5xx: geri çekilip tekrar dene
+                raise RuntimeError(f"OpenAI sunucu hatası HTTP {e.code}: {metin}") from e
+            except urllib.error.URLError as e:
+                if deneme < self.DENEME - 1:
+                    continue  # bağlantı hatası: geri çekilip tekrar dene
+                raise RuntimeError(f"OpenAI sunucuya ulaşılamadı: {e}") from e
+        raise RuntimeError("OpenAI sunucu hatası: denemeler tükendi")  # pragma: no cover
+
+    @staticmethod
+    def _coz(govde: bytes) -> str:
+        try:
+            return json.loads(govde.decode("utf-8"))["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as e:
+            raise RuntimeError(f"OpenAI yanıt gövdesi çözülemedi: {govde[:500]!r}") from e
+
+
+def arguman_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model-dir", required=True)
-    ap.add_argument("--repo", required=True)
+    ap.add_argument("--model-dir", default=None)
+    ap.add_argument("--repo", default=None)
+    ap.add_argument("--taban-url", default=None,
+                    help="OpenAI-uyumlu sunucu taban adresi (örn. http://127.0.0.1:8001/v1)")
+    ap.add_argument("--motor-ad", default=None,
+                    help="Sunucuya gönderilen model adı (--taban-url ile zorunlu)")
     ap.add_argument("--davranis", required=True, choices=["dil_karar", "guvenlik"])
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--max-new-tokens", type=int, default=None)
@@ -137,10 +205,49 @@ def main() -> None:
     ap.add_argument("--max-cpu-gb", type=int, default=22)
     ap.add_argument("--protokol-notu", default="")
     ap.add_argument("--checkpoint", type=Path, default=None)
+    return ap
+
+
+def argumanlar_dogrula(args) -> None:
+    """Motor yolu kuralları: --taban-url var mı, yok mu? İhlalde ValueError.
+
+    - --taban-url verildiyse: --motor-ad zorunlu, --model-dir yasak.
+    - --taban-url yoksa (HF yolu): --model-dir ve --repo zorunlu.
+    """
+    hatalar = []
+    if args.taban_url:
+        if not args.motor_ad:
+            hatalar.append("--taban-url ile --motor-ad zorunludur")
+        if args.model_dir:
+            hatalar.append("--taban-url ile --model-dir birlikte verilemez")
+    else:
+        if not args.model_dir:
+            hatalar.append("--taban-url yoksa --model-dir zorunludur")
+        if not args.repo:
+            hatalar.append("--taban-url yoksa --repo zorunludur")
+    if hatalar:
+        raise ValueError("; ".join(hatalar))
+
+
+def run_id_hesapla(args) -> str:
+    """Sunucu yolunda run_id '_openai' eki alır — HF checkpoint'leriyle çakışmaz."""
+    if args.taban_url:
+        ham = f"{args.motor_ad}_{args.davranis}_openai"
+    else:
+        ham = f"{args.repo}_{args.davranis}"
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", ham)
+
+
+def main() -> None:
+    ap = arguman_parser()
     args = ap.parse_args()
+    try:
+        argumanlar_dogrula(args)
+    except ValueError as e:
+        ap.error(str(e))
 
     max_new = args.max_new_tokens or (16 if args.davranis == "dil_karar" else 128)
-    run_id = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{args.repo}_{args.davranis}")
+    run_id = run_id_hesapla(args)
     ckpt_yolu = args.checkpoint or (TAHMINLER_DIR / f"{run_id}.jsonl")
     SONUCLAR_DIR.mkdir(parents=True, exist_ok=True)
     TAHMINLER_DIR.mkdir(parents=True, exist_ok=True)
@@ -150,8 +257,20 @@ def main() -> None:
     print(f"[hazir] ornek={len(ornekler)} resume={len(gecmis)} run_id={run_id}", flush=True)
 
     t0 = time.time()
-    engine = HFEngine(args.model_dir, max_new, args.quant, args.max_gpu_gb, args.max_cpu_gb)
-    print(f"[motor] yüklendi ({time.time() - t0:.0f}s) — ölçüm başlıyor", flush=True)
+    if args.taban_url:
+        engine = OpenAIEngine(args.taban_url, args.motor_ad, max_new)
+        model_ad = args.motor_ad
+
+        def generate(prompt: dict) -> str:
+            # run_eval tek prompt(dict)->str bekler; sunucu motora düz metin gider
+            return engine.generate([prompt["system"] + "\n" + prompt["user"]])[0]
+
+        print(f"[motor] sunucu motoru hazır ({args.taban_url}) — ölçüm başlıyor", flush=True)
+    else:
+        engine = HFEngine(args.model_dir, max_new, args.quant, args.max_gpu_gb, args.max_cpu_gb)
+        model_ad = args.repo
+        generate = engine.generate
+        print(f"[motor] yüklendi ({time.time() - t0:.0f}s) — ölçüm başlıyor", flush=True)
 
     ckpt = ckpt_yolu.open("a")
 
@@ -161,7 +280,7 @@ def main() -> None:
 
     try:
         sonuc = run_eval(
-            args.davranis, ornekler, args.repo, engine.generate,
+            args.davranis, ornekler, model_ad, generate,
             limit=args.limit, protokol_notu=args.protokol_notu,
             gecmis=gecmis, on_pred=on_pred,
         )
@@ -169,7 +288,7 @@ def main() -> None:
         ckpt.close()
 
     sonuc["sure_saniye"] = round(time.time() - t0, 1)
-    sonuc["quant"] = args.quant
+    sonuc["quant"] = "gguf-openai" if args.taban_url else args.quant
     (SONUCLAR_DIR / f"{run_id}.json").write_text(json.dumps(sonuc, ensure_ascii=False, indent=2))
     satir = kanit_row(sonuc)
     mevcut = json.loads(KANITLAR_YOLU.read_text()) if KANITLAR_YOLU.exists() else []
