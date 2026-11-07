@@ -10,6 +10,8 @@ Kural (plan §8): "distill_covariance.py LLM covariance 0.01-0.3
 """
 from __future__ import annotations
 
+import math
+
 # Kod uzmanları için LLM kovaryans katsayısı aralığı (plan §8).
 LLM_COVARIANCE_RANGE = (0.01, 0.3)
 
@@ -36,18 +38,35 @@ def validate_prior(uzman: str, prior: float) -> float:
     return float(prior)
 
 
+def _stabilite(record: dict) -> float:
+    """Stabilité terimi: gerçek kovaryans ölçümü varsa o, yoksa vekâlet.
+
+    `record['kovaryans']` (ör. red_collection.measure_layers çıktısının
+    'kovaryans' alanı) sonlu ve negatif olmamalı; bozuk ölçüm ValueError.
+    """
+    raw = record.get("kovaryans")
+    if raw is None:
+        # shortcut: ölçüm yoksa magnitude vekâleten; tüm çağıranlar
+        #   measure_layers gerçek kovaryansını besleyene kadar.
+        return abs(float(record.get("magnitude") or 0.0))
+    val = float(raw)
+    if not math.isfinite(val) or val < 0:
+        raise ValueError(f"kovaryans ölçümü sonlu ve negatif olmamalı: {raw!r}")
+    return val
+
+
 def covariance_weight(record: dict, prior: float) -> float:
     """Tek tensor kaydı için kovaryans-ağırlıklı skor.
 
     w = n_synapses * magnitude * (1 + prior * stabilité)
-    stabilité = |magnitude| büyüklüğü (ham ölçek bilinmediğinden
-    normalize edilmez — nispi sıralama için yeterli).
-    # shortcut: gerçek kovaryans (aktivasyon) yerine magnitude vekâleten,
-    #   Faz-C aktivasyon ölçümü gelince yerini alacak.
+    stabilité: `record['kovaryans']` (gerçek aktivasyon ölçümü —
+    red_collection.measure_layers) varsa o; yoksa |magnitude| vekâleti.
+    Ham ölçek bilinmediğinden normalize edilmez — nispi sıralama için
+    yeterli.
     """
     n = float(record.get("n_synapses", 0))
     mag = abs(float(record.get("magnitude") or 0.0))
-    return n * mag * (1.0 + float(prior) * mag)
+    return n * mag * (1.0 + float(prior) * _stabilite(record))
 
 
 def select_for_distillation(
